@@ -17,6 +17,8 @@ typedef struct {
 typedef struct {
     int type;                   /* NULL or ARBITRARY */
     float delay;                /* sec */
+    float deadTime;             /* sec */
+    float ringdownTime;         /* sec */
     PulseqShapeArbitrary wav;   /* arbitrary waveform, normalized amplitude */
 } PulseqRF;
 
