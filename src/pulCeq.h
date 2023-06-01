@@ -66,11 +66,9 @@ typedef struct {
 
 /* Struct containing block IDs for all block groups */
 typedef struct {
-    int   nGroups;           /* number of groups */
-    int*  nBlocksInGroup;    /* number of blocks in each group, i.e.: */
-                             /* size(blockIds[iGroup], 2) = nBlocksInGroup[iGroup] */
-    int** blockIDs;          /* block id's for all groups. size(blockIds,1) = nGroups */
-} BlockGroups;
+    int  nBlocksInGroup;    /* number of blocks in each group */
+    int* blockIDs;          /* block id's for all groups */
+} BlockGroup;
 
 /* struct containing entire sequence definition */
 typedef struct {
@@ -78,7 +76,7 @@ typedef struct {
     PulseqBlock* parentBlocks;
 
     int nGroups;    
-    BlockGroups groups; /* optional */
+    BlockGroup* groups;      /* optional */
 
     float** loop    /* Dynamic scan settings: waveform amplitudes, phase offsets, etc. */
                     /* loop[n] = [rfamp gxamp gyamp gzamp rfFreqOffset rfPhaseOffset ...]
