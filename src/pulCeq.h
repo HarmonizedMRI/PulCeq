@@ -74,11 +74,11 @@ typedef struct {
 
 /* struct containing entire sequence definition */
 typedef struct {
-    PulseqBlock* parentBlocks;
     int nParentBlocks; 
+    PulseqBlock* parentBlocks;
 
-    BlockGroups groups;
     int nGroups;    
+    BlockGroups groups; /* optional */
 
     float** loop    /* Dynamic scan settings: waveform amplitudes, phase offsets, etc. */
                     /* loop[n] = [rfamp gxamp gyamp gzamp rfFreqOffset rfPhaseOffset ...]
