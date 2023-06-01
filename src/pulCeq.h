@@ -66,8 +66,8 @@ typedef struct {
 
 /* Struct containing block IDs for all block groups */
 typedef struct {
-    int  nBlocksInGroup;    /* number of blocks in each group */
-    int* blockIDs;          /* block id's for all groups */
+    int  nBlocksInGroup;    /* number of blocks in group */
+    int* blockIDs;          /* block id's in this group */
 } BlockGroup;
 
 /* struct containing entire sequence definition */
