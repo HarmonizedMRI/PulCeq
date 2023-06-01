@@ -54,7 +54,7 @@ typedef struct {
     PulseqADC  adc;
     PulseqTrig trig;
 
-    /* vectors available for use as needed by the user */
+    /* vectors available for use as needed by the client program */
     int nVal1;                /* number of int values. Must be defined. */
     int* val1;                /* to be allocated dynamically by the client program */
     int nVal2;                /* number of float values. Must be defined. */
