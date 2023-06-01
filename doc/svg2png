@@ -1,1 +1,1 @@
-inkscape -d 300 -o model.png model.svg
+inkscape -d 120 -o model.png model.svg
