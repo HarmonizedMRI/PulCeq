@@ -16,12 +16,13 @@ typedef struct {
 
 typedef struct {
     int type;                   /* NULL or ARBITRARY */
-    float delay;                /* us */
+    float delay;                /* sec */
     PulseqShapeArbitrary wav;   /* arbitrary waveform, normalized amplitude */
 } PulseqRF;
 
 typedef struct {
-    int type;            /* NULL, TRAP, or ARBITRARY */
+    int type;                   /* NULL, TRAP, or ARBITRARY */
+    float delay;                /* sec */
     union {
         PulseqShapeArbitrary wav;
         PulseqShapeTrap trap;
@@ -38,7 +39,7 @@ typedef struct {
 
 typedef struct {
     int   type;           /* NULL or OUTPUT or ? */
-    char channel[10];     /* 'ext1' or ? */
+    int   channel;        /* EXT1 or ? */
     float delay;          /* sec */
     float duration;       /* sec */
 } PulseqTrig;
