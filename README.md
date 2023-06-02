@@ -1,4 +1,7 @@
-# PulCeq
+
+![logo](doc/logo.png)
+
+**[NB! We're just getting started -- current development is happening in the 'dev' branch]**
 
 A C representation of arbitrary MR pulse sequences, based on the "scaled parent block" (SPB) description.
 
