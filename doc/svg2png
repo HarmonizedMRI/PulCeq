@@ -1,2 +1,2 @@
 inkscape -d 120 -o model.png model.svg
-inkscape -d 200 -o logo.png logo.svg
+inkscape -d 120 -o logo.png logo.svg
