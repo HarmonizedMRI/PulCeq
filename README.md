@@ -1,5 +1,5 @@
 
-![logo](doc/logo.png)
+![logo](doc/logo.svg)
 
 **[NB! We're just getting started -- current development is happening in the 'dev' branch]**
 
@@ -10,7 +10,7 @@ The idea is to represent the sequence as a (typically small) collection of paren
 blocks, that are played out repeatedly during the scan with different
 RF/gradient amplitudes, RF/DAQ frequency/phase offsets, etc:
 
-![model](doc/model.png)
+![model](doc/model.svg)
 
 The goal of this repository is to provide a **community standard** specification
 for encapsulating this sequence description in C code.
