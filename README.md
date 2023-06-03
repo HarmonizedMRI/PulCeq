@@ -16,7 +16,7 @@ The goal of this repository is to provide a **community standard** specification
 for encapsulating this sequence description in C code.
 
 This specification is contained in the ./src/ folder, which contains the following:
-* **pulseq.h**: defines `Seq`, a nested struct containing the entire sequence, and
+* **pulCeq.h**: defines `Seq`, a nested struct containing the entire sequence, and
 function prototypes (interfaces) for various tasks including
    * serializing to file
    * allocating and freeing up memory
