@@ -9,46 +9,32 @@ end
 
 gamma = 42576000;   % Hz/T
 
-% Identify pure delay blocks (handled different from other blocks in the TOPPE interpreter)
-k = 1;
-for p = 1:ceq.nParentBlocks
-    if ~isdelayblock(ceq.parentBlocks{p})
-        activeParentBlocks.IDs(k) = p;
-        k = k + 1;
-    end
-end
-
-nActiveParentBlocks = length(activeParentBlocks.IDs);
-
 % define .mod file names
-for k = 1:nActiveParentBlocks
-    p = activeParentBlocks.IDs(k);
-    modFiles{k} = sprintf('module%d.mod', k);
+for p = 1:ceq.nParentBlocks
+    modFiles{p} = sprintf('module%d.mod', p);
 end
 
 % Write modules.txt
 fid = fopen('modules.txt','w');
 fprintf(fid,'Total number of unique cores\n');
-fprintf(fid,'%d\n', nActiveParentBlocks);
+fprintf(fid,'%d\n', ceq.nParentBlocks);
 fprintf(fid,'fname dur(us) hasRF hasADC trigpos\n');
 
-for k = 1:nActiveParentBlocks
-    p = activeParentBlocks.IDs(k);
+for p = 1:ceq.nParentBlocks
     b = ceq.parentBlocks{p};
-    hasRF(k) = ~isempty(b.rf);
-    hasADC(k) = ~isempty(b.adc);
-    if (hasRF(k) & hasADC(k))
+    hasRF(p) = ~isempty(b.rf);
+    hasADC(p) = ~isempty(b.adc);
+    if (hasRF(p) & hasADC(p))
         error('Block cannot contain both RF and ADC events');
     end
     dur = round(ceil(b.blockDuration/sysGE.raster)*sysGE.raster*1e6); % us
     fprintf(fid,'%s\t%d\t%d\t%d\t-1\n', ...
-        modFiles{k}, dur, hasRF(k), hasADC(k));    
+        modFiles{p}, dur, hasRF(p), hasADC(p));    
 end
 fclose(fid);
 
 % Write .mod files
-for k = 1:nActiveParentBlocks
-    p = activeParentBlocks.IDs(k);
+for p = 1:ceq.nParentBlocks
 
     % defaults
     rf = []; grad.x = []; grad.y = []; grad.z = [];
@@ -58,21 +44,21 @@ for k = 1:nActiveParentBlocks
 
     % npre = number of 4us samples to discard at beginning of RF/ADC window
     % rfres = number of 4us samples in RF/ADC window
-    if hasRF(k)
+    if hasRF(p)
         npre = ceil(b.rf.delay/sysGE.raster);
         rfres = ceil(b.rf.shape_dur/sysGE.raster);
-        b1ScalingFile = modFiles{k};
-    elseif hasADC(k)
+        b1ScalingFile = modFiles{p};
+    elseif hasADC(p)
         npre = ceil(b.adc.delay/sysGE.raster);
         rfres = ceil(b.adc.numSamples*b.adc.dwell/sysGE.raster);
-        readoutFile = modFiles{k};
+        readoutFile = modFiles{p};
     else
         npre = 0;
     end
     nChop = [npre 0];
 
     % Interpolate waveforms and convert to Gauss and Gauss/cm
-    if hasRF(k)
+    if hasRF(p)
         tge = sysGE.raster/2 : sysGE.raster : b.rf.shape_dur;
         rf = interp1(b.rf.t, b.rf.signal, tge) / gamma * 1e4;  % Gauss
         rf = [zeros(npre,1); rf.'];
@@ -100,7 +86,7 @@ for k = 1:nActiveParentBlocks
     
     % write .mod file
     if ~isDelayBlock 
-        toppe.writemod(sysGE, 'ofname', modFiles{k}, ...
+        toppe.writemod(sysGE, 'ofname', modFiles{p}, ...
             'rf', rf, 'gx', grad.x', 'gy', grad.y', 'gz', grad.z', ...
             'nChop', nChop);
     end
@@ -120,12 +106,9 @@ for n = 1:ceq.nMax
     i = ceq.loop(n, 1);   % block group ID
     p = ceq.loop(n, 2);   % parent block ID
 
-    k = find(activeParentBlocks.IDs == p);
-    if isempty(k)
-        % delay block
-        % TODO: how to deal with large number of different delay times in ceq struct
+    if p == 0  % delay block
         toppe.write2loop('delay', sysGE, ...
-            'textra', round(ceq.parentBlocks{p}.blockDuration/sysGE.raster)*sysGE.raster*1e3, ...  % msec
+            'textra', round(ceq.loop(n, 10)*1e6)/1e3, ... % msec
             'core', i);
         continue;
     end
@@ -153,7 +136,7 @@ for n = 1:ceq.nMax
 
     DAQphase = ceq.loop(n, 9);
 
-    toppe.write2loop(modFiles{k}, sysGE, ...
+    toppe.write2loop(modFiles{p}, sysGE, ...
         'Gamplitude',  [amp.gx amp.gy amp.gz]', ...
         'RFamplitude', RFamplitude, ...
         'RFphase',     RFphase, ...
@@ -163,7 +146,7 @@ for n = 1:ceq.nMax
         'echo',        echo, ...
         'view',        view, ...
         'dabmode',     'on', ...
-        'textra',      0, ...  % TODO
+        'textra',      0, ...  
         'waveform',    1, ...
         'core', i);
 
@@ -179,20 +162,8 @@ toppe.writeentryfile('toppeN.entry', ...
 
 % write block group file (cores.txt)
 for i = 1:ceq.nGroups
-    blockIDs = ceq.groups.blockIDs;
-
-    for j = 1:length(blockIDs)
-        k = find(blockIDs(j) == activeParentBlocks.IDs);
-        if isempty(k)
-            blockIDs(j) = 0;
-        else
-            blockIDs(j) = k;
-        end
-    end
-
-    blockGroups{i} = blockIDs;
+    blockGroups{i} = ceq.groups(i).blockIDs;
 end
-
 toppe.writecoresfile(blockGroups);
 
 % Create 'sequence stamp' file for TOPPE.
@@ -202,15 +173,15 @@ toppe.writecoresfile(blockGroups);
 
 % Put TOPPE files in a .tar file (for convenience)
 system(sprintf('tar cf %s toppeN.entry seqstamp.txt modules.txt scanloop.txt cores.txt', ofname));
-for k = 1:nActiveParentBlocks
-    system(sprintf('tar rf %s %s', ofname, modFiles{k}));
+for p = 1:ceq.nParentBlocks
+    system(sprintf('tar rf %s %s', ofname, modFiles{p}));
 end
 
 % clean up (unless in verbose mode)
 if ~verbose
     system('rm toppeN.entry seqstamp.txt modules.txt scanloop.txt cores.txt');
-    for k = 1:nActiveParentBlocks
-        system(sprintf('rm %s', modFiles{k}));
+    for p = 1:ceq.nParentBlocks
+        system(sprintf('rm %s', modFiles{p}));
     end
 end
 
