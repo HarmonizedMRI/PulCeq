@@ -100,7 +100,7 @@ for p = 1:length(parentBlockIndex)
             g = block.(ax{1});
             if ~isempty(g)
                 if strcmp(g.type, 'trap')
-                    gamp = abs(g.amplitude);
+                    gamp = abs(g.amplitude);   % trapezoids are positive lobes by definition
                 else
                     gamp = max(abs(g.waveform));
                 end
@@ -174,7 +174,7 @@ for n = 1:ceq.nMax
     b = seq.getBlock(n);
     p = parentBlockIDs(n); 
     if p ~= 0
-        ceq.loop(n,:) = getdynamics(b, coreIDs(n), p);
+        ceq.loop(n,:) = getdynamics(b, coreIDs(n), p, ceq.parentBlocks{p});
     end
 end
 

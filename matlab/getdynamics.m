@@ -1,4 +1,4 @@
-function loop = getdynamics(block, blockGroupID, parentBlockID)
+function loop = getdynamics(block, blockGroupID, parentBlockID, parentBlock)
 % Return vector containing waveform amplitudes, RF/ADC phase, etc,
 % for a Pulseq block, in physical (Pulseq) units.
 
@@ -21,9 +21,17 @@ for ax = {'gx','gy','gz'}
     g = block.(ax{1});
     if ~isempty(g)
         if strcmp(g.type, 'trap')
-            amp.(ax{1}) = block.(ax{1}).amplitude;
+            amp.(ax{1}) = g.amplitude;
         else
-            amp.(ax{1}) = max(abs(block.(ax{1}).waveform));
+            % need to check polarity (sign) with respect to parent block
+            mx = max(g.waveform);
+            mn = min(g.waveform);
+            pbmx = max(parentBlock.(ax{1}).waveform);
+            pbmn = min(parentBlock.(ax{1}).waveform);
+            amp.(ax{1}) = max(abs(g.waveform));
+            if xor(mx>abs(mn), pbmx>abs(pbmn))
+                amp.(ax{1}) = -amp.(ax{1});
+            end
         end
     end
 end
