@@ -40,5 +40,5 @@ if ~isempty(block.adc)
     recphs = block.adc.phaseOffset;
 end
 
-loop = [blockGroupID parentBlockID rfamp rfphs rffreq amp.gx amp.gy amp.gz recphs];
+loop = [blockGroupID parentBlockID rfamp rfphs rffreq amp.gx amp.gy amp.gz recphs block.blockDuration];
     

@@ -8,7 +8,7 @@ function ceq = seq2ceq(seqarg, varargin)
 %   seqarg     a seq object, or name of a .seq file
 %
 % Output
-%   ceq        struct
+%   ceq        struct, similar to github/HarmonizedMRI/PulCeq/src/pulCeq.h
 
 %% parse inputs
 % Defaults
@@ -52,13 +52,20 @@ end
 parentBlockIndex(1) = 1;  % first block is unique by definition
 
 for n = 1:ceq.nMax
-    issame = 0;
-
     if ~mod(n, 500) | n == ceq.nMax
         for inb = 1:20
             fprintf('\b');
         end
         fprintf('Block %d/%d', n, ceq.nMax);
+    end
+
+    issame = 0;
+
+    % Pure delay blocks are handled separately
+    b = seq.getBlock(n);
+    if isdelayblock(b)
+        parentBlockIDs(n) = 0;
+        continue;
     end
 
     for p = 1:length(parentBlockIndex)
@@ -169,11 +176,13 @@ end
 
 
 %% Get dynamic scan information
-ceq.loop = zeros(ceq.nMax, 9);
+ceq.loop = zeros(ceq.nMax, 10);
 for n = 1:ceq.nMax
     b = seq.getBlock(n);
     p = parentBlockIDs(n); 
-    if p ~= 0
+    if p == 0  % delay block
+        ceq.loop(n,:) = getdynamics(b, coreIDs(n), p);
+    else
         ceq.loop(n,:) = getdynamics(b, coreIDs(n), p, ceq.parentBlocks{p});
     end
 end
