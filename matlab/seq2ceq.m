@@ -17,7 +17,7 @@ arg.debug = false;
 arg.nt      = [];
 
 % Substitute specified system values as appropriate (from MIRT toolbox)
-arg = pulsegeq.utils.vararg_pair(arg, varargin);
+arg = vararg_pair(arg, varargin);
 
 
 %% Get seq object
