@@ -14,25 +14,6 @@ for p = 1:ceq.nParentBlocks
     modFiles{p} = sprintf('module%d.mod', p);
 end
 
-% Write modules.txt
-fid = fopen('modules.txt','w');
-fprintf(fid,'Total number of unique cores\n');
-fprintf(fid,'%d\n', ceq.nParentBlocks);
-fprintf(fid,'fname dur(us) hasRF hasADC trigpos\n');
-
-for p = 1:ceq.nParentBlocks
-    b = ceq.parentBlocks{p};
-    hasRF(p) = ~isempty(b.rf);
-    hasADC(p) = ~isempty(b.adc);
-    if (hasRF(p) & hasADC(p))
-        error('Block cannot contain both RF and ADC events');
-    end
-    dur = round(ceil(b.blockDuration/sysGE.raster)*sysGE.raster*1e6); % us
-    fprintf(fid,'%s\t%d\t%d\t%d\t-1\n', ...
-        modFiles{p}, dur, hasRF(p), hasADC(p));    
-end
-fclose(fid);
-
 % Write .mod files
 for p = 1:ceq.nParentBlocks
 
@@ -41,6 +22,9 @@ for p = 1:ceq.nParentBlocks
     isDelayBlock = true;
 
     b = ceq.parentBlocks{p};
+
+    hasRF(p) = ~isempty(b.rf);
+    hasADC(p) = ~isempty(b.adc);
 
     % npre = number of 4us samples to discard at beginning of RF/ADC window
     % rfres = number of 4us samples in RF/ADC window
@@ -91,6 +75,26 @@ for p = 1:ceq.nParentBlocks
             'nChop', nChop);
     end
 end
+
+% Write modules.txt
+% Do this after creating .mod files, so .mod file duration can be set exactly.
+fid = fopen('modules.txt','w');
+fprintf(fid,'Total number of unique cores\n');
+fprintf(fid,'%d\n', ceq.nParentBlocks);
+fprintf(fid,'fname dur(us) hasRF hasADC trigpos\n');
+
+for p = 1:ceq.nParentBlocks
+    b = ceq.parentBlocks{p};
+    if (hasRF(p) & hasADC(p))
+        error('Block cannot contain both RF and ADC events');
+    end
+    rf = toppe.readmod(modFiles{p});
+    dur = length(rf)*sysGE.raster*1e6;  % us
+    dur = max(dur, round(ceil(b.blockDuration/sysGE.raster)*sysGE.raster*1e6)); % us
+    fprintf(fid,'%s\t%d\t%d\t%d\t-1\n', ...
+        modFiles{p}, dur, hasRF(p), hasADC(p));    
+end
+fclose(fid);
 
 % Write scanloop.txt
 toppe.write2loop('setup', sysGE, 'version', 6); 
