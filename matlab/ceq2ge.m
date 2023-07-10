@@ -71,7 +71,7 @@ for k = 1:nActiveParentBlocks
     end
     nChop = [npre 0];
 
-    % Prepare waveforms
+    % Interpolate waveforms and convert to Gauss and Gauss/cm
     if hasRF(k)
         tge = sysGE.raster/2 : sysGE.raster : b.rf.shape_dur;
         rf = interp1(b.rf.t, b.rf.signal, tge) / gamma * 1e4;  % Gauss
@@ -123,7 +123,9 @@ for n = 1:ceq.nMax
     k = find(activeParentBlocks.IDs == p);
     if isempty(k)
         % delay block
+        % TODO: how to deal with large number of different delay times in ceq struct
         toppe.write2loop('delay', sysGE, ...
+            'textra', round(ceq.parentBlocks{p}.blockDuration/sysGE.raster)*sysGE.raster*1e3, ...  % msec
             'core', i);
         continue;
     end
