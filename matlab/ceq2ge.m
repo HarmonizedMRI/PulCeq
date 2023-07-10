@@ -14,7 +14,7 @@ for p = 1:ceq.nParentBlocks
     modFiles{p} = sprintf('module%d.mod', p);
 end
 
-% Write .mod files
+%% Write .mod files
 for p = 1:ceq.nParentBlocks
 
     % defaults
@@ -76,7 +76,7 @@ for p = 1:ceq.nParentBlocks
     end
 end
 
-% Write modules.txt
+%% Write modules.txt
 % Do this after creating .mod files, so .mod file duration can be set exactly.
 fid = fopen('modules.txt','w');
 fprintf(fid,'Total number of unique cores\n');
@@ -91,12 +91,13 @@ for p = 1:ceq.nParentBlocks
     rf = toppe.readmod(modFiles{p});
     dur = length(rf)*sysGE.raster*1e6;  % us
     dur = max(dur, round(ceil(b.blockDuration/sysGE.raster)*sysGE.raster*1e6)); % us
+    dur = dur + sysGE.psd_rf_wait*hasRF(p);  % conservative/lazy choice for now
     fprintf(fid,'%s\t%d\t%d\t%d\t-1\n', ...
         modFiles{p}, dur, hasRF(p), hasADC(p));    
 end
 fclose(fid);
 
-% Write scanloop.txt
+%% Write scanloop.txt
 toppe.write2loop('setup', sysGE, 'version', 6); 
 
 for n = 1:ceq.nMax
