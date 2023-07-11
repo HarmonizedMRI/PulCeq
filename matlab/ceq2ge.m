@@ -98,6 +98,12 @@ end
 fclose(fid);
 
 %% Write scanloop.txt
+% data frames (in P-file) are stored using indeces 'slice', 'echo', and 'view' 
+sl = 1;
+view = 1;
+echo = 0; 
+adcCount = 0;
+
 toppe.write2loop('setup', sysGE, 'version', 6); 
 
 for n = 1:ceq.nMax
@@ -126,7 +132,23 @@ for n = 1:ceq.nMax
     RFphase = ceq.loop(n, 4);   % rad
     RFoffset = ceq.loop(n, 5);  % Hz
 
-    slice = 1; echo = 1; view = 1;  % TODO
+    % set slice/echo/view indeces (if block is an acquisition block)
+    % view = 1, ..., system.maxView
+    % sl   = 1, ..., system.maxSlice
+    if hasADC(p)
+        view = mod(adcCount, sysGE.maxView) + 1;
+        sl   = floor(adcCount/sysGE.maxView) + 1;
+        if sl > sysGE.maxSlice;
+            error(sprintf('max number of slices ecxeeded (%d)', sysGE.maxSlice));
+        end
+        echo = floor(adcCount/(sysGE.maxView*sysGE.maxSlice));
+        if echo > sysGE.maxEcho
+            error(sprintf('max number of echoes ecxeeded (%d)', sysGE.maxEcho));
+        end
+        %fprintf('n: %d, view: %d, sl: %d, echo: %d\n', n, view, sl, echo);
+
+        adcCount = adcCount+1;
+    end
 
     ax = {'gx','gy','gz'};
     for idim = 1:length(ax)
@@ -147,8 +169,8 @@ for n = 1:ceq.nMax
         'RFphase',     RFphase, ...
         'DAQphase',    DAQphase, ...
         'RFoffset',    RFoffset, ...
-        'slice',       slice, ...
-        'echo',        echo, ...
+        'slice',       sl, ...
+        'echo',        echo+1, ...  % write2loop starts indexing at 1
         'view',        view, ...
         'dabmode',     'on', ...
         'textra',      0, ...  
