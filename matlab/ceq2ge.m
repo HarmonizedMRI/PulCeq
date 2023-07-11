@@ -107,11 +107,12 @@ adcCount = 0;
 toppe.write2loop('setup', sysGE, 'version', 6); 
 
 for n = 1:ceq.nMax
-   if ~mod(n, 2000) | n == ceq.nMax
-        for inb = 1:30
+    if ~mod(n, 2000) | n == ceq.nMax
+        msg = sprintf('\tblock %d/%d', n, ceq.nMax);
+        for ib = 1:strlength(msg)
             fprintf('\b');
         end
-        fprintf('Block %d/%d', n, ceq.nMax);
+        fprintf(msg);
     end
 
     i = ceq.loop(n, 1);   % block group ID
@@ -196,7 +197,7 @@ toppe.writecoresfile(blockGroups);
 % Create 'sequence stamp' file for TOPPE.
 % TODO: update plotseq to handle delay blocks (mod ID = 0)
 % This file is listed in line 6 of toppeN.entry
-%toppe.preflightcheck('toppeN.entry', 'seqstamp.txt', sysGE);
+toppe.preflightcheck('toppeN.entry', 'seqstamp.txt', sysGE);
 
 % Put TOPPE files in a .tar file (for convenience)
 system(sprintf('tar cf %s toppeN.entry seqstamp.txt modules.txt scanloop.txt cores.txt', ofname));
@@ -212,4 +213,5 @@ if ~verbose
     end
 end
 
+fprintf('\n');
 
