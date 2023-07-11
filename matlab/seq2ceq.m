@@ -52,11 +52,12 @@ end
 parentBlockIndex(1) = 1;  % first block is unique by definition
 
 for n = 1:ceq.nMax
-    if ~mod(n, 500) | n == ceq.nMax
-        for inb = 1:20
+    if ~mod(n, 2000) | n == ceq.nMax
+        msg = sprintf('\tblock %d/%d', n, ceq.nMax);
+        for ib = 1:strlength(msg)
             fprintf('\b');
         end
-        fprintf('Block %d/%d', n, ceq.nMax);
+        fprintf(msg);
     end
 
     issame = 0;
@@ -83,7 +84,6 @@ for n = 1:ceq.nMax
         parentBlockIDs(n) = I;
     end
 end
-fprintf('\n');
 
 ceq.nParentBlocks = length(parentBlockIndex);
 for p = 1:length(parentBlockIndex)
@@ -142,12 +142,6 @@ end
 currentCoreID = []; 
 blockGroupIDs = zeros(1,ceq.nMax);  % keep track of which core each block belongs to
 for n = 1:ceq.nMax
-    if ~mod(n, 500) | n == ceq.nMax
-        for inb = 1:20
-            fprintf('\b');
-        end
-        fprintf('Block %d/%d', n, ceq.nMax);
-    end
 
     b = seq.getBlock(n);
 
@@ -167,7 +161,6 @@ for n = 1:ceq.nMax
 
     blockGroupIDs(n) = currentCoreID;
 end
-fprintf('\n');
 
 ceq.nGroups = length(Cores);
 for i = 1:ceq.nGroups
@@ -189,3 +182,4 @@ for n = 1:ceq.nMax
     end
 end
 
+fprintf('\n');
