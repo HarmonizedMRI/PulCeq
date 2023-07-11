@@ -73,7 +73,9 @@ for n = 1:ceq.nMax
         IsSame(p) = compareblocks(seq, blockEvents(n,:), blockEvents(n2,:), n, n2);
     end
     if sum(IsSame) == 0
-        fprintf('Found new block on line %d\n', n);
+        if arg.verbose
+            fprintf('Found new block on line %d\n', n);
+        end
         parentBlockIndex(p+1) = n;  % found a unique block, so add it to list
         parentBlockIDs(n) = p+1;
     else
@@ -138,7 +140,7 @@ end
 
 %% Get block group definitions
 currentCoreID = []; 
-coreIDs = zeros(1,ceq.nMax);  % keep track of which core each block belongs to
+blockGroupIDs = zeros(1,ceq.nMax);  % keep track of which core each block belongs to
 for n = 1:ceq.nMax
     if ~mod(n, 500) | n == ceq.nMax
         for inb = 1:20
@@ -163,7 +165,7 @@ for n = 1:ceq.nMax
         blockIDs = [blockIDs parentBlockIDs(n)];
     end
 
-    coreIDs(n) = currentCoreID;
+    blockGroupIDs(n) = currentCoreID;
 end
 fprintf('\n');
 
@@ -181,9 +183,9 @@ for n = 1:ceq.nMax
     b = seq.getBlock(n);
     p = parentBlockIDs(n); 
     if p == 0  % delay block
-        ceq.loop(n,:) = getdynamics(b, coreIDs(n), p);
+        ceq.loop(n,:) = getdynamics(b, blockGroupIDs(n), p);
     else
-        ceq.loop(n,:) = getdynamics(b, coreIDs(n), p, ceq.parentBlocks{p});
+        ceq.loop(n,:) = getdynamics(b, blockGroupIDs(n), p, ceq.parentBlocks{p});
     end
 end
 
