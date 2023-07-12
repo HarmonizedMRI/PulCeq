@@ -2,7 +2,7 @@ function ceq = seq2ceq(seqarg, varargin)
 % function ceq = seq2ceq(seq)
 %
 % Convert a Pulseq file (http://pulseq.github.io/) to a PulCeq struct.
-% See github/HarmonizedMRI/PulCeq/.
+% See github/HarmonizedMRI/PulCeq/src/pulCeq.h
 %
 % Input
 %   seqarg     a seq object, or name of a .seq file
@@ -10,8 +10,10 @@ function ceq = seq2ceq(seqarg, varargin)
 % Output
 %   ceq        struct, similar to github/HarmonizedMRI/PulCeq/src/pulCeq.h
 
+
 %% parse inputs
-% Defaults
+
+% defaults
 arg.verbose = false;
 arg.debug = false;
 arg.nt      = [];
@@ -60,8 +62,6 @@ for n = 1:ceq.nMax
         fprintf(msg);
     end
 
-    issame = 0;
-
     % Pure delay blocks are handled separately
     b = seq.getBlock(n);
     if isdelayblock(b)
@@ -77,7 +77,7 @@ for n = 1:ceq.nMax
         if arg.verbose
             fprintf('Found new block on line %d\n', n);
         end
-        parentBlockIndex(p+1) = n;  % found a unique block, so add it to list
+        parentBlockIndex(p+1) = n;  % add new block to list
         parentBlockIDs(n) = p+1;
     else
         I = find(IsSame);
