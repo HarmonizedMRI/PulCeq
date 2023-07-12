@@ -7,7 +7,9 @@ if nargin < 4
     verbose = false;
 end
 
-gamma = 42576000;   % Hz/T
+gamma = sysGE.gamma;   % Hz/T
+
+raster = sysGE.raster*1e-6;   % sec
 
 % define .mod file names
 for p = 1:ceq.nParentBlocks
@@ -29,12 +31,12 @@ for p = 1:ceq.nParentBlocks
     % npre = number of 4us samples to discard at beginning of RF/ADC window
     % rfres = number of 4us samples in RF/ADC window
     if hasRF(p)
-        npre = ceil(b.rf.delay/sysGE.raster);
-        rfres = ceil(b.rf.shape_dur/sysGE.raster);
+        npre = ceil(b.rf.delay/raster);
+        rfres = ceil(b.rf.shape_dur/raster);
         b1ScalingFile = modFiles{p};
     elseif hasADC(p)
-        npre = ceil(b.adc.delay/sysGE.raster);
-        rfres = ceil(b.adc.numSamples*b.adc.dwell/sysGE.raster);
+        npre = ceil(b.adc.delay/raster);
+        rfres = ceil(b.adc.numSamples*b.adc.dwell/raster);
         readoutFile = modFiles{p};
     else
         npre = 0;
@@ -43,7 +45,7 @@ for p = 1:ceq.nParentBlocks
 
     % Interpolate waveforms and convert to Gauss and Gauss/cm
     if hasRF(p)
-        tge = sysGE.raster/2 : sysGE.raster : b.rf.shape_dur;
+        tge = raster/2 : raster : b.rf.shape_dur;
         rf = interp1(b.rf.t, b.rf.signal, tge, 'linear', 'extrap') / gamma * 1e4;  % Gauss
         rf = [zeros(npre,1); rf.'];
         if any(isnan(rf))
@@ -58,14 +60,14 @@ for p = 1:ceq.nParentBlocks
             isDelayBlock = false;
             if strcmp(g.type, 'grad')
                 % Arbitrary gradient
-                tge = sysGE.raster/2 : sysGE.raster : max(g.tt);
+                tge = raster/2 : raster : max(g.tt);
                 grad.(ax{1}) = interp1(g.tt, g.waveform, tge, 'linear', 'extrap') / gamma * 100;   % Gauss/cm
             else
                 % Convert trapezoid to arbitrary gradient
-                gtmp = [ linspace(0, 0, ceil(g.delay/sysGE.raster)) ...
-                    linspace(0, g.amplitude, ceil(g.riseTime/sysGE.raster)+1)  ...
-                    g.amplitude*ones(1, floor(g.flatTime/sysGE.raster)) ...
-                    linspace(g.amplitude, 0, ceil(g.fallTime/sysGE.raster)+1) ]';
+                gtmp = [ linspace(0, 0, ceil(g.delay/raster)) ...
+                    linspace(0, g.amplitude, ceil(g.riseTime/raster)+1)  ...
+                    g.amplitude*ones(1, floor(g.flatTime/raster)) ...
+                    linspace(g.amplitude, 0, ceil(g.fallTime/raster)+1) ]';
                 grad.(ax{1}) = gtmp / gamma * 100;   % Gauss/cm
             end
         end
@@ -92,8 +94,8 @@ for p = 1:ceq.nParentBlocks
         error('Block cannot contain both RF and ADC events');
     end
     rf = toppe.readmod(modFiles{p});
-    dur = length(rf)*sysGE.raster*1e6;  % us
-    dur = max(dur, round(ceil(b.blockDuration/sysGE.raster)*sysGE.raster*1e6)); % us
+    dur = length(rf)*raster*1e6;  % us
+    dur = max(dur, round(ceil(b.blockDuration/raster)*raster*1e6)); % us
     dur = dur + sysGE.psd_rf_wait*hasRF(p);  % conservative/lazy choice for now
     fprintf(fid,'%s\t%d\t%d\t%d\t-1\n', ...
         modFiles{p}, dur, hasRF(p), hasADC(p));    
