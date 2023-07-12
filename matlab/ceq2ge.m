@@ -44,8 +44,11 @@ for p = 1:ceq.nParentBlocks
     % Interpolate waveforms and convert to Gauss and Gauss/cm
     if hasRF(p)
         tge = sysGE.raster/2 : sysGE.raster : b.rf.shape_dur;
-        rf = interp1(b.rf.t, b.rf.signal, tge) / gamma * 1e4;  % Gauss
+        rf = interp1(b.rf.t, b.rf.signal, tge, 'linear', 'extrap') / gamma * 1e4;  % Gauss
         rf = [zeros(npre,1); rf.'];
+        if any(isnan(rf))
+            keyboard
+        end
         isDelayBlock = false;
     end
 
@@ -56,7 +59,7 @@ for p = 1:ceq.nParentBlocks
             if strcmp(g.type, 'grad')
                 % Arbitrary gradient
                 tge = sysGE.raster/2 : sysGE.raster : max(g.tt);
-                grad.(ax{1}) = interp1(g.tt, g.waveform, tge) / gamma * 100;   % Gauss/cm
+                grad.(ax{1}) = interp1(g.tt, g.waveform, tge, 'linear', 'extrap') / gamma * 100;   % Gauss/cm
             else
                 % Convert trapezoid to arbitrary gradient
                 gtmp = [ linspace(0, 0, ceil(g.delay/sysGE.raster)) ...
