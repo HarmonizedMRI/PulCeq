@@ -199,18 +199,18 @@ for i = 1:ceq.nGroups
 end
 toppe.writecoresfile(blockGroups);
 
-% Create 'sequence stamp' file for TOPPE.
+%% Create 'sequence stamp' file for TOPPE.
 % TODO: update plotseq to handle delay blocks (mod ID = 0)
 % This file is listed in line 6 of toppeN.entry
 toppe.preflightcheck('toppeN.entry', 'seqstamp.txt', sysGE);
 
-% Put TOPPE files in a .tar file (for convenience)
+%% Put TOPPE files in a .tar file (for convenience)
 system(sprintf('tar cf %s toppeN.entry seqstamp.txt modules.txt scanloop.txt cores.txt', ofname));
 for p = 1:ceq.nParentBlocks
     system(sprintf('tar rf %s %s', ofname, modFiles{p}));
 end
 
-% clean up (unless in verbose mode)
+%% clean up (unless in verbose mode)
 if ~verbose
     system('rm toppeN.entry seqstamp.txt modules.txt scanloop.txt cores.txt');
     for p = 1:ceq.nParentBlocks
