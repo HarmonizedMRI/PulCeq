@@ -138,35 +138,35 @@ for p = 1:ceq.nParentBlocks
 end
 
 
-%% Get block group definitions
-currentCoreID = []; 
-blockGroupIDs = zeros(1,ceq.nMax);  % keep track of which core each block belongs to
+%% Get segment (block group) definitions
+currentSegmentID = []; 
+blockGroupIDs = zeros(1,ceq.nMax);  % keep track of which segment each block belongs to
 for n = 1:ceq.nMax
 
     b = seq.getBlock(n);
 
     if isfield(b, 'label')
-        % wrap up the current core
-        if ~isempty(currentCoreID)  
-            Cores{currentCoreID} = [currentCoreID length(blockIDs) blockIDs];
+        % wrap up the current segment
+        if ~isempty(currentSegmentID)  
+            Segments{currentSegmentID} = [currentSegmentID length(blockIDs) blockIDs];
         end
 
-        % start new core
-        currentCoreID = b.label.value;
+        % start new segment
+        currentSegmentID = b.label.value;
         blockIDs = parentBlockIDs(n); 
     else
         % add block to this block group
         blockIDs = [blockIDs parentBlockIDs(n)];
     end
 
-    blockGroupIDs(n) = currentCoreID;
+    blockGroupIDs(n) = currentSegmentID;
 end
 
-ceq.nGroups = length(Cores);
+ceq.nGroups = length(Segments);
 for i = 1:ceq.nGroups
-    ceq.groups(i).groupID = Cores{i}(1);
-    ceq.groups(i).nBlocksInGroup = Cores{i}(2);
-    ceq.groups(i).blockIDs = Cores{i}(3:end);
+    ceq.groups(i).groupID = Segments{i}(1);
+    ceq.groups(i).nBlocksInGroup = Segments{i}(2);
+    ceq.groups(i).blockIDs = Segments{i}(3:end);
 end
 
 
