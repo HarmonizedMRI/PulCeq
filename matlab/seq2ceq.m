@@ -15,7 +15,6 @@ function ceq = seq2ceq(seqarg, varargin)
 
 % defaults
 arg.verbose = false;
-arg.debug = false;
 arg.nt      = [];
 
 % Substitute specified system values as appropriate (from MIRT toolbox)
