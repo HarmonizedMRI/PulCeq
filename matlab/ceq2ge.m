@@ -94,7 +94,7 @@ for p = 1:ceq.nParentBlocks
         error('Block cannot contain both RF and ADC events');
     end
     rf = toppe.readmod(modFiles{p});
-    dur = length(rf)*raster*1e6  % us
+    dur = length(rf)*raster*1e6;  % us
     dur = max(dur, round(ceil(b.blockDuration/raster)*raster*1e6)); % us
     dur = dur + sysGE.psd_rf_wait*hasRF(p);  % conservative/lazy choice for now
     fprintf(fid,'%s\t%d\t%d\t%d\t-1\n', ...
