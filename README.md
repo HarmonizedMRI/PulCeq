@@ -1,7 +1,7 @@
 
 ![logo](doc/logo.svg)
 
-**[NB! We're just getting started -- current development is happening in the 'dev' branch]**
+THIS REPO IS IN DEVELOPMENT
 
 A C representation of arbitrary magnetic resonance pulse sequences, 
 based on a "scaled parent block" description.
