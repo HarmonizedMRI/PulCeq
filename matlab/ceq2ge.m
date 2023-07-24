@@ -111,13 +111,15 @@ adcCount = 0;
 
 toppe.write2loop('setup', sysGE, 'version', 6); 
 
+fprintf('\nWriting block %d/%d', 1, ceq.nMax); prev_n = 1; % Progress update trackers
 for n = 1:ceq.nMax
-    if ~mod(n, 2000) | n == ceq.nMax
-        msg = sprintf('\tblock %d/%d', n, ceq.nMax);
-        for ib = 1:strlength(msg)
+    if ~mod(n, 2000) || n == ceq.nMax
+        for ib = 1:strlength(sprintf('Writing block %d/%d', prev_n, ceq.nMax))
             fprintf('\b');
         end
-        fprintf(msg);
+        prev_n = n;
+        fprintf(sprintf('Writing block %d/%d', n, ceq.nMax));
+        if n == ceq.nMax, fprintf('\n'), end
     end
 
     i = ceq.loop(n, 1);   % block group ID
