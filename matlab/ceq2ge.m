@@ -138,7 +138,7 @@ for n = 1:ceq.nMax
         RFamplitude = 0;
     end
     RFphase = ceq.loop(n, 4);   % rad
-    RFoffset = ceq.loop(n, 5);  % Hz
+    RFoffset = round(ceq.loop(n, 5));  % Hz
 
     % set slice/echo/view indeces (if block is an acquisition block)
     % view = 1, ..., system.maxView
