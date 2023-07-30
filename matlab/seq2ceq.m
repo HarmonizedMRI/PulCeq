@@ -148,7 +148,7 @@ for n = 1:ceq.nMax
 
     if isfield(b, 'label')
         % wrap up the current segment
-        if ~isempty(currentSegmentID)  
+        if ~isempty(currentSegmentID) | n == ceq.nMax
             Segments{currentSegmentID} = [currentSegmentID length(blockIDs) blockIDs];
         end
 
