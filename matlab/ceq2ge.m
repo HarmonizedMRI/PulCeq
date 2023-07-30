@@ -28,51 +28,69 @@ for p = 1:ceq.nParentBlocks
     hasRF(p) = ~isempty(b.rf);
     hasADC(p) = ~isempty(b.adc);
 
+    % number of 4us samples in block 
+    n = round(b.blockDuration/raster);
+
+    % defaults
     % npre = number of 4us samples to discard at beginning of RF/ADC window
     % rfres = number of 4us samples in RF/ADC window
-    if hasRF(p)
-        npre = ceil(b.rf.delay/raster);
-        rfres = ceil(b.rf.shape_dur/raster);
-        b1ScalingFile = modFiles{p};
-    elseif hasADC(p)
-        npre = ceil(b.adc.delay/raster);
-        rfres = ceil(b.adc.numSamples*b.adc.dwell/raster);
-        readoutFile = modFiles{p};
-    else
-        npre = 0;
-    end
-    nChop = [npre 0];
+    npre = 0;
+    nChopEnd = 0;   
+    rfres = [];
 
-    % Interpolate waveforms and convert to Gauss and Gauss/cm
+    % Interpolate RF waveforms and convert to Gauss
     if hasRF(p)
+        b1ScalingFile = modFiles{p};
+
         tge = raster/2 : raster : b.rf.shape_dur;
         rf = interp1(b.rf.t, b.rf.signal, tge, 'linear', 'extrap') / gamma * 1e4;  % Gauss
+
+        npre = round(b.rf.delay/raster);
+        rfres = length(rf);
+
         rf = [zeros(npre,1); rf.'];
-        if any(isnan(rf))
-            keyboard
-        end
+        
         isDelayBlock = false;
     end
 
+    % Interpolate gradient waveforms and convert to Gauss/cm
     for ax = {'x','y','z'}
         g = b.(['g' ax{1}]);
         if ~isempty(g)
             isDelayBlock = false;
             if strcmp(g.type, 'grad')
                 % Arbitrary gradient
-                tge = raster/2 : raster : max(g.tt);
-                grad.(ax{1}) = interp1(g.tt, g.waveform, tge, 'linear', 'extrap') / gamma * 100;   % Gauss/cm
+                delay = zeros(1, round(g.delay/raster));
+                tge = 0 : raster : (ceil(dur/raster)*raster);
+                tmp = interp1(g.tt, g.waveform, tge, 'linear', 'extrap') / gamma * 100;   % Gauss/cm
+                grad.(ax{1}) = [delay tmp];
             else
-                % Convert trapezoid to arbitrary gradient
-                gtmp = [ linspace(0, 0, ceil(g.delay/raster)) ...
-                    linspace(0, g.amplitude, ceil(g.riseTime/raster)+1)  ...
-                    g.amplitude*ones(1, floor(g.flatTime/raster)) ...
-                    linspace(g.amplitude, 0, ceil(g.fallTime/raster)+1) ]';
-                grad.(ax{1}) = gtmp / gamma * 100;   % Gauss/cm
+                % Add delay and convert trapezoid to arbitrary gradient
+                delay = zeros(1, round(g.delay/raster));
+                dur = g.riseTime+g.flatTime+g.fallTime;
+                tge = 0 : raster : (ceil(dur/raster)*raster);
+                tmp = interp1([0 g.riseTime g.riseTime+g.flatTime dur], ...
+                    [0 g.amplitude g.amplitude 0], tge, 'linear', 'extrap');
+                grad.(ax{1}) = [delay tmp]/ gamma * 100;   % Gauss/cm
             end
         end
     end
-    
+
+    % ADC
+    if hasADC(p)
+        npre = round(b.adc.delay/raster);
+        rfres = round(b.adc.numSamples*b.adc.dwell/raster);
+        readoutFile = modFiles{p};
+    end
+
+    % Set nChop, which is the number of samples to trim from beginning and end of RF/ADC window
+    n = max([length(rf), length(grad.x), length(grad.y), length(grad.z)]);  % number of 4us samples in module
+    if isempty(rfres)
+        nChop = [0 0];
+    else
+        nChop = [npre n-npre-rfres];   % trim this many samples from beginning and end of RF/ADC window
+    end
+
     % write .mod file
     if ~isDelayBlock 
         toppe.writemod(sysGE, 'ofname', modFiles{p}, ...
