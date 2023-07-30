@@ -71,6 +71,7 @@ for p = 1:ceq.nParentBlocks
                 tge = 0 : raster : (ceil(dur/raster)*raster);
                 tmp = interp1([0 g.riseTime g.riseTime+g.flatTime dur], ...
                     [0 g.amplitude g.amplitude 0], tge, 'linear', 'extrap');
+                tmp(end) = 0;   % can be non-zero due to extrapolation
                 grad.(ax{1}) = [delay tmp]/ gamma * 100;   % Gauss/cm
             end
         end
