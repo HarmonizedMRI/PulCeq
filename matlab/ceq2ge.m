@@ -239,5 +239,5 @@ if ~verbose
     end
 end
 
-fprintf('\n');
+fprintf('Sequence file %s ready for execution on GE scanners\n', ofname);
 
