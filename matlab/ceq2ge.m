@@ -10,6 +10,7 @@ end
 gamma = sysGE.gamma;   % Hz/T
 
 raster = sysGE.raster*1e-6;   % sec
+rasterUs = sysGE.raster;
 
 % define .mod file names
 for p = 1:ceq.nParentBlocks
@@ -55,25 +56,48 @@ for p = 1:ceq.nParentBlocks
 
     % Interpolate gradient waveforms and convert to Gauss/cm
     for ax = {'x','y','z'}
+
         g = b.(['g' ax{1}]);
+
         if ~isempty(g)
+
             isDelayBlock = false;
+
+            delayUs = round(g.delay*1e6);
+            delay = zeros(1, max(1, round(delayUs/rasterUs)));  % at least one zero 
+
             if strcmp(g.type, 'grad')
                 % Arbitrary gradient
-                delay = zeros(1, round(g.delay/raster));
-                tge = 0 : raster : (ceil(dur/raster)*raster);
-                tmp = interp1(g.tt, g.waveform, tge, 'linear', 'extrap') / gamma * 100;   % Gauss/cm
-                grad.(ax{1}) = [delay tmp];
+                ttUs = round(g.tt*1e6);
+                durUs = ttUs(end);
+                tge = rasterUs : rasterUs : (round(durUs/rasterUs)*rasterUs);
+                tmp = interp1(ttUs, g.waveform, tge);
             else
                 % Add delay and convert trapezoid to arbitrary gradient
-                delay = zeros(1, round(g.delay/raster));
-                dur = g.riseTime+g.flatTime+g.fallTime;
-                tge = 0 : raster : (ceil(dur/raster)*raster);
-                tmp = interp1([0 g.riseTime g.riseTime+g.flatTime dur], ...
-                    [0 g.amplitude g.amplitude 0], tge, 'linear', 'extrap');
-                tmp(end) = 0;   % can be non-zero due to extrapolation
-                grad.(ax{1}) = [delay tmp]/ gamma * 100;   % Gauss/cm
+                % Convert times to us to avoid numerical precision error
+                riseTimeUs = round(g.riseTime*1e6);
+                flatTimeUs = round(g.flatTime*1e6);
+                fallTimeUs = round(g.fallTime*1e6);
+                durUs = riseTimeUs + flatTimeUs + fallTimeUs;
+                tge = rasterUs : rasterUs : (round(durUs/rasterUs)*rasterUs);
+                tmp = interp1([0 riseTimeUs riseTimeUs+flatTimeUs durUs], ...
+                    [0 g.amplitude g.amplitude 0], tge); 
             end
+
+            % If tge(end) > dur, last point is NaN.
+            % dur is always an even number of us, so tge(end)-dur is either
+            % 0 or 2us=raster/2
+            if isnan(tmp(end))
+                df = diff(tmp);
+                tmp(end) = tmp(end-1) + df(end-1);
+                if abs(tmp(end)+tmp(end-1)) < abs(df(end-1))  % last two point straddle zero
+                    tmp(end) = 0; 
+                end
+            end
+            if any(isnan(tmp))
+                error('NaN in gradient trapezoid waveform after interpolation');
+            end
+            grad.(ax{1}) = [delay tmp]/ gamma * 100;   % Gauss/cm
         end
     end
 
@@ -239,5 +263,5 @@ if ~verbose
     end
 end
 
-fprintf('\n');
+fprintf('Sequence file %s ready for execution on GE scanners\n', ofname);
 
