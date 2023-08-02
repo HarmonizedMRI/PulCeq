@@ -15,7 +15,7 @@ function ceq = seq2ceq(seqarg, varargin)
 
 % defaults
 arg.verbose = false;
-arg.nt      = [];
+arg.nMax    = [];
 
 % Substitute specified system values as appropriate (from MIRT toolbox)
 arg = vararg_pair(arg, varargin);
@@ -37,10 +37,10 @@ blockEvents = cell2mat(seq.blockEvents);
 blockEvents = reshape(blockEvents, [nEvents, length(seq.blockEvents)]).'; 
 
 % number of blocks (rows in .seq file) to step through
-if isempty(arg.nt)
+if isempty(arg.nMax)
     ceq.nMax = size(blockEvents, 1);
 else
-    ceq.nMax = arg.nt;
+    ceq.nMax = arg.nMax;
 end
 
 
@@ -54,7 +54,7 @@ parentBlockIndex(1) = 1;  % first block is unique by definition
 
 fprintf('\nGetting block %d/%d', 1, ceq.nMax); prev_n = 1; % Progress update trackers
 for n = 1:ceq.nMax
-    if ~mod(n, 2000) || n == ceq.nMax
+    if ~mod(n, 500) || n == ceq.nMax
         for ib = 1:strlength(sprintf('Getting block %d/%d', prev_n, ceq.nMax))
             fprintf('\b');
         end
@@ -76,7 +76,7 @@ for n = 1:ceq.nMax
     end
     if sum(IsSame) == 0
         if arg.verbose
-            fprintf('Found new block on line %d\n', n);
+            fprintf('\nFound new block on line %d\n', n);
         end
         parentBlockIndex(p+1) = n;  % add new block to list
         parentBlockIDs(n) = p+1;
@@ -138,7 +138,6 @@ for p = 1:ceq.nParentBlocks
     end
 end
 
-
 %% Get segment (block group) definitions
 currentSegmentID = []; 
 blockGroupIDs = zeros(1,ceq.nMax);  % keep track of which segment each block belongs to
@@ -163,12 +162,22 @@ for n = 1:ceq.nMax
     blockGroupIDs(n) = currentSegmentID;
 end
 
-ceq.nGroups = length(Segments);
-for i = 1:ceq.nGroups
-    ceq.groups(i).groupID = Segments{i}(1);
-    ceq.groups(i).nBlocksInGroup = Segments{i}(2);
-    ceq.groups(i).blockIDs = Segments{i}(3:end);
+% In the above, the Segments array index equals the Segment ID specified in the .seq file.
+% Now we squash the Segments array and redefine the Segment IDs accordingly;
+% this is needed since the interpreter assumes that segment ID = index into group array.
+% Also need to update blockGroupIDs array accordingly
+iSeg = 1;    % segment array index
+for segmentID = 1:length(Segments)
+    if ~isempty(Segments{segmentID})
+        segmentID2Ind(segmentID) = iSeg;
+        ceq.groups(iSeg).groupID = iSeg;
+        ceq.groups(iSeg).nBlocksInGroup = Segments{segmentID}(2);
+        ceq.groups(iSeg).blockIDs = Segments{segmentID}(3:end);
+        iSeg = iSeg + 1;
+    end
 end
+
+ceq.nGroups = length(ceq.groups);
 
 
 %% Get dynamic scan information
@@ -177,9 +186,9 @@ for n = 1:ceq.nMax
     b = seq.getBlock(n);
     p = parentBlockIDs(n); 
     if p == 0  % delay block
-        ceq.loop(n,:) = getdynamics(b, blockGroupIDs(n), p);
+        ceq.loop(n,:) = getdynamics(b, segmentID2Ind(blockGroupIDs(n)), p);
     else
-        ceq.loop(n,:) = getdynamics(b, blockGroupIDs(n), p, ceq.parentBlocks{p});
+        ceq.loop(n,:) = getdynamics(b, segmentID2Ind(blockGroupIDs(n)), p, ceq.parentBlocks{p});
     end
 end
 
