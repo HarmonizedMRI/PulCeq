@@ -76,7 +76,7 @@ for n = 1:ceq.nMax
     end
     if sum(IsSame) == 0
         if arg.verbose
-            fprintf('Found new block on line %d\n', n);
+            fprintf('\nFound new block on line %d\n', n);
         end
         parentBlockIndex(p+1) = n;  % add new block to list
         parentBlockIDs(n) = p+1;
