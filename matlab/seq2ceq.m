@@ -15,7 +15,7 @@ function ceq = seq2ceq(seqarg, varargin)
 
 % defaults
 arg.verbose = false;
-arg.nt      = [];
+arg.nMax    = [];
 
 % Substitute specified system values as appropriate (from MIRT toolbox)
 arg = vararg_pair(arg, varargin);
@@ -37,10 +37,10 @@ blockEvents = cell2mat(seq.blockEvents);
 blockEvents = reshape(blockEvents, [nEvents, length(seq.blockEvents)]).'; 
 
 % number of blocks (rows in .seq file) to step through
-if isempty(arg.nt)
+if isempty(arg.nMax)
     ceq.nMax = size(blockEvents, 1);
 else
-    ceq.nMax = arg.nt;
+    ceq.nMax = arg.nMax;
 end
 
 
