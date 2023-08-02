@@ -80,8 +80,13 @@ for p = 1:ceq.nParentBlocks
                 fallTimeUs = round(g.fallTime*1e6);
                 durUs = riseTimeUs + flatTimeUs + fallTimeUs;
                 tge = rasterUs : rasterUs : (round(durUs/rasterUs)*rasterUs);
-                tmp = interp1([0 riseTimeUs riseTimeUs+flatTimeUs durUs], ...
-                    [0 g.amplitude g.amplitude 0], tge); 
+                if flatTimeUs > 0
+                    tmp = interp1([0 riseTimeUs riseTimeUs+flatTimeUs durUs], ...
+                        [0 g.amplitude g.amplitude 0], tge); 
+                else
+                    tmp = interp1([0 riseTimeUs durUs], ...
+                        [0 g.amplitude 0], tge); 
+                end
             end
 
             % If tge(end) > dur, last point is NaN.
