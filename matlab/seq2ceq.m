@@ -162,19 +162,26 @@ for n = 1:ceq.nMax
     blockGroupIDs(n) = currentSegmentID;
 end
 
-% In the above, the Segments array index equals the Segment ID specified in the .seq file.
-% Now we squash the Segments array and redefine the Segment IDs accordingly;
-% this is needed since the interpreter assumes that segment ID = index into group array.
-% Also need to update blockGroupIDs array accordingly
-iSeg = 1;    % segment array index
-for segmentID = 1:length(Segments)
-    if ~isempty(Segments{segmentID})
-        segmentID2Ind(segmentID) = iSeg;
-        ceq.groups(iSeg).groupID = iSeg;
-        ceq.groups(iSeg).nBlocksInGroup = Segments{segmentID}(2);
-        ceq.groups(iSeg).blockIDs = Segments{segmentID}(3:end);
-        iSeg = iSeg + 1;
+%currentSegmentID = [];  
+if ~isempty(currentSegmentID)
+    % In the above, the Segments array index equals the Segment ID specified in the .seq file.
+    % Now we squash the Segments array and redefine the Segment IDs accordingly;
+    % this is needed since the interpreter assumes that segment ID = index into group array.
+    % Also need to update blockGroupIDs array accordingly
+    iSeg = 1;    % segment array index
+    for segmentID = 1:length(Segments)
+        if ~isempty(Segments{segmentID})
+            segmentID2Ind(segmentID) = iSeg;
+            ceq.groups(iSeg).groupID = iSeg;
+            ceq.groups(iSeg).nBlocksInGroup = Segments{segmentID}(2);
+            ceq.groups(iSeg).blockIDs = Segments{segmentID}(3:end);
+            iSeg = iSeg + 1;
+        end
     end
+else
+    % .seq file does not contain segment definitions.
+    % Will be converted to TOPPE v5 in ceq2ge.m
+    ceq.groups = [];
 end
 
 ceq.nGroups = length(ceq.groups);
@@ -185,10 +192,18 @@ ceq.loop = zeros(ceq.nMax, 10);
 for n = 1:ceq.nMax
     b = seq.getBlock(n);
     p = parentBlockIDs(n); 
-    if p == 0  % delay block
-        ceq.loop(n,:) = getdynamics(b, segmentID2Ind(blockGroupIDs(n)), p);
+    if ~isempty(currentSegmentID)
+        if p == 0  % delay block
+            ceq.loop(n,:) = getdynamics(b, segmentID2Ind(blockGroupIDs(n)), p);
+        else
+            ceq.loop(n,:) = getdynamics(b, segmentID2Ind(blockGroupIDs(n)), p, ceq.parentBlocks{p});
+        end
     else
-        ceq.loop(n,:) = getdynamics(b, segmentID2Ind(blockGroupIDs(n)), p, ceq.parentBlocks{p});
+        if p == 0 
+            ceq.loop(n,:) = getdynamics(b, 0, p);
+        else
+            ceq.loop(n,:) = getdynamics(b, 0, p, ceq.parentBlocks{p});
+        end
     end
 end
 

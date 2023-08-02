@@ -150,6 +150,17 @@ for p = 1:ceq.nParentBlocks
 end
 fclose(fid);
 
+%% write block group file (cores.txt) and determine TOPPE version
+if ceq.nGroups > 0
+    toppeVersion = 6;
+    for i = 1:ceq.nGroups
+        blockGroups{i} = ceq.groups(i).blockIDs;
+    end
+    toppe.writecoresfile(blockGroups);
+else
+    toppeVersion = 5;
+end
+
 %% Write scanloop.txt
 % data frames (in P-file) are stored using indeces 'slice', 'echo', and 'view' 
 sl = 1;
@@ -157,7 +168,7 @@ view = 1;
 echo = 0; 
 adcCount = 0;
 
-toppe.write2loop('setup', sysGE, 'version', 6); 
+toppe.write2loop('setup', sysGE, 'version', toppeVersion); 
 
 fprintf('\nWriting block %d/%d', 1, ceq.nMax); prev_n = 1; % Progress update trackers
 for n = 1:ceq.nMax
@@ -242,12 +253,6 @@ toppe.writeentryfile('toppeN.entry', ...
     'filePath', '/usr/g/research/pulseq/v6/seq2ge/', ...
     'b1ScalingFile', b1ScalingFile, ...
     'readoutFile', readoutFile);
-
-% write block group file (cores.txt)
-for i = 1:ceq.nGroups
-    blockGroups{i} = ceq.groups(i).blockIDs;
-end
-toppe.writecoresfile(blockGroups);
 
 %% Create 'sequence stamp' file for TOPPE.
 % TODO: update plotseq to handle delay blocks (mod ID = 0)
