@@ -54,7 +54,7 @@ parentBlockIndex(1) = 1;  % first block is unique by definition
 
 fprintf('\nGetting block %d/%d', 1, ceq.nMax); prev_n = 1; % Progress update trackers
 for n = 1:ceq.nMax
-    if ~mod(n, 2000) || n == ceq.nMax
+    if ~mod(n, 500) || n == ceq.nMax
         for ib = 1:strlength(sprintf('Getting block %d/%d', prev_n, ceq.nMax))
             fprintf('\b');
         end
