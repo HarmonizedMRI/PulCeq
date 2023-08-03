@@ -1,4 +1,4 @@
-function loop = getdynamics(block, blockGroupID, parentBlockID, parentBlock)
+function loop = getdynamics(block, segmentID, parentBlockID, parentBlock)
 % Return vector containing waveform amplitudes, RF/ADC phase, etc,
 % for a Pulseq block, in physical (Pulseq) units.
 
@@ -40,5 +40,5 @@ if ~isempty(block.adc)
     recphs = block.adc.phaseOffset;
 end
 
-loop = [blockGroupID parentBlockID rfamp rfphs rffreq amp.gx amp.gy amp.gz recphs block.blockDuration];
+loop = [segmentID parentBlockID rfamp rfphs rffreq amp.gx amp.gy amp.gz recphs block.blockDuration];
     

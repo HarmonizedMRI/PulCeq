@@ -1,11 +1,15 @@
-function ceq2ge(ceq, sysGE, ofname, verbose)
+function ceq2ge(ceq, sysGE, ofname, varargin)
+% function ceq2ge(ceq, sysGE, ofname, varargin)
 %
 % Write a Ceq struct to a set of files that can be executed
 % on GE scanners using the TOPPE interpreter (v6)
 
-if nargin < 4
-    verbose = false;
-end
+% defaults
+arg.verbose = false;
+arg.ignoreTrigger = false;
+
+% Substitute specified system values as appropriate (from MIRT toolbox)
+arg = vararg_pair(arg, varargin);
 
 gamma = sysGE.gamma;   % Hz/T
 
@@ -69,9 +73,10 @@ for p = 1:ceq.nParentBlocks
             if strcmp(g.type, 'grad')
                 % Arbitrary gradient
                 ttUs = round(g.tt*1e6);
-                durUs = ttUs(end);
-                tge = rasterUs : rasterUs : (round(durUs/rasterUs)*rasterUs);
-                tmp = interp1(ttUs, g.waveform, tge);
+                seqRasterUs = ttUs(2)-ttUs(1);  % gradient raster time in Pulseq block
+                durUs = ttUs(end) + seqRasterUs/2; 
+                tge = 0 : rasterUs : (round(durUs/rasterUs)*rasterUs);
+                tmp = interp1(ttUs, g.waveform, tge, 'linear', 'extrap');
             else
                 % Add delay and convert trapezoid to arbitrary gradient
                 % Convert times to us to avoid numerical precision error
@@ -89,18 +94,23 @@ for p = 1:ceq.nParentBlocks
                 end
             end
 
-            % If tge(end) > dur, last point is NaN.
+            % If tge starts/ends outside of 
             % dur is always an even number of us, so tge(end)-dur is either
             % 0 or 2us=raster/2
             if isnan(tmp(end))
                 df = diff(tmp);
+                tmp(1) = tmp(2) - df(1);
+                if abs(tmp(1)+tmp(2)) < abs(df(1))  % first two points straddle zero
+                    tmp(1) = 0; 
+                end
                 tmp(end) = tmp(end-1) + df(end-1);
                 if abs(tmp(end)+tmp(end-1)) < abs(df(end-1))  % last two point straddle zero
                     tmp(end) = 0; 
                 end
             end
             if any(isnan(tmp))
-                error('NaN in gradient trapezoid waveform after interpolation');
+                msg = sprintf('NaN in gradient trapezoid waveform after interpolation (parent block %d)', p);
+                error(msg);
             end
             grad.(ax{1}) = [delay tmp]/ gamma * 100;   % Gauss/cm
         end
@@ -138,17 +148,42 @@ fprintf(fid,'fname dur(us) hasRF hasADC trigpos\n');
 
 for p = 1:ceq.nParentBlocks
     b = ceq.parentBlocks{p};
+
     if (hasRF(p) & hasADC(p))
         error('Block cannot contain both RF and ADC events');
     end
+
+    % trigger out
+    if isfield(b, 'trig') & ~arg.ignoreTrigger
+        if b.trig.delay < 100e-6
+            warning('Requested trigger time too short. Setting to 100us');
+            trigpos = 100;  % us
+        else
+            trigpos = round(b.trig.delay*1e6);   % us
+        end
+    else
+        trigpos = -1;    % no trigger
+    end
+
     rf = toppe.readmod(modFiles{p});
     dur = length(rf)*raster*1e6;  % us
     dur = max(dur, round(ceil(b.blockDuration/raster)*raster*1e6)); % us
     dur = dur + sysGE.psd_rf_wait*hasRF(p);  % conservative/lazy choice for now
-    fprintf(fid,'%s\t%d\t%d\t%d\t-1\n', ...
-        modFiles{p}, round(dur), hasRF(p), hasADC(p));    
+    fprintf(fid,'%s\t%d\t%d\t%d\t%d\n', ...
+        modFiles{p}, round(dur), hasRF(p), hasADC(p), trigpos);    
 end
 fclose(fid);
+
+%% write block group file (cores.txt) and determine TOPPE version
+if ceq.nGroups > 0
+    toppeVersion = 6;
+    for i = 1:ceq.nGroups
+        blockGroups{i} = ceq.groups(i).blockIDs;
+    end
+    toppe.writecoresfile(blockGroups);
+else
+    toppeVersion = 5;
+end
 
 %% Write scanloop.txt
 % data frames (in P-file) are stored using indeces 'slice', 'echo', and 'view' 
@@ -157,7 +192,7 @@ view = 1;
 echo = 0; 
 adcCount = 0;
 
-toppe.write2loop('setup', sysGE, 'version', 6); 
+toppe.write2loop('setup', sysGE, 'version', toppeVersion); 
 
 fprintf('\nWriting block %d/%d', 1, ceq.nMax); prev_n = 1; % Progress update trackers
 for n = 1:ceq.nMax
@@ -215,9 +250,11 @@ for n = 1:ceq.nMax
         end
     end
 
-    %rfamp rfphs rffreq amp.gx amp.gy amp.gz recphs];
+    % [rfamp rfphs rffreq amp.gx amp.gy amp.gz recphs]
 
     DAQphase = ceq.loop(n, 9);
+
+    trigout = 1 * isfield(ceq.parentBlocks{p}, 'trig');
 
     toppe.write2loop(modFiles{p}, sysGE, ...
         'Gamplitude',  [amp.gx amp.gy amp.gz]', ...
@@ -231,6 +268,7 @@ for n = 1:ceq.nMax
         'dabmode',     'on', ...
         'textra',      0, ...  
         'waveform',    1, ...
+        'trigout',     trigout, ...
         'core', i);
 
 end
@@ -243,26 +281,28 @@ toppe.writeentryfile('toppeN.entry', ...
     'b1ScalingFile', b1ScalingFile, ...
     'readoutFile', readoutFile);
 
-% write block group file (cores.txt)
-for i = 1:ceq.nGroups
-    blockGroups{i} = ceq.groups(i).blockIDs;
-end
-toppe.writecoresfile(blockGroups);
-
 %% Create 'sequence stamp' file for TOPPE.
 % TODO: update plotseq to handle delay blocks (mod ID = 0)
 % This file is listed in line 6 of toppeN.entry
 toppe.preflightcheck('toppeN.entry', 'seqstamp.txt', sysGE);
 
 %% Put TOPPE files in a .tar file (for convenience)
-system(sprintf('tar cf %s toppeN.entry seqstamp.txt modules.txt scanloop.txt cores.txt', ofname));
+if toppeVersion > 5
+    system(sprintf('tar cf %s toppeN.entry seqstamp.txt modules.txt scanloop.txt cores.txt', ofname));
+else
+    system(sprintf('tar cf %s toppeN.entry seqstamp.txt modules.txt scanloop.txt', ofname));
+end
 for p = 1:ceq.nParentBlocks
     system(sprintf('tar rf %s %s', ofname, modFiles{p}));
 end
 
 %% clean up (unless in verbose mode)
-if ~verbose
-    system('rm toppeN.entry seqstamp.txt modules.txt scanloop.txt cores.txt');
+if ~arg.verbose
+    if toppeVersion > 5
+        system('rm toppeN.entry seqstamp.txt modules.txt scanloop.txt cores.txt');
+    else
+        system('rm toppeN.entry seqstamp.txt modules.txt scanloop.txt');
+    end
     for p = 1:ceq.nParentBlocks
         system(sprintf('rm %s', modFiles{p}));
     end

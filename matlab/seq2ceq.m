@@ -16,6 +16,7 @@ function ceq = seq2ceq(seqarg, varargin)
 % defaults
 arg.verbose = false;
 arg.nMax    = [];
+arg.ignoreSegmentLabels = false; % Don't define segments using the EXT column
 
 % Substitute specified system values as appropriate (from MIRT toolbox)
 arg = vararg_pair(arg, varargin);
@@ -132,48 +133,75 @@ for p = 1:ceq.nParentBlocks
             if strcmp(g.type, 'trap')
                 ceq.parentBlocks{p}.(ax{1}).amplitude = b.amp.(ax{1});
             else
-                ceq.parentBlocks{p}.(ax{1}).waveform = b.(ax{1}).waveform/max(abs(b.(ax{1}).waveform))*b.amp.(ax{1});
+                if max(abs(b.(ax{1}).waveform)) > 0
+                    ceq.parentBlocks{p}.(ax{1}).waveform = b.(ax{1}).waveform/max(abs(b.(ax{1}).waveform))*b.amp.(ax{1});
+                end
             end
         end
     end
 end
 
 %% Get segment (block group) definitions
+% Define the following:
+%  ceq.groups
+%  blockGroupIDs: length-n vector containing segment IDs
 currentSegmentID = []; 
-blockGroupIDs = zeros(1,ceq.nMax);  % keep track of which segment each block belongs to
-for n = 1:ceq.nMax
+if ~arg.ignoreSegmentLabels
+    blockGroupIDs = zeros(1,ceq.nMax);  % keep track of which segment each block belongs to
+    for n = 1:ceq.nMax
 
-    b = seq.getBlock(n);
+        b = seq.getBlock(n);
 
-    if isfield(b, 'label')
-        % wrap up the current segment
-        if ~isempty(currentSegmentID) | n == ceq.nMax
-            Segments{currentSegmentID} = [currentSegmentID length(blockIDs) blockIDs];
+        if isfield(b, 'label')
+            % wrap up the current segment
+            if ~isempty(currentSegmentID) | n == ceq.nMax
+                Segments{currentSegmentID} = [currentSegmentID length(blockIDs) blockIDs];
+            end
+
+            % start new segment
+            currentSegmentID = b.label.value;
+            blockIDs = parentBlockIDs(n); 
+        else
+            % add block to this block group
+            blockIDs = [blockIDs parentBlockIDs(n)];
         end
 
-        % start new segment
-        currentSegmentID = b.label.value;
-        blockIDs = parentBlockIDs(n); 
-    else
-        % add block to this block group
-        blockIDs = [blockIDs parentBlockIDs(n)];
+        blockGroupIDs(n) = currentSegmentID;
+    end
+else
+    % Each block becomes its own segment (as in TOPPE v5)
+    for p = 1:ceq.nParentBlocks
+        ceq.groups(p).groupID = p;
+        ceq.groups(p).nBlocksInGroup = 1;
+        ceq.groups(p).blockIDs = p;
     end
 
-    blockGroupIDs(n) = currentSegmentID;
+    % Add delay segment (dedicated segment that's always defined)
+    ceq.groups(p+1).groupID = p+1;
+    ceq.groups(p+1).nBlocksInGroup = 1;
+    ceq.groups(p+1).blockIDs = 0;   % block ID zero is a flag indicating a delay block
+
+    blockGroupIDs = parentBlockIDs;
+    blockGroupIDs(parentBlockIDs==0) = p+1;
+
+    segmentID2Ind = 1:(p+1);
 end
 
-% In the above, the Segments array index equals the Segment ID specified in the .seq file.
-% Now we squash the Segments array and redefine the Segment IDs accordingly;
-% this is needed since the interpreter assumes that segment ID = index into group array.
-% Also need to update blockGroupIDs array accordingly
-iSeg = 1;    % segment array index
-for segmentID = 1:length(Segments)
-    if ~isempty(Segments{segmentID})
-        segmentID2Ind(segmentID) = iSeg;
-        ceq.groups(iSeg).groupID = iSeg;
-        ceq.groups(iSeg).nBlocksInGroup = Segments{segmentID}(2);
-        ceq.groups(iSeg).blockIDs = Segments{segmentID}(3:end);
-        iSeg = iSeg + 1;
+%currentSegmentID = [];  
+%if ~isempty(currentSegmentID)
+if ~arg.ignoreSegmentLabels
+    % In the above, the Segments array index equals the Segment ID specified in the .seq file.
+    % Now we squash the Segments array and redefine the Segment IDs accordingly;
+    % this is needed since the interpreter assumes that segment ID = index into segment array.
+    iSeg = 1;    % segment array index
+    for segmentID = 1:length(Segments)
+        if ~isempty(Segments{segmentID})
+            segmentID2Ind(segmentID) = iSeg;
+            ceq.groups(iSeg).groupID = iSeg;
+            ceq.groups(iSeg).nBlocksInGroup = Segments{segmentID}(2);
+            ceq.groups(iSeg).blockIDs = Segments{segmentID}(3:end);
+            iSeg = iSeg + 1;
+        end
     end
 end
 

@@ -12,8 +12,13 @@ b1 = seq.getBlock(n1);
 b2 = seq.getBlock(n2);
 
 % Compare duration
-tol = 1;   % us
+tol = 1e-6;   % s
 if abs(b1.blockDuration - b2.blockDuration) > tol
+    issame = false; return;
+end
+
+% Is a trigger present/absent in both blocks
+if isfield(b1, 'trig') ~= isfield(b2, 'trig')
     issame = false; return;
 end
 
