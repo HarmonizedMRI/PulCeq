@@ -69,9 +69,10 @@ for p = 1:ceq.nParentBlocks
             if strcmp(g.type, 'grad')
                 % Arbitrary gradient
                 ttUs = round(g.tt*1e6);
-                durUs = ttUs(end);
-                tge = rasterUs : rasterUs : (round(durUs/rasterUs)*rasterUs);
-                tmp = interp1(ttUs, g.waveform, tge);
+                seqRasterUs = ttUs(2)-ttUs(1);  % gradient raster time in Pulseq block
+                durUs = ttUs(end) + seqRasterUs/2; 
+                tge = 0 : rasterUs : (round(durUs/rasterUs)*rasterUs);
+                tmp = interp1(ttUs, g.waveform, tge, 'linear', 'extrap');
             else
                 % Add delay and convert trapezoid to arbitrary gradient
                 % Convert times to us to avoid numerical precision error
@@ -89,18 +90,23 @@ for p = 1:ceq.nParentBlocks
                 end
             end
 
-            % If tge(end) > dur, last point is NaN.
+            % If tge starts/ends outside of 
             % dur is always an even number of us, so tge(end)-dur is either
             % 0 or 2us=raster/2
             if isnan(tmp(end))
                 df = diff(tmp);
+                tmp(1) = tmp(2) - df(1);
+                if abs(tmp(1)+tmp(2)) < abs(df(1))  % first two points straddle zero
+                    tmp(1) = 0; 
+                end
                 tmp(end) = tmp(end-1) + df(end-1);
                 if abs(tmp(end)+tmp(end-1)) < abs(df(end-1))  % last two point straddle zero
                     tmp(end) = 0; 
                 end
             end
             if any(isnan(tmp))
-                error('NaN in gradient trapezoid waveform after interpolation');
+                msg = sprintf('NaN in gradient trapezoid waveform after interpolation (parent block %d)', p);
+                error(msg);
             end
             grad.(ax{1}) = [delay tmp]/ gamma * 100;   % Gauss/cm
         end
@@ -260,14 +266,22 @@ toppe.writeentryfile('toppeN.entry', ...
 toppe.preflightcheck('toppeN.entry', 'seqstamp.txt', sysGE);
 
 %% Put TOPPE files in a .tar file (for convenience)
-system(sprintf('tar cf %s toppeN.entry seqstamp.txt modules.txt scanloop.txt cores.txt', ofname));
+if toppeVersion > 5
+    system(sprintf('tar cf %s toppeN.entry seqstamp.txt modules.txt scanloop.txt cores.txt', ofname));
+else
+    system(sprintf('tar cf %s toppeN.entry seqstamp.txt modules.txt scanloop.txt', ofname));
+end
 for p = 1:ceq.nParentBlocks
     system(sprintf('tar rf %s %s', ofname, modFiles{p}));
 end
 
 %% clean up (unless in verbose mode)
 if ~verbose
-    system('rm toppeN.entry seqstamp.txt modules.txt scanloop.txt cores.txt');
+    if toppeVersion > 5
+        system('rm toppeN.entry seqstamp.txt modules.txt scanloop.txt cores.txt');
+    else
+        system('rm toppeN.entry seqstamp.txt modules.txt scanloop.txt');
+    end
     for p = 1:ceq.nParentBlocks
         system(sprintf('rm %s', modFiles{p}));
     end
