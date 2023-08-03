@@ -1,11 +1,15 @@
-function ceq2ge(ceq, sysGE, ofname, verbose)
+function ceq2ge(ceq, sysGE, ofname, varargin)
+% function ceq2ge(ceq, sysGE, ofname, varargin)
 %
 % Write a Ceq struct to a set of files that can be executed
 % on GE scanners using the TOPPE interpreter (v6)
 
-if nargin < 4
-    verbose = false;
-end
+% defaults
+arg.verbose = false;
+arg.ignoreTrigger = false;
+
+% Substitute specified system values as appropriate (from MIRT toolbox)
+arg = vararg_pair(arg, varargin);
 
 gamma = sysGE.gamma;   % Hz/T
 
@@ -150,7 +154,7 @@ for p = 1:ceq.nParentBlocks
     end
 
     % trigger out
-    if isfield(b, 'trig')
+    if isfield(b, 'trig') & ~arg.ignoreTrigger
         if b.trig.delay < 100e-6
             warning('Requested trigger time too short. Setting to 100us');
             trigpos = 100;  % us
@@ -293,7 +297,7 @@ for p = 1:ceq.nParentBlocks
 end
 
 %% clean up (unless in verbose mode)
-if ~verbose
+if ~arg.verbose
     if toppeVersion > 5
         system('rm toppeN.entry seqstamp.txt modules.txt scanloop.txt cores.txt');
     else
