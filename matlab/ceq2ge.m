@@ -144,15 +144,29 @@ fprintf(fid,'fname dur(us) hasRF hasADC trigpos\n');
 
 for p = 1:ceq.nParentBlocks
     b = ceq.parentBlocks{p};
+
     if (hasRF(p) & hasADC(p))
         error('Block cannot contain both RF and ADC events');
     end
+
+    % trigger out
+    if isfield(b, 'trig')
+        if b.trig.delay < 100e-6
+            warning('Requested trigger time too short. Setting to 100us');
+            trigpos = 100;  % us
+        else
+            trigpos = round(b.trig.delay*1e6);   % us
+        end
+    else
+        trigpos = -1;    % no trigger
+    end
+
     rf = toppe.readmod(modFiles{p});
     dur = length(rf)*raster*1e6;  % us
     dur = max(dur, round(ceil(b.blockDuration/raster)*raster*1e6)); % us
     dur = dur + sysGE.psd_rf_wait*hasRF(p);  % conservative/lazy choice for now
-    fprintf(fid,'%s\t%d\t%d\t%d\t-1\n', ...
-        modFiles{p}, round(dur), hasRF(p), hasADC(p));    
+    fprintf(fid,'%s\t%d\t%d\t%d\t%d\n', ...
+        modFiles{p}, round(dur), hasRF(p), hasADC(p), trigpos);    
 end
 fclose(fid);
 
@@ -232,9 +246,11 @@ for n = 1:ceq.nMax
         end
     end
 
-    %rfamp rfphs rffreq amp.gx amp.gy amp.gz recphs];
+    % [rfamp rfphs rffreq amp.gx amp.gy amp.gz recphs]
 
     DAQphase = ceq.loop(n, 9);
+
+    trigout = 1 * isfield(ceq.parentBlocks{p}, 'trig');
 
     toppe.write2loop(modFiles{p}, sysGE, ...
         'Gamplitude',  [amp.gx amp.gy amp.gz]', ...
@@ -248,6 +264,7 @@ for n = 1:ceq.nMax
         'dabmode',     'on', ...
         'textra',      0, ...  
         'waveform',    1, ...
+        'trigout',     trigout, ...
         'core', i);
 
 end
