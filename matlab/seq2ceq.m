@@ -53,7 +53,7 @@ end
 
 parentBlockIndex(1) = 1;  % first block is unique by definition
 
-fprintf('\nGetting block %d/%d', 1, ceq.nMax); prev_n = 1; % Progress update trackers
+fprintf('Getting block %d/%d', 1, ceq.nMax); prev_n = 1; % Progress update trackers
 for n = 1:ceq.nMax
     if ~mod(n, 500) || n == ceq.nMax
         for ib = 1:strlength(sprintf('Getting block %d/%d', prev_n, ceq.nMax))
@@ -217,6 +217,21 @@ for n = 1:ceq.nMax
         ceq.loop(n,:) = getdynamics(b, segmentID2Ind(blockGroupIDs(n)), p);
     else
         ceq.loop(n,:) = getdynamics(b, segmentID2Ind(blockGroupIDs(n)), p, ceq.parentBlocks{p});
+    end
+end
+
+%% Check that the execution of blocks throughout the sequence
+%% is consistent with the segment definitions
+n = 1;
+while n < ceq.nMax
+    i = ceq.loop(n, 1);  % segment id
+    for j = 1:ceq.groups(i).nBlocksInGroup
+        p = ceq.loop(n, 2);  % parent block id
+        p_ij = ceq.groups(i).blockIDs(j);
+        if p ~= p_ij
+            error(sprintf('Expected parent block ID %d, found %d (block %d)', p_ij, p, n));
+        end
+        n = n + 1;
     end
 end
 
