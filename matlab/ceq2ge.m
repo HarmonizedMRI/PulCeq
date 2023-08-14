@@ -73,9 +73,7 @@ for p = 1:ceq.nParentBlocks
             if strcmp(g.type, 'grad')
                 % Arbitrary gradient
                 ttUs = round(g.tt*1e6);
-                seqRasterUs = ttUs(2)-ttUs(1);  % gradient raster time in Pulseq block
-                durUs = ttUs(end) + seqRasterUs/2; 
-                tge = 0 : rasterUs : (round(durUs/rasterUs)*rasterUs);
+                tge = 0 : rasterUs : (ceil(ttUs(end)/rasterUs)*rasterUs);
                 tmp = interp1(ttUs, g.waveform, tge, 'linear', 'extrap');
             else
                 % Add delay and convert trapezoid to arbitrary gradient
