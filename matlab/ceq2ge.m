@@ -73,7 +73,6 @@ for p = 1:ceq.nParentBlocks
             else
                 % Convert trapezoid to arbitrary gradient
                 if g.flatTime > 0
-                    dur = g.riseTime + g.flatTime + g.fallTime;
                     g.waveform = [0 1 1 0]*g.amplitude;       
                     g.first = g.waveform(1);
                     g.last = g.waveform(end);
