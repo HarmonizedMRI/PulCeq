@@ -7,6 +7,7 @@ function ceq2ge(ceq, sysGE, ofname, varargin)
 % defaults
 arg.verbose = false;
 arg.ignoreTrigger = false;
+arg.seqGradRasterTime = 10e-6;   % gradient raster time in .seq file
 
 % Substitute specified system values as appropriate (from MIRT toolbox)
 arg = vararg_pair(arg, varargin);
@@ -64,54 +65,35 @@ for p = 1:ceq.nParentBlocks
         g = b.(['g' ax{1}]);
 
         if ~isempty(g)
-
             isDelayBlock = false;
-
-            delayUs = round(g.delay*1e6);
-            delay = zeros(1, max(1, round(delayUs/rasterUs)));  % at least one zero 
 
             if strcmp(g.type, 'grad')
                 % Arbitrary gradient
-                ttUs = round(g.tt*1e6);
-                seqRasterUs = ttUs(2)-ttUs(1);  % gradient raster time in Pulseq block
-                durUs = ttUs(end) + seqRasterUs/2; 
-                tge = 0 : rasterUs : (round(durUs/rasterUs)*rasterUs);
-                tmp = interp1(ttUs, g.waveform, tge, 'linear', 'extrap');
+                tmp = gradinterp(g, arg.seqGradRasterTime, sysGE.raster*1e-6);
             else
-                % Add delay and convert trapezoid to arbitrary gradient
-                % Convert times to us to avoid numerical precision error
-                riseTimeUs = round(g.riseTime*1e6);
-                flatTimeUs = round(g.flatTime*1e6);
-                fallTimeUs = round(g.fallTime*1e6);
-                durUs = riseTimeUs + flatTimeUs + fallTimeUs;
-                tge = rasterUs : rasterUs : (round(durUs/rasterUs)*rasterUs);
-                if flatTimeUs > 0
-                    tmp = interp1([0 riseTimeUs riseTimeUs+flatTimeUs durUs], ...
-                        [0 g.amplitude g.amplitude 0], tge); 
+                % Convert trapezoid to arbitrary gradient
+                if g.flatTime > 0
+                    g.waveform = [0 1 1 0]*g.amplitude;       
+                    g.first = g.waveform(1);
+                    g.last = g.waveform(end);
+                    g.tt = [0 g.riseTime g.riseTime+g.flatTime g.riseTime+g.flatTime+g.fallTime];
+                    tmp = gradinterp(g, arg.seqGradRasterTime, sysGE.raster*1e-6);
                 else
-                    tmp = interp1([0 riseTimeUs durUs], ...
-                        [0 g.amplitude 0], tge); 
+                    g.waveform = [0 1 0]*g.amplitude;       
+                    g.first = g.waveform(1);
+                    g.last = g.waveform(end);
+                    g.tt = [0 g.riseTime g.riseTime+g.fallTime];
+                    tmp = gradinterp(g, arg.seqGradRasterTime, sysGE.raster*1e-6);
                 end
             end
 
-            % If tge starts/ends outside of 
-            % dur is always an even number of us, so tge(end)-dur is either
-            % 0 or 2us=raster/2
-            if isnan(tmp(end))
-                df = diff(tmp);
-                tmp(1) = tmp(2) - df(1);
-                if abs(tmp(1)+tmp(2)) < abs(df(1))  % first two points straddle zero
-                    tmp(1) = 0; 
-                end
-                tmp(end) = tmp(end-1) + df(end-1);
-                if abs(tmp(end)+tmp(end-1)) < abs(df(end-1))  % last two point straddle zero
-                    tmp(end) = 0; 
-                end
-            end
             if any(isnan(tmp))
                 msg = sprintf('NaN in gradient trapezoid waveform after interpolation (parent block %d)', p);
                 error(msg);
             end
+
+            % add delay and convert to Gauss/cm
+            delay = zeros(1, round(g.delay/raster));
             grad.(ax{1}) = [delay tmp]/ gamma * 100;   % Gauss/cm
         end
     end
