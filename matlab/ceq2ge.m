@@ -176,14 +176,14 @@ adcCount = 0;
 
 toppe.write2loop('setup', sysGE, 'version', toppeVersion); 
 
-fprintf('\nWriting block %d/%d', 1, ceq.nMax); prev_n = 1; % Progress update trackers
+fprintf('ceq2ge: Writing block %d/%d', 1, ceq.nMax); prev_n = 1; % Progress update trackers
 for n = 1:ceq.nMax
     if ~mod(n, 2000) || n == ceq.nMax
-        for ib = 1:strlength(sprintf('Writing block %d/%d', prev_n, ceq.nMax))
+        for ib = 1:strlength(sprintf('ceq2ge: Writing block %d/%d', prev_n, ceq.nMax))
             fprintf('\b');
         end
         prev_n = n;
-        fprintf(sprintf('Writing block %d/%d', n, ceq.nMax));
+        fprintf(sprintf('ceq2ge: Writing block %d/%d', n, ceq.nMax));
         if n == ceq.nMax, fprintf('\n'), end
     end
 
@@ -255,7 +255,6 @@ for n = 1:ceq.nMax
 
 end
 toppe.write2loop('finish', sysGE);   % close file
-fprintf('\n');
 
 % Write .entry file
 toppe.writeentryfile('toppeN.entry', ...
