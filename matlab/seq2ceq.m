@@ -53,14 +53,14 @@ end
 
 parentBlockIndex(1) = 1;  % first block is unique by definition
 
-fprintf('Getting block %d/%d', 1, ceq.nMax); prev_n = 1; % Progress update trackers
+fprintf('seq2ceq: Getting block %d/%d', 1, ceq.nMax); prev_n = 1; % Progress update trackers
 for n = 1:ceq.nMax
     if ~mod(n, 500) || n == ceq.nMax
-        for ib = 1:strlength(sprintf('Getting block %d/%d', prev_n, ceq.nMax))
+        for ib = 1:strlength(sprintf('seq2ceq: Getting block %d/%d', prev_n, ceq.nMax))
             fprintf('\b');
         end
         prev_n = n;
-        fprintf(sprintf('Getting block %d/%d', n, ceq.nMax));
+        fprintf(sprintf('seq2ceq: Getting block %d/%d', n, ceq.nMax));
         if n == ceq.nMax, fprintf('\n'), end
     end
 
@@ -235,4 +235,4 @@ while n < ceq.nMax
     end
 end
 
-fprintf('\n');
+%fprintf('\n');
