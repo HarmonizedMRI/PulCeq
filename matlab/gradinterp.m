@@ -20,9 +20,15 @@ if ischar(g)
     return;
 end
 
+% Round sample times to nearest 100ns to avoid numerical precision error in mod() below
+dt = 0.1e-6;
+g.tt = round(g.tt/dt)*dt;
+rasterIn = round(rasterIn/dt)*dt;
+rasterOut = round(rasterOut/dt)*dt;
+
 % initial values
-ttIn = g.tt;
-wav = g.waveform;
+ttIn = g.tt(:);
+wav = g.waveform(:);
 
 % If first sample is not at t=0, add g.first.
 % This is probably due to g.tt(1) = rasterIn/2
@@ -31,7 +37,7 @@ if g.tt(1) > 0
     wav = [g.first; wav];
 end
 
-% If last sample is not at end edge of last raster point, add g.last
+% If last sample is not at end edge of last raster point, add g.last.
 if mod(g.tt(end), rasterIn)
     ttIn = [ttIn; ttIn(end) + rasterIn - mod(ttIn(end), rasterIn)];
     wav = [wav; g.last];
@@ -41,7 +47,8 @@ end
 % stretch time so end sample is on rasterOut boundary
 timeStretchFactor = (ceil(ttIn(end)/rasterOut)*rasterOut) / ttIn(end);
 ttIn = ttIn * timeStretchFactor;
-ttIn = round(ttIn*1e7)/1e7;
+dt = 1e-9;
+ttIn = round(ttIn/dt)*dt; 
 ttOut = [0:rasterOut:ttIn(end)];
 
 wavOut = interp1(ttIn, wav, ttOut); %, 'interp', 'extrap');
