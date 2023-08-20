@@ -40,71 +40,95 @@ if g.tt(1) > 0
     wav = [g.first; wav];
 end
 
-% If last sample is not at end edge of last raster point, add g.last
+% If last sample is not at end edge of last rasterIn interval, add g.last
 if mod(g.tt(end), rasterIn)
     ttIn = [ttIn; ttIn(end) + rasterIn - mod(ttIn(end), rasterIn)];
     wav = [wav; g.last];
 end
 
 % Output sample times on regular raster.
-dt = 1e-9;
-ttIn = round(ttIn/dt)*dt; 
-ttOutLast = ceil(ttIn(end)/rasterOut)*rasterOut; % add sample at end if necessary to avoid extrapolation
-ttOut = [0:rasterOut:ttOutLast];
+ttOutLast = ceil(ttIn(end)/rasterOut)*rasterOut;  % extend last sample past end of waveform if necessary
+ttOut = [0:rasterOut:ttIn(end)]';
 
-wavOut = interp1(ttIn, wav, ttOut); %, 'interp', 'extrap');
+wavOut = interp1(ttIn, wav, ttOut); %, 'linear', 'extrap');
+
+% If last output sample is before ttIn(end),
+% add a sample and set value to g.last
+if ttOut(end) < ttIn(end)
+    wavOut = [wavOut; g.last];
+end
+
+if any(isnan(wavOut))
+    error('gradinterp(): NaN after interpolation');
+end
 
 return
 
 
 function sub_test
 
-% Define test waveform and sample times.
-% Sample times at center of rasterIn intervals, and not on 4us boundary
 rasterIn = 10e-6;   % Siemens gradient raster
+rasterOut = 4e-6;   % GE gradient raster
+
+% Add time 'noise' to test robustness to roundoff error
+tNoise = 1e-11;   % sec
+rasterInNoisy = rasterIn + tNoise;
+
+% Define test waveform and sample times.
 g.waveform = [1 1 0];   % gradient waveform, a.u.
-g.tt = [5 105 205]*1e-6;    % sample times, sec
+g.tt = [rasterIn/2 108e-6 20*rasterIn];    % sample times, sec
 g.first = g.waveform(1);    % waveform at start edge of first raster time
 g.last = g.waveform(end);   % waveform at end edge of last raster time
 
-% Add time sample 'noise' to test robustness to roundoff error
-tNoise = 1e-11;   % sec
-rasterInNoisy = rasterIn + tNoise;
-gNoisy.waveform = g.waveform;
+gNoisy = g;
 gNoisy.tt = g.tt + tNoise*randn(1, length(g.tt));
-gNoisy.first = g.first;
-gNoisy.last = g.last;
 
 % Interpolate
-rasterOut = 4e-6;
 gout = gradinterp(gNoisy, rasterInNoisy, rasterOut + tNoise);
 
 % Plot
-tt = (0:(length(gout)-1))*rasterOut;
 hold off;
 plot(g.tt*1e6, g.waveform, 'bo', 'MarkerSize', 8);
 hold on;
+tt = (0:(length(gout)-1))*rasterOut;
 plot(tt*1e6, gout, 'rx-');
 xlabel('time (us)');
 
-% Do it again for a sinusoidal waveform
+% Do it again for a sinusoidal waveform,
+% time samples at center of input raster times
 tNoise = 1e-11;   % sec
 rasterInNoisy = rasterIn + tNoise;
 n = 20;   % number of waveform samples
-g.tt = ([1:n]-0.5)*rasterIn;  % times at center of inputer raster intervals
+g.tt = ([1:n]-0.5)*rasterIn;
 freq = 1000; % Hz 
 g.waveform = sin(2*pi*freq*g.tt);
 g.first = 0;
 g.last = g.waveform(end) + (g.waveform(end)-g.waveform(end-1))/2;
 
-gNoisy.waveform = g.waveform;
+gNoisy = g;
 gNoisy.tt = g.tt + tNoise*randn(1, length(g.tt));
-gNoisy.first = g.first;
-gNoisy.last = g.last;
 
 gout = gradinterp(gNoisy, rasterInNoisy, rasterOut + tNoise);
-tt = (0:(length(gout)-1))*rasterOut;
 plot(g.tt*1e6, g.waveform, 'bo', 'MarkerSize', 8);
+tt = (0:(length(gout)-1))*rasterOut;
 plot(tt*1e6, gout, 'rx-');
 
-legend('Input waveform', 'Output waveform', 'Input waveform', 'Output waveform'); 
+% Do it again for a negative trapezoid
+% Duration not on 4us boundary
+g.waveform = [-0.2 -0.6 -0.6 0];
+g.first = g.waveform(1);
+g.last = g.waveform(end);
+g.riseTime = 50e-06;
+g.flatTime = 30e-06;
+g.fallTime = 70e-06;
+g.tt = [0 g.riseTime g.riseTime+g.flatTime g.riseTime+g.flatTime+g.fallTime];
+
+gNoisy = g;
+gNoisy.tt = g.tt + tNoise*randn(1, length(g.tt));
+
+gout = gradinterp(gNoisy, rasterInNoisy, rasterOut + tNoise);
+plot(g.tt*1e6, g.waveform, 'bo', 'MarkerSize', 8);
+tt = (0:(length(gout)-1))*rasterOut;
+plot(tt*1e6, gout, 'rx-');
+
+legend('Input waveform', 'Output waveform', '', '', '', '');
