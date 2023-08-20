@@ -4,8 +4,8 @@ function wavOut = gradinterp(g, rasterIn, rasterOut)
 % Interpolate arbitrary gradient to uniform raster
 %
 % Intputs:
-%  g             Pulseq (arbitrary) gradient struct. Must define the following:
-%                g.waveform     gradient waveform samples (Hz/m)
+%  g             Pulseq (arbitrary) gradient struct. Must contain the following fields:
+%                g.waveform     gradient waveform samples (a.u.)
 %                g.tt           sample times (sec)
 %                g.first        waveform value at starting edge of 1st raster time
 %                g.last         waveform value at ending edge of last raster time
@@ -13,7 +13,7 @@ function wavOut = gradinterp(g, rasterIn, rasterOut)
 %  rasterOut     output gradient raster time (sec)
 %
 % Output:
-%  gout          gradient on uniform raster (Hz/m)
+%  gout          gradient on uniform raster
 %
 % To run test function:
 %  >> gradinterp('test');
@@ -95,7 +95,7 @@ g.tt = ([1:n]-0.5)*rasterIn;  % times at center of inputer raster intervals
 freq = 1000; % Hz 
 g.waveform = sin(2*pi*freq*g.tt);
 g.first = 0;
-g.last = g.waveform(end-1) + (g.waveform(end)-g.waveform(end-1))/2;
+g.last = g.waveform(end) + (g.waveform(end)-g.waveform(end-1))/2;
 
 gNoisy.waveform = g.waveform;
 gNoisy.tt = g.tt + tNoise*randn(1, length(g.tt));
