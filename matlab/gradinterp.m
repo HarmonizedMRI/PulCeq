@@ -1,7 +1,8 @@
-function wavOut = gradinterp(g, rasterIn, rasterOut)
-% function wavOut = gradinterp(g, rasterIn, rasterOut)
+function [wavOut, ttOut] = gradinterp(g, rasterIn, rasterOut)
+% function [wavOut, ttOut] = gradinterp(g, rasterIn, rasterOut)
 %
-% Interpolate arbitrary gradient to uniform raster
+% Interpolate arbitrary Pulseq gradient to uniform raster,
+% beginning at time = 0. This is surprisingly tricky.
 %
 % Intputs:
 %  g             Pulseq (arbitrary) gradient struct. Must contain the following fields:
@@ -13,7 +14,8 @@ function wavOut = gradinterp(g, rasterIn, rasterOut)
 %  rasterOut     output gradient raster time (sec)
 %
 % Output:
-%  gout          gradient on uniform raster
+%  gOut          gradient on uniform raster
+%  ttOut         output gradient sample times (starts at zero)
 %
 % To run test function:
 %  >> gradinterp('test');
@@ -26,7 +28,7 @@ end
 % Round sample times to nearest 100ns to avoid numerical precision error in mod() below
 dt = 0.1e-6;
 g.tt = round(g.tt/dt)*dt;
-rasterIn = round(rasterIn/dt)*dt;
+rasterIn = round(rasterIn/dt)*dt;   % round() is safe. ceil() is not, surprisingly
 rasterOut = round(rasterOut/dt)*dt;
 
 % initial values
@@ -46,8 +48,7 @@ if mod(g.tt(end), rasterIn)
     wav = [wav; g.last];
 end
 
-% Output sample times on regular raster.
-ttOutLast = ceil(ttIn(end)/rasterOut)*rasterOut;  % extend last sample past end of waveform if necessary
+% Output sample times are on regular raster
 ttOut = [0:rasterOut:ttIn(end)]';
 
 wavOut = interp1(ttIn, wav, ttOut); %, 'linear', 'extrap');
@@ -55,6 +56,7 @@ wavOut = interp1(ttIn, wav, ttOut); %, 'linear', 'extrap');
 % If last output sample is before ttIn(end),
 % add a sample and set value to g.last
 if ttOut(end) < ttIn(end)
+    ttOut = [ttOut; ttOut(end) + rasterOut];
     wavOut = [wavOut; g.last];
 end
 
@@ -66,6 +68,7 @@ return
 
 
 function sub_test
+% Try a few waveforms to see how the interpolation behaves
 
 rasterIn = 10e-6;   % Siemens gradient raster
 rasterOut = 4e-6;   % GE gradient raster
@@ -83,15 +86,13 @@ g.last = g.waveform(end);   % waveform at end edge of last raster time
 gNoisy = g;
 gNoisy.tt = g.tt + tNoise*randn(1, length(g.tt));
 
-% Interpolate
-gout = gradinterp(gNoisy, rasterInNoisy, rasterOut + tNoise);
+% Interpolate and plot
+[gOut ttOut] = gradinterp(gNoisy, rasterInNoisy, rasterOut + tNoise);
 
-% Plot
 hold off;
 plot(g.tt*1e6, g.waveform, 'bo', 'MarkerSize', 8);
 hold on;
-tt = (0:(length(gout)-1))*rasterOut;
-plot(tt*1e6, gout, 'rx-');
+plot(ttOut*1e6, gOut, 'rx-');
 xlabel('time (us)');
 
 % Do it again for a sinusoidal waveform,
@@ -108,10 +109,9 @@ g.last = g.waveform(end) + (g.waveform(end)-g.waveform(end-1))/2;
 gNoisy = g;
 gNoisy.tt = g.tt + tNoise*randn(1, length(g.tt));
 
-gout = gradinterp(gNoisy, rasterInNoisy, rasterOut + tNoise);
+[gOut, ttOut] = gradinterp(gNoisy, rasterInNoisy, rasterOut + tNoise);
 plot(g.tt*1e6, g.waveform, 'bo', 'MarkerSize', 8);
-tt = (0:(length(gout)-1))*rasterOut;
-plot(tt*1e6, gout, 'rx-');
+plot(ttOut*1e6, gOut, 'rx-');
 
 % Do it again for a negative trapezoid
 % Duration not on 4us boundary
@@ -126,9 +126,8 @@ g.tt = [0 g.riseTime g.riseTime+g.flatTime g.riseTime+g.flatTime+g.fallTime];
 gNoisy = g;
 gNoisy.tt = g.tt + tNoise*randn(1, length(g.tt));
 
-gout = gradinterp(gNoisy, rasterInNoisy, rasterOut + tNoise);
+[gOut ttOut] = gradinterp(gNoisy, rasterInNoisy, rasterOut + tNoise);
 plot(g.tt*1e6, g.waveform, 'bo', 'MarkerSize', 8);
-tt = (0:(length(gout)-1))*rasterOut;
-plot(tt*1e6, gout, 'rx-');
+plot(ttOut*1e6, gOut, 'rx-');
 
 legend('Input waveform', 'Output waveform', '', '', '', '');
