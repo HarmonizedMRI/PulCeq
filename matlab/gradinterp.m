@@ -79,7 +79,7 @@ rasterInNoisy = rasterIn + tNoise;
 
 % Define test waveform and sample times.
 g.waveform = [1 1 0];   % gradient waveform, a.u.
-g.tt = [rasterIn/2 108e-6 20*rasterIn];    % sample times, sec
+g.tt = [rasterIn/2 58e-6 20*rasterIn];    % sample times, sec
 g.first = g.waveform(1);    % waveform at start edge of first raster time
 g.last = g.waveform(end);   % waveform at end edge of last raster time
 
@@ -102,7 +102,7 @@ tNoise = 1e-11;   % sec
 rasterInNoisy = rasterIn + tNoise;
 n = 20;   % number of waveform samples
 g.tt = ([1:n]-0.5)*rasterIn;
-freq = 1000; % Hz 
+freq = 2000; % Hz 
 g.waveform = sin(2*pi*freq*g.tt);
 g.first = 0;
 g.last = g.waveform(end) + (g.waveform(end)-g.waveform(end-1))/2;
