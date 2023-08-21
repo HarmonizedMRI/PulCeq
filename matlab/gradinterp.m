@@ -94,6 +94,7 @@ plot(g.tt*1e6, g.waveform, 'bo', 'MarkerSize', 8);
 hold on;
 plot(ttOut*1e6, gOut, 'rx-');
 xlabel('time (us)');
+ylabel('Waveform amplitude (a.u.)');
 
 % Do it again for a sinusoidal waveform,
 % time samples at center of input raster times
