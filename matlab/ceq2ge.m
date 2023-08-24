@@ -94,7 +94,7 @@ for p = 1:ceq.nParentBlocks
 
             % add delay and convert to Gauss/cm
             delay = zeros(1, round(g.delay/raster));
-            grad.(ax{1}) = [delay tmp]/ gamma * 100;   % Gauss/cm
+            grad.(ax{1}) = [delay tmp(:).']/ gamma * 100;   % Gauss/cm
         end
     end
 
