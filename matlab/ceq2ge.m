@@ -48,6 +48,14 @@ for p = 1:ceq.nParentBlocks
     if hasRF(p)
         b1ScalingFile = modFiles{p};
 
+        if b.rf.delay < sysGE.rfDeadTime*1e-6
+            error(sprintf('Parent block %d: RF delay must be >= sysGE.rfDeadTime', p));
+        end
+
+        if b.rf.delay + b.rf.shape_dur + sysGE.rfRingdownTime*1e-6 > b.blockDuration
+            error(sprintf('Parent block %d: RF ringdown extends past end of block', p));
+        end
+
         tge = raster/2 : raster : b.rf.shape_dur;
         rf = interp1(b.rf.t, b.rf.signal, tge, 'linear', 'extrap') / gamma * 1e4;  % Gauss
 
@@ -100,6 +108,12 @@ for p = 1:ceq.nParentBlocks
 
     % ADC
     if hasADC(p)
+        if b.adc.delay < sysGE.adcDeadTime*1e-6
+            error(sprintf('Parent block %d: ADC delay must be >= sysGE.adcDeadTime', p));
+        end
+        if b.adc.delay + b.adc.numSamples*b.adc.dwell > b.blockDuration
+            error(sprintf('Parent block %d: ADC window extends past end of block', p));
+        end
         npre = round(b.adc.delay/raster);
         rfres = round(b.adc.numSamples*b.adc.dwell/raster);
         readoutFile = modFiles{p};
