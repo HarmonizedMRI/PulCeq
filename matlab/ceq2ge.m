@@ -182,7 +182,7 @@ else
 end
 
 %% Write scanloop.txt
-% data frames (in P-file) are stored using indeces 'slice', 'echo', and 'view' 
+% data frames (in P-file) are stored using indices 'slice', 'echo', and 'view' 
 sl = 1;
 view = 1;
 echo = 0; 
@@ -219,7 +219,7 @@ for n = 1:ceq.nMax
     RFphase = ceq.loop(n, 4);   % rad
     RFoffset = round(ceq.loop(n, 5));  % Hz
 
-    % set slice/echo/view indeces (if block is an acquisition block)
+    % set slice/echo/view indices (if block is an acquisition block)
     % view = 1, ..., system.maxView
     % sl   = 1, ..., system.maxSlice
     if hasADC(p)
