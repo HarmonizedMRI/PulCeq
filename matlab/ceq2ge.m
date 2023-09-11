@@ -109,7 +109,7 @@ for p = 1:ceq.nParentBlocks
     % ADC
     if hasADC(p)
         if b.adc.delay < sysGE.adcDeadTime*1e-6
-            error(sprintf('Parent block %d: ADC delay must be >= sysGE.adcDeadTime', p));
+            warning(sprintf('Parent block %d: ADC delay is < sysGE.adcDeadTime', p));
         end
         if b.adc.delay + b.adc.numSamples*b.adc.dwell > b.blockDuration
             error(sprintf('Parent block %d: ADC window extends past end of block', p));
