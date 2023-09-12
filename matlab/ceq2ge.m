@@ -77,13 +77,16 @@ for p = 1:ceq.nParentBlocks
 
             if strcmp(g.type, 'grad')
                 % Arbitrary gradient
-                areaIn = sum( (g.waveform(1:(end-1)) + g.waveform(2:end))/2 .* diff(g.tt) );
                 if g.tt(1) < 1e-9
                     % If first time point is zero, assume that waveform is specified on corner points
+                    areaIn = sum( (g.waveform(1:(end-1)) + g.waveform(2:end))/2 .* diff(g.tt) );
                     tge = raster/2 : raster : g.tt(end);
                     tmp = interp1(g.tt, g.waveform, tge);
                 else
                     % Otherwise, interpolate using time samples and 'first' and 'last' values
+                    wavtmp = [g.first; g.waveform(:); g.last];
+                    tttmp = [0; g.tt(:); g.tt(end) + arg.seqGradRasterTime/2];
+                    areaIn = sum( (wavtmp(1:(end-1)) + wavtmp(2:end))/2 .* diff(tttmp) );
                     tmp = gradinterp(g, arg.seqGradRasterTime, sysGE.raster*1e-6);
                 end
             else
