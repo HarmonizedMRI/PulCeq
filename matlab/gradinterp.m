@@ -1,8 +1,7 @@
 function [wavOut, ttOut] = gradinterp(g, rasterIn, rasterOut)
 % function [wavOut, ttOut] = gradinterp(g, rasterIn, rasterOut)
 %
-% Interpolate arbitrary Pulseq gradient to uniform raster,
-% beginning at time = 0. This is surprisingly tricky.
+% Interpolate arbitrary Pulseq gradient to uniform raster.
 %
 % Intputs:
 %  g             Pulseq (arbitrary) gradient struct. Must contain the following fields:
@@ -49,16 +48,9 @@ if mod(g.tt(end), rasterIn)
 end
 
 % Output sample times are on regular raster
-ttOut = [0:rasterOut:ttIn(end)]';
+ttOut = [rasterOut/2:rasterOut:ttIn(end)]';
 
 wavOut = interp1(ttIn, wav, ttOut); %, 'linear', 'extrap');
-
-% If last output sample is before ttIn(end),
-% add a sample and set value to g.last
-if ttOut(end) < ttIn(end)
-    ttOut = [ttOut; ttOut(end) + rasterOut];
-    wavOut = [wavOut; g.last];
-end
 
 if any(isnan(wavOut))
     error('gradinterp(): NaN after interpolation');
