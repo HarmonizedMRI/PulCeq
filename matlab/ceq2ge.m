@@ -77,22 +77,27 @@ for p = 1:ceq.nParentBlocks
 
             if strcmp(g.type, 'grad')
                 % Arbitrary gradient
-                tmp = gradinterp(g, arg.seqGradRasterTime, sysGE.raster*1e-6);
-            else
-                % Convert trapezoid to arbitrary gradient
-                if g.flatTime > 0
-                    g.waveform = [0 1 1 0]*g.amplitude;       
-                    g.first = g.waveform(1);
-                    g.last = g.waveform(end);
-                    g.tt = [0 g.riseTime g.riseTime+g.flatTime g.riseTime+g.flatTime+g.fallTime];
-                    tmp = gradinterp(g, arg.seqGradRasterTime, sysGE.raster*1e-6);
+                areaIn = sum( (g.waveform(1:(end-1)) + g.waveform(2:end))/2 .* diff(g.tt) );
+                if g.tt(1) < 1e-9
+                    % If first time point is zero, assume that waveform is specified on corner points
+                    tge = raster/2 : raster : g.tt(end);
+                    tmp = interp1(g.tt, g.waveform, tge);
                 else
-                    g.waveform = [0 1 0]*g.amplitude;       
-                    g.first = g.waveform(1);
-                    g.last = g.waveform(end);
-                    g.tt = [0 g.riseTime g.riseTime+g.fallTime];
+                    % Otherwise, interpolate using time samples and 'first' and 'last' values
                     tmp = gradinterp(g, arg.seqGradRasterTime, sysGE.raster*1e-6);
                 end
+            else
+                % Convert trapezoid to arbitrary gradient
+                areaIn = [g.riseTime/2 + g.flatTime + g.fallTime/2] * g.amplitude;
+                if g.flatTime > 0
+                    g.waveform = [0 1 1 0]*g.amplitude;       
+                    g.tt = [0 g.riseTime g.riseTime+g.flatTime g.riseTime+g.flatTime+g.fallTime];
+                else
+                    g.waveform = [0 1 0]*g.amplitude;       
+                    g.tt = [0 g.riseTime g.riseTime+g.fallTime];
+                end
+                tge = raster/2 : raster : g.tt(end);
+                tmp = interp1(g.tt, g.waveform, tge);
             end
 
             if any(isnan(tmp))
@@ -100,9 +105,10 @@ for p = 1:ceq.nParentBlocks
                 error(msg);
             end
 
-            % add delay and convert to Gauss/cm
+            % Add delay, scale to preserve area, and convert to Gauss/cm
+            areaOut = sum(tmp) * raster;
             delay = zeros(1, round(g.delay/raster));
-            grad.(ax{1}) = [delay tmp(:).']/ gamma * 100;   % Gauss/cm
+            grad.(ax{1}) = [delay tmp(:).' * areaIn/areaOut]/ gamma * 100;   % Gauss/cm
         end
     end
 
