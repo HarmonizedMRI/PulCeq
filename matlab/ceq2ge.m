@@ -77,17 +77,29 @@ for p = 1:ceq.nParentBlocks
 
             if strcmp(g.type, 'grad')
                 % Arbitrary gradient
-                if g.tt(1) < 1e-9
-                    % If first time point is zero, assume that waveform is specified on corner points
-                    areaIn = sum( (g.waveform(1:(end-1)) + g.waveform(2:end))/2 .* diff(g.tt) );
-                    tge = raster/2 : raster : g.tt(end);
-                    tmp = interp1(g.tt, g.waveform, tge);
-                else
-                    % Otherwise, interpolate using time samples and 'first' and 'last' values
+                % restore shape: if we had a
+                % trapezoid converted to shape we have to find
+                % the "corners" and we can eliminate internal
+                % samples on the straight segments
+                % but first we have to restore samples on the
+                % edges of the gradient raster intervals
+                % for that we need the first sample
+
+                % check if we have (1) an extended trapezoid or (2) an arbitrary gradient on a regular raster
+                tt_rast=g.tt/arg.seqGradRasterTime+0.5;
+                if all(abs(tt_rast-(1:length(tt_rast))')<1e-6)  % samples assumed to be on center of raster intervals
+                    % Samples on regular raster.
+                    % Here we need to know the 'first' and 'last' values
                     wavtmp = [g.first; g.waveform(:); g.last];
                     tttmp = [0; g.tt(:); g.tt(end) + arg.seqGradRasterTime/2];
                     areaIn = sum( (wavtmp(1:(end-1)) + wavtmp(2:end))/2 .* diff(tttmp) );
-                    tmp = gradinterp(g, arg.seqGradRasterTime, sysGE.raster*1e-6);
+                    tge = raster/2 : raster : g.tt(end);
+                    tmp = interp1(tttmp, wavtmp, tge);
+                else
+                    % extended trapezoid: shape specified on "corners"
+                    areaIn = sum( (g.waveform(1:(end-1)) + g.waveform(2:end))/2 .* diff(g.tt) );
+                    tge = raster/2 : raster : g.tt(end);
+                    tmp = interp1(g.tt, g.waveform, tge);
                 end
             else
                 % Convert trapezoid to arbitrary gradient
