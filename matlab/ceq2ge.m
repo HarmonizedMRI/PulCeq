@@ -68,6 +68,10 @@ for p = 1:ceq.nParentBlocks
     end
 
     % Interpolate gradient waveforms and convert to Gauss/cm
+    % We assume that there are only 3 types of gradients:
+    % 1. trapezoid, starting and ending at 0
+    % 2. extended trapezoid, specified on "corners" of shape. Assumed to start at zero if and only if delay > 0.
+    % 3. arbitrary gradient specified on regular raster time. Assumed to start and end at zero ('first' and 'last' points). 
     for ax = {'x','y','z'}
 
         g = b.(['g' ax{1}]);
@@ -85,48 +89,53 @@ for p = 1:ceq.nParentBlocks
                 % edges of the gradient raster intervals
                 % for that we need the first sample
 
-                % check if we have (1) an extended trapezoid or (2) an arbitrary gradient on a regular raster
+                % check if we have an extended trapezoid, or an arbitrary gradient on a regular raster
                 tt_rast=g.tt/arg.seqGradRasterTime+0.5;
                 if all(abs(tt_rast-(1:length(tt_rast))')<1e-6)  % samples assumed to be on center of raster intervals
-                    % Samples on regular raster.
-                    % Here we need to know the 'first' and 'last' values
-                    areaIn = sum(g.waveform) * arg.seqGradRasterTime;
-                    wavtmp = [g.first; g.waveform(:); g.last];
-                    tttmp = [0; g.tt(:); g.tt(end) + arg.seqGradRasterTime/2];
-                    tge = raster/2 : raster : g.tt(end);
-                    tmp = interp1(tttmp, wavtmp, tge);
+                    % arbitrary gradient on a regular raster
+                    areaIn = sum(g.waveform)*arg.seqGradRasterTime;
+                    g.first = 0;
+                    g.last = 0;
+                    wavtmp = [g.first g.waveform(:)' g.last];
+                    tttmp = g.delay + [0 g.tt(:)' g.tt(end)+arg.seqGradRasterTime/2];
                 else
-                    % extended trapezoid: shape specified on "corners"
+                    % extended trapezoid: shape specified on "corners" of waveform
                     areaIn = sum( (g.waveform(1:(end-1)) + g.waveform(2:end))/2 .* diff(g.tt) );
-                    tge = raster/2 : raster : g.tt(end);
-                    tmp = interp1(g.tt, g.waveform, tge);
+                    wavtmp = g.waveform(:)';
+                    tttmp = g.delay + g.tt(:)';
                 end
             else
                 % Convert trapezoid to arbitrary gradient
                 areaIn = [g.riseTime/2 + g.flatTime + g.fallTime/2] * g.amplitude;
                 if g.flatTime > 0
-                    g.waveform = [0 1 1 0]*g.amplitude;       
-                    g.tt = [0 g.riseTime g.riseTime+g.flatTime g.riseTime+g.flatTime+g.fallTime];
+                    wavtmp = [0 1 1 0]*g.amplitude;       
+                    tttmp = g.delay + [0 g.riseTime g.riseTime+g.flatTime g.riseTime+g.flatTime+g.fallTime ];
                 else
-                    g.waveform = [0 1 0]*g.amplitude;       
-                    g.tt = [0 g.riseTime g.riseTime+g.fallTime];
+                    wavtmp = [0 1 0]*g.amplitude;       
+                    tttmp = g.delay + [0 g.riseTime g.riseTime+g.fallTime ];
                 end
-                tge = raster/2 : raster : g.tt(end);
-                tmp = interp1(g.tt, g.waveform, tge);
             end
+
+            if g.delay > 0
+                wavtmp = [0 wavtmp];
+                tttmp = [0 tttmp];
+            end
+
+            tge = raster/2 : raster : tttmp(end);
+            tmp = interp1(tttmp, wavtmp, tge);
 
             if any(isnan(tmp))
                 msg = sprintf('NaN in gradient trapezoid waveform after interpolation (parent block %d)', p);
                 error(msg);
             end
 
-            % Add delay, scale to preserve area, and convert to Gauss/cm
+            % Scale to preserve area, and convert to Gauss/cm
             areaOut = sum(tmp) * raster;
-            delay = zeros(1, round(g.delay/raster));
             if areaIn > 1e-6 
-                grad.(ax{1}) = [delay tmp(:).' * areaIn/areaOut]/ gamma * 100;   % Gauss/cm
+                grad.(ax{1}) = tmp(:).' * areaIn/areaOut/ gamma * 100;   % Gauss/cm
             else
-                grad.(ax{1}) = 0 * [delay tmp(:).'];
+                % avoid division by 0
+                grad.(ax{1}) = 0 * tmp(:).';
             end
         end
     end
