@@ -188,7 +188,7 @@ for p = 1:ceq.nParentBlocks
 
     rf = toppe.readmod(modFiles{p});
     dur = length(rf)*raster*1e6;  % us
-    %dur = max(dur, round(ceil(b.blockDuration/raster)*raster*1e6)); % us
+    dur = max(dur, round(floor(b.blockDuration/raster)*raster*1e6)); % us
     dur = dur + sysGE.psd_rf_wait*hasRF(p);  % conservative/lazy choice for now
     fprintf(fid,'%s\t%d\t%d\t%d\t%d\n', ...
         modFiles{p}, round(dur), hasRF(p), hasADC(p), trigpos);    
