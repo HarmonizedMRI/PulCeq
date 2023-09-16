@@ -35,7 +35,7 @@ for p = 1:ceq.nParentBlocks
     hasADC(p) = ~isempty(b.adc);
 
     % number of 4us samples in block 
-    n = round(b.blockDuration/raster);
+    %n = round(b.blockDuration/raster);
 
     % defaults
     % npre = number of 4us samples to discard at beginning of RF/ADC window
@@ -188,14 +188,14 @@ for p = 1:ceq.nParentBlocks
 
     rf = toppe.readmod(modFiles{p});
     dur = length(rf)*raster*1e6;  % us
-    dur = max(dur, round(ceil(b.blockDuration/raster)*raster*1e6)); % us
+    %dur = max(dur, round(ceil(b.blockDuration/raster)*raster*1e6)); % us
     dur = dur + sysGE.psd_rf_wait*hasRF(p);  % conservative/lazy choice for now
     fprintf(fid,'%s\t%d\t%d\t%d\t%d\n', ...
         modFiles{p}, round(dur), hasRF(p), hasADC(p), trigpos);    
 end
 fclose(fid);
 
-%% write block group file (cores.txt) and determine TOPPE version
+%% write segment definition file (cores.txt) and determine TOPPE version
 if ceq.nGroups > 0
     toppeVersion = 6;
     for i = 1:ceq.nGroups
