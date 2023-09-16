@@ -90,9 +90,9 @@ for p = 1:ceq.nParentBlocks
                 if all(abs(tt_rast-(1:length(tt_rast))')<1e-6)  % samples assumed to be on center of raster intervals
                     % Samples on regular raster.
                     % Here we need to know the 'first' and 'last' values
+                    areaIn = sum(g.waveform) * arg.seqGradRasterTime;
                     wavtmp = [g.first; g.waveform(:); g.last];
                     tttmp = [0; g.tt(:); g.tt(end) + arg.seqGradRasterTime/2];
-                    areaIn = sum( (wavtmp(1:(end-1)) + wavtmp(2:end))/2 .* diff(tttmp) );
                     tge = raster/2 : raster : g.tt(end);
                     tmp = interp1(tttmp, wavtmp, tge);
                 else
@@ -123,7 +123,11 @@ for p = 1:ceq.nParentBlocks
             % Add delay, scale to preserve area, and convert to Gauss/cm
             areaOut = sum(tmp) * raster;
             delay = zeros(1, round(g.delay/raster));
-            grad.(ax{1}) = [delay tmp(:).' * areaIn/areaOut]/ gamma * 100;   % Gauss/cm
+            if areaIn > 1e-6 
+                grad.(ax{1}) = [delay tmp(:).' * areaIn/areaOut]/ gamma * 100;   % Gauss/cm
+            else
+                grad.(ax{1}) = 0 * [delay tmp(:).'];
+            end
         end
     end
 
