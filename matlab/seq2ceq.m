@@ -154,6 +154,9 @@ if ~arg.ignoreSegmentLabels
         if isfield(b, 'label') | n == ceq.nMax
             % wrap up the current segment
             if ~isempty(currentSegmentID) 
+                if n == ceq.nMax
+                    blockIDs = [blockIDs parentBlockIDs(n)];
+                end
                 Segments{currentSegmentID} = [currentSegmentID length(blockIDs) blockIDs];
             end
 
