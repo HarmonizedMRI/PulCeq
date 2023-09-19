@@ -69,9 +69,9 @@ for p = 1:ceq.nParentBlocks
 
     % Interpolate gradient waveforms and convert to Gauss/cm
     % We assume that there are only 3 types of gradients:
-    % 1. trapezoid, starting and ending at 0
-    % 2. extended trapezoid, specified on "corners" of shape. Assumed to start at zero if and only if delay > 0.
-    % 3. arbitrary gradient specified on regular raster time. Assumed to start and end at zero ('first' and 'last' points). 
+    % gradType = 1: arbitrary gradient specified on regular raster time. Assumed to start and end at zero ('first' and 'last' points). 
+    % gradType = 2: extended trapezoid, specified on "corners" of shape. Assumed to start at zero if and only if delay > 0.
+    % gradType = 3: trapezoid, starting and ending at 0
     for ax = {'x','y','z'}
 
         g = b.(['g' ax{1}]);
@@ -93,6 +93,7 @@ for p = 1:ceq.nParentBlocks
                 tt_rast=g.tt/arg.seqGradRasterTime+0.5;
                 if all(abs(tt_rast-(1:length(tt_rast))')<1e-6)  % samples assumed to be on center of raster intervals
                     % arbitrary gradient on a regular raster
+                    gradType = 1;
                     areaIn = sum(g.waveform)*arg.seqGradRasterTime;
                     g.first = 0;
                     g.last = 0;
@@ -100,12 +101,14 @@ for p = 1:ceq.nParentBlocks
                     tttmp = g.delay + [0 g.tt(:)' g.tt(end)+arg.seqGradRasterTime/2];
                 else
                     % extended trapezoid: shape specified on "corners" of waveform
+                    gradType = 2;
                     areaIn = sum( (g.waveform(1:(end-1)) + g.waveform(2:end))/2 .* diff(g.tt) );
                     wavtmp = g.waveform(:)';
                     tttmp = g.delay + g.tt(:)';
                 end
             else
                 % Convert trapezoid to arbitrary gradient
+                gradType = 3;
                 areaIn = [g.riseTime/2 + g.flatTime + g.fallTime/2] * g.amplitude;
                 if g.flatTime > 0
                     wavtmp = [0 1 1 0]*g.amplitude;       
@@ -129,14 +132,15 @@ for p = 1:ceq.nParentBlocks
                 error(msg);
             end
 
-            % Scale to preserve area, and convert to Gauss/cm
-            areaOut = sum(tmp) * raster;
-            if areaIn > 1e-6 
-                grad.(ax{1}) = tmp(:).' * areaIn/areaOut/ gamma * 100;   % Gauss/cm
-            else
-                % avoid division by 0
-                grad.(ax{1}) = 0 * tmp(:).';
+            % scale to preserve area
+            % 10 mG for 10us = 4.3e-2 Hz-sec, so don't scale if area less than this
+            if areaIn > 4.3e-2 %& any(gradType == [2,3]) 
+                areaOut = sum(tmp) * raster;
+                tmp = tmp*areaIn/areaOut;
             end
+
+            % convert to Gauss/cm
+            grad.(ax{1}) = tmp(:).' / gamma * 100; % Gauss/cm
         end
     end
 
