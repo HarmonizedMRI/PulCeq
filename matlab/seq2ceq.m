@@ -8,7 +8,7 @@ function ceq = seq2ceq(seqarg, varargin)
 %   seqarg     a seq object, or name of a .seq file
 %
 % Output
-%   ceq        struct, similar to github/HarmonizedMRI/PulCeq/src/pulCeq.h
+%   ceq        struct, based on github/HarmonizedMRI/PulCeq/src/pulCeq.h
 
 
 %% parse inputs
@@ -49,7 +49,7 @@ end
 % parent blocks = unique up to a scaling factor, or phase/frequency offsets.
 % Contains waveforms with maximum amplitude across blocks.
 % First find unique blocks, then determine and set max amplitudes.
-% parentBlockIDs = vector of parent block IDs for all blocks
+% parentBlockIDs = [1 nMax], vector of parent block IDs for all blocks
 
 parentBlockIndex(1) = 1;  % first block is unique by definition
 
@@ -141,36 +141,38 @@ for p = 1:ceq.nParentBlocks
     end
 end
 
+
 %% Get segment (block group) definitions
-% Define the following:
-%  ceq.groups
-%  segmentIDs: length-n vector containing segment IDs
-currentSegmentID = []; 
+% Segments defined by their first occurrence in the .seq file.
+previouslyDefinedSegmentIDs = [];
 if ~arg.ignoreSegmentLabels
     segmentIDs = zeros(1,ceq.nMax);  % keep track of which segment each block belongs to
     for n = 1:ceq.nMax
         b = seq.getBlock(n);
 
-        if isfield(b, 'label') | n == ceq.nMax
-            % wrap up the current segment
-            if ~isempty(currentSegmentID) 
-                if n == ceq.nMax
-                    blockIDs = [blockIDs parentBlockIDs(n)];
-                end
-                Segments{currentSegmentID} = [currentSegmentID length(blockIDs) blockIDs];
-            end
+        if isfield(b, 'label') 
+            activeSegmentID = b.label.value;
 
-            % start new segment
-            if n < ceq.nMax
-                currentSegmentID = b.label.value;
-                blockIDs = parentBlockIDs(n); 
+            if ~any(activeSegmentID == previouslyDefinedSegmentIDs)
+                % start new segment
+                firstOccurrence = true;
+                previouslyDefinedSegmentIDs = [previouslyDefinedSegmentIDs activeSegmentID];
+                Segments{activeSegmentID} = [];
+            else
+                firstOccurrence = false;
             end
-        else
-            % add block to this block group
-            blockIDs = [blockIDs parentBlockIDs(n)];
         end
 
-        segmentIDs(n) = currentSegmentID;
+        if ~exist('firstOccurrence', 'var')
+            error('First block must contain a segment ID');
+        end
+
+        % add block to segment
+        if firstOccurrence
+            Segments{activeSegmentID} = [Segments{activeSegmentID} parentBlockIDs(n)];
+        end
+
+        segmentIDs(n) = activeSegmentID;
     end
 else
     % Each block becomes its own segment (as in TOPPE v5)
@@ -191,26 +193,24 @@ else
     segmentID2Ind = 1:(p+1);
 end
 
-%currentSegmentID = [];  
-%if ~isempty(currentSegmentID)
+% In the above, the Segments array index equals the Segment ID specified in the .seq file,
+% which is an arbitrary integer.
+% Now we squash the Segments array and redefine the Segment IDs accordingly;
+% this is needed since the interpreter assumes that segment ID = index into segment array.
 if ~arg.ignoreSegmentLabels
-    % In the above, the Segments array index equals the Segment ID specified in the .seq file.
-    % Now we squash the Segments array and redefine the Segment IDs accordingly;
-    % this is needed since the interpreter assumes that segment ID = index into segment array.
     iSeg = 1;    % segment array index
     for segmentID = 1:length(Segments)
         if ~isempty(Segments{segmentID})
             segmentID2Ind(segmentID) = iSeg;
             ceq.groups(iSeg).groupID = iSeg;
-            ceq.groups(iSeg).nBlocksInGroup = Segments{segmentID}(2);
-            ceq.groups(iSeg).blockIDs = Segments{segmentID}(3:end);
+            ceq.groups(iSeg).nBlocksInGroup = length(Segments{segmentID});
+            ceq.groups(iSeg).blockIDs = Segments{segmentID};
             iSeg = iSeg + 1;
         end
     end
 end
 
 ceq.nGroups = length(ceq.groups);
-
 
 %% Get dynamic scan information
 ceq.loop = zeros(ceq.nMax, 10);
@@ -233,7 +233,7 @@ while n < ceq.nMax
         p = ceq.loop(n, 2);  % parent block id
         p_ij = ceq.groups(i).blockIDs(j);
         if p ~= p_ij
-            error(sprintf('Expected parent block ID %d, found %d (block %d)', p_ij, p, n));
+            error(sprintf('Sequence contains inconsistent segment definitions. Expected parent block ID %d, found %d (block %d)', p_ij, p, n));
         end
         n = n + 1;
     end
