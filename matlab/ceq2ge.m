@@ -8,6 +8,7 @@ function ceq2ge(ceq, sysGE, ofname, varargin)
 arg.verbose = false;
 arg.ignoreTrigger = false;
 arg.seqGradRasterTime = 10e-6;   % gradient raster time in .seq file
+arg.preserveArea = false;        % attempt to scale gradient after interpolation to preserve area exactly
 
 % Substitute specified system values as appropriate (from MIRT toolbox)
 arg = vararg_pair(arg, varargin);
@@ -134,7 +135,7 @@ for p = 1:ceq.nParentBlocks
 
             % scale to preserve area
             % 10 mG for 10us = 4.3e-2 Hz-sec, so don't scale if area less than this
-            if areaIn > 4.3e-2 %& any(gradType == [2,3]) 
+            if areaIn > 4.3e-2 & arg.preserveArea %& any(gradType == [2,3]) 
                 areaOut = sum(tmp) * raster;
                 tmp = tmp*areaIn/areaOut;
             end
