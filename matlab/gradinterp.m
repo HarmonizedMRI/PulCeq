@@ -1,4 +1,6 @@
 function wav = gradinterp(g, sysGE, varargin)
+% function wav = gradinterp(g, sysGE, varargin)
+%
 % Interpolate gradient waveforms and convert to Gauss/cm
 %
 % We assume that there are 3 types of gradients:
