@@ -1,5 +1,6 @@
 function wav = gradinterp(g, sysGE, varargin)
 % Interpolate gradient waveforms and convert to Gauss/cm
+%
 % We assume that there are 3 types of gradients:
 % 1: arbitrary gradient specified on regular raster time. Assumed to start and end at zero ('first' and 'last' points). 
 % 2: extended trapezoid, specified on "corners" of shape. Assumed to start at zero if and only if delay > 0.
@@ -94,28 +95,29 @@ end
 return
 
 function sub_test()
-    sys = mr.opts();   % default settings
-    fov = 24e-2;       % m
-    deltak = 1/fov;
-    
-    % define two trapezoids: before and after wrapping in trap4ge
-    g = mr.makeTrapezoid('x', sys, 'Area', 1*deltak);
-    g2 = trap4ge(g, 20e-6, sys);  % ensure that sample points are on 20us boundary
-    g.delay = 40e-6;              % on 20us boundary
-    g2.delay = 40e-6;             % on 20us boundary
 
-    subplot(131); 
-    title('Trapezoid interpolated to 4us, before wrapping in trap4ge');
-    sub_test_doone(g);
+sys = mr.opts();   % default settings
+fov = 24e-2;       % m
+deltak = 1/fov;
 
-    subplot(132);
-    title('Trapezoid interpolated to 4us, after wrapping in trap4ge');
-    sub_test_doone(g2);
+% define two trapezoids: before and after wrapping in trap4ge
+g = mr.makeTrapezoid('x', sys, 'Area', 1*deltak);
+g2 = trap4ge(g, 20e-6, sys);  % ensure that sample points are on 20us boundary
+g.delay = 40e-6;              % on 20us boundary
+g2.delay = 40e-6;             % on 20us boundary
 
-    subplot(133);
-    title('Plotted together');
-    sub_test_doone(g);
-    sub_test_doone(g2);
+subplot(131); 
+title('Trapezoid interpolated to 4us, before wrapping in trap4ge');
+sub_test_doone(g);
+
+subplot(132);
+title('Trapezoid interpolated to 4us, after wrapping in trap4ge');
+sub_test_doone(g2);
+
+subplot(133);
+title('Plotted together');
+sub_test_doone(g);
+sub_test_doone(g2);
 
 return
 
