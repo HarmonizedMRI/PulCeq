@@ -25,6 +25,9 @@ gout = mr.makeTrapezoid(gin.channel, sys, ...
     'fallTime', ceil(gin.fallTime/commonRasterTime)*commonRasterTime);
 
 % scale to preserve area
-gout.amplitude = gout.amplitude * gin.area/gout.area;
+if abs(gin.area) > 1e-6
+    gout.amplitude = gout.amplitude * gin.area/gout.area;
+end
+    
 gout.area = gin.area;
 
