@@ -47,15 +47,18 @@ else
             % arbitrary gradient on a regular raster
             g.first = 0;
             g.last = 0;
+            areaIn = sum(g.waveform)*arg.seqGradRasterTime;
             wavtmp = [g.first g.waveform(:)' g.last];
             tttmp = g.delay + [0 g.tt(:)' g.tt(end)+arg.seqGradRasterTime/2];
         else
             % extended trapezoid: shape specified on "corners" of waveform
+            areaIn = sum( (g.waveform(1:(end-1)) + g.waveform(2:end))/2 .* diff(g.tt) );
             wavtmp = g.waveform(:)';
             tttmp = g.delay + g.tt(:)';
         end
     else
         % Convert trapezoid to arbitrary gradient
+        areaIn = [g.riseTime/2 + g.flatTime + g.fallTime/2] * g.amplitude;
         [tttmp, wavtmp] = trap2arb(g);
     end
 
@@ -69,9 +72,19 @@ else
     tge = raster/2 : raster : tttmp(end);
     tmp = interp1(tttmp, wavtmp, tge);
 
+    areaOut = sum(tmp) * raster;
+
     if any(isnan(tmp))
         msg = sprintf('NaN in gradient trapezoid waveform after interpolation (parent block %d)', p);
         error(msg);
+    end
+
+    % If areas don't match to better than 0.01%, throw warning
+    if abs(areaIn) > 1e-6 
+        if abs(areaIn-areaOut)/abs(areaIn) > 1e-4
+            msg = sprintf('Gradient area not preserved after interpolating to GE raster time (in: %.3f 1/m, out: %.3f). Did you wrap all gradient events in trap4ge()?', areaIn, areaOut);
+            warning(msg);
+        end
     end
 
     % convert to Gauss/cm
@@ -127,8 +140,8 @@ ylabel('Gauss/cm');
 areaIn = (g.riseTime/2 + g.flatTime + g.fallTime/2)*g.amplitude;
 areaOut = sum(wav) * raster;
 
-legend(sprintf('In: area = %.6f G/cm*us', areaIn*1e6) , ...
-       sprintf('Out: area = %.6f G/cm*us', areaOut*1e6));
+legend(sprintf('In: area = %.4f G/cm*us', areaIn*1e6) , ...
+       sprintf('Out: area = %.4f G/cm*us', areaOut*1e6));
 
 fprintf('Areas = %.5f (in), %.5f (out) G/cm*us\n', areaIn*1e6, areaOut*1e6);
 
