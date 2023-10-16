@@ -1,4 +1,4 @@
-function wav = gradinterp(g, sysGE, varargin)
+function [wav, tt] = gradinterp(g, sysGE, varargin)
 % function wav = gradinterp(g, sysGE, varargin)
 %
 % Interpolate gradient waveforms and convert to Gauss/cm
@@ -72,8 +72,8 @@ else
     end
 
     % interpolate (includes the delay)
-    tge = raster/2 : raster : tttmp(end);
-    tmp = interp1(tttmp, wavtmp, tge);
+    tt = raster/2 : raster : tttmp(end);
+    tmp = interp1(tttmp, wavtmp, tt);
 
     areaOut = sum(tmp) * raster;
 
@@ -83,6 +83,7 @@ else
     end
 
     % If areas don't match to better than 0.01%, throw warning
+    [areaIn areaOut]
     if abs(areaIn) > 1e-6 
         if abs(areaIn-areaOut)/abs(areaIn) > 1e-4
             msg = sprintf('Gradient area not preserved after interpolating to GE raster time (in: %.3f 1/m, out: %.3f). Did you wrap all gradient events in trap4ge()?', areaIn, areaOut);
