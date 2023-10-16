@@ -83,7 +83,6 @@ else
     end
 
     % If areas don't match to better than 0.01%, throw warning
-    [areaIn areaOut]
     if abs(areaIn) > 1e-6 
         if abs(areaIn-areaOut)/abs(areaIn) > 1e-4
             msg = sprintf('Gradient area not preserved after interpolating to GE raster time (in: %.3f 1/m, out: %.3f). Did you wrap all gradient events in trap4ge()?', areaIn, areaOut);
