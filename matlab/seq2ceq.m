@@ -238,7 +238,6 @@ while n < ceq.nMax
         p = ceq.loop(n, 2);  % parent block id
         p_ij = ceq.groups(i).blockIDs(j);
         if p ~= p_ij
-        keyboard
             error(sprintf('Sequence contains inconsistent segment definitions. Expected parent block ID %d, found %d (block %d)', p_ij, p, n));
         end
         n = n + 1;
