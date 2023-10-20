@@ -3,6 +3,15 @@ function ceq2ge(ceq, sysGE, ofname, varargin)
 %
 % Write a Ceq struct to a set of files that can be executed
 % on GE scanners using the TOPPE interpreter (v6)
+%
+% Inputs
+%   ceq       struct     See seq2ceq.m
+%   sysGE     struct 
+%   ofname    string
+% 
+% Input options [default]
+%   ignoreTrigger [false]
+%   seqGradRasterTime [10e-6]
 
 % defaults
 arg.verbose = false;
