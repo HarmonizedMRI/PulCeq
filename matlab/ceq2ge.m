@@ -3,11 +3,21 @@ function ceq2ge(ceq, sysGE, ofname, varargin)
 %
 % Write a Ceq struct to a set of files that can be executed
 % on GE scanners using the TOPPE interpreter (v6)
+%
+% Inputs
+%   ceq       struct     See seq2ceq.m
+%   sysGE     struct 
+%   ofname    string
+% 
+% Input options [default]
+%   ignoreTrigger [false]
+%   seqGradRasterTime [10e-6]
 
 % defaults
 arg.verbose = false;
 arg.ignoreTrigger = false;
 arg.seqGradRasterTime = 10e-6;   % gradient raster time in .seq file
+arg.preserveArea = false;        % attempt to scale gradient after interpolation to preserve area exactly
 
 % Substitute specified system values as appropriate (from MIRT toolbox)
 arg = vararg_pair(arg, varargin);
@@ -35,7 +45,7 @@ for p = 1:ceq.nParentBlocks
     hasADC(p) = ~isempty(b.adc);
 
     % number of 4us samples in block 
-    n = round(b.blockDuration/raster);
+    %n = round(b.blockDuration/raster);
 
     % defaults
     % npre = number of 4us samples to discard at beginning of RF/ADC window
@@ -69,47 +79,17 @@ for p = 1:ceq.nParentBlocks
 
     % Interpolate gradient waveforms and convert to Gauss/cm
     for ax = {'x','y','z'}
-
         g = b.(['g' ax{1}]);
-
         if ~isempty(g)
             isDelayBlock = false;
-
-            if strcmp(g.type, 'grad')
-                % Arbitrary gradient
-                tmp = gradinterp(g, arg.seqGradRasterTime, sysGE.raster*1e-6);
-            else
-                % Convert trapezoid to arbitrary gradient
-                if g.flatTime > 0
-                    g.waveform = [0 1 1 0]*g.amplitude;       
-                    g.first = g.waveform(1);
-                    g.last = g.waveform(end);
-                    g.tt = [0 g.riseTime g.riseTime+g.flatTime g.riseTime+g.flatTime+g.fallTime];
-                    tmp = gradinterp(g, arg.seqGradRasterTime, sysGE.raster*1e-6);
-                else
-                    g.waveform = [0 1 0]*g.amplitude;       
-                    g.first = g.waveform(1);
-                    g.last = g.waveform(end);
-                    g.tt = [0 g.riseTime g.riseTime+g.fallTime];
-                    tmp = gradinterp(g, arg.seqGradRasterTime, sysGE.raster*1e-6);
-                end
-            end
-
-            if any(isnan(tmp))
-                msg = sprintf('NaN in gradient trapezoid waveform after interpolation (parent block %d)', p);
-                error(msg);
-            end
-
-            % add delay and convert to Gauss/cm
-            delay = zeros(1, round(g.delay/raster));
-            grad.(ax{1}) = [delay tmp(:).']/ gamma * 100;   % Gauss/cm
+            grad.(ax{1}) = gradinterp(g, sysGE, 'seqGradRasterTime', arg.seqGradRasterTime);
         end
     end
 
     % ADC
     if hasADC(p)
         if b.adc.delay < sysGE.adcDeadTime*1e-6
-            error(sprintf('Parent block %d: ADC delay must be >= sysGE.adcDeadTime', p));
+            warning(sprintf('Parent block %d: ADC delay is < sysGE.adcDeadTime', p));
         end
         if b.adc.delay + b.adc.numSamples*b.adc.dwell > b.blockDuration
             error(sprintf('Parent block %d: ADC window extends past end of block', p));
@@ -163,14 +143,14 @@ for p = 1:ceq.nParentBlocks
 
     rf = toppe.readmod(modFiles{p});
     dur = length(rf)*raster*1e6;  % us
-    dur = max(dur, round(ceil(b.blockDuration/raster)*raster*1e6)); % us
-    dur = dur + sysGE.psd_rf_wait*hasRF(p);  % conservative/lazy choice for now
+    dur = max(dur, round(floor(b.blockDuration/raster)*raster*1e6)); % us
+    %dur = dur + sysGE.psd_rf_wait*hasRF(p);  % conservative/lazy choice for now
     fprintf(fid,'%s\t%d\t%d\t%d\t%d\n', ...
         modFiles{p}, round(dur), hasRF(p), hasADC(p), trigpos);    
 end
 fclose(fid);
 
-%% write block group file (cores.txt) and determine TOPPE version
+%% write segment definition file (cores.txt) and determine TOPPE version
 if ceq.nGroups > 0
     toppeVersion = 6;
     for i = 1:ceq.nGroups

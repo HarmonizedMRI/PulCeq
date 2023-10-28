@@ -1,134 +1,152 @@
-function [wavOut, ttOut] = gradinterp(g, rasterIn, rasterOut)
-% function [wavOut, ttOut] = gradinterp(g, rasterIn, rasterOut)
+function [wav, tt] = gradinterp(g, sysGE, varargin)
+% function wav = gradinterp(g, sysGE, varargin)
 %
-% Interpolate arbitrary Pulseq gradient to uniform raster,
-% beginning at time = 0. This is surprisingly tricky.
+% Interpolate gradient waveforms and convert to Gauss/cm
 %
-% Intputs:
-%  g             Pulseq (arbitrary) gradient struct. Must contain the following fields:
-%                g.waveform     gradient waveform samples (a.u.)
-%                g.tt           sample times (sec)
-%                g.first        waveform value at starting edge of 1st raster time
-%                g.last         waveform value at ending edge of last raster time
-%  rasterIn      input gradient raster time (sec)
-%  rasterOut     output gradient raster time (sec)
+% We assume that there are 3 types of gradients:
+% 1: arbitrary gradient specified on regular raster time. Assumed to start and end at zero ('first' and 'last' points). 
+% 2: extended trapezoid, specified on "corners" of shape. Assumed to start at zero if and only if delay > 0.
+% 3: trapezoid, starting and ending at 0
 %
-% Output:
-%  gOut          gradient on uniform raster
-%  ttOut         output gradient sample times (starts at zero)
+% To run test function, do:
+% >> gradinterp('test');
 %
-% To run test function:
-%  >> gradinterp('test');
+% Inputs
+%    g         struct    Pulseq gradient event
+%    sysGE     struct    GE hardware settings, see toppe.systemspecs()
+% 
+% Output
+%    wav   [n 1]     Gradient waveform interpolated to 4us raster time, Gauss/cm
 
-if ischar(g)
+if isstr(g)
     sub_test();
     return;
 end
 
-% Round sample times to nearest 100ns to avoid numerical precision error in mod() below
-dt = 0.1e-6;
-g.tt = round(g.tt/dt)*dt;
-rasterIn = round(rasterIn/dt)*dt;   % round() is safe. ceil() is not, surprisingly
-rasterOut = round(rasterOut/dt)*dt;
+% parse input options
+arg.seqGradRasterTime = 10e-6;
+arg.outRasterTime = 4e-6;
+arg = vararg_pair(arg, varargin);
 
-% initial values
-ttIn = g.tt(:);
-wav = g.waveform(:);
+gamma = sysGE.gamma;   % Hz/T
+raster = sysGE.raster*1e-6;   % sec
 
-% If first sample is not at t=0, add g.first
-% This is probably due to g.tt(1) = rasterIn/2
-if g.tt(1) > 0
-    ttIn = [0; ttIn];
-    wav = [g.first; wav];
-end
+if isempty(g)
+    wav = [];
+else
+    if strcmp(g.type, 'grad')
+        % Arbitrary gradient
+        % restore shape: if we had a
+        % trapezoid converted to shape we have to find
+        % the "corners" and we can eliminate internal
+        % samples on the straight segments
+        % but first we have to restore samples on the
+        % edges of the gradient raster intervals
+        % for that we need the first sample
 
-% If last sample is not at end edge of last rasterIn interval, add g.last
-if mod(g.tt(end), rasterIn)
-    ttIn = [ttIn; ttIn(end) + rasterIn - mod(ttIn(end), rasterIn)];
-    wav = [wav; g.last];
-end
+        % check if we have an extended trapezoid, or an arbitrary gradient on a regular raster
+        tt_rast=g.tt/arg.seqGradRasterTime+0.5;
+        if all(abs(tt_rast-(1:length(tt_rast))')<1e-6)  % samples assumed to be on center of raster intervals
+            % arbitrary gradient on a regular raster
+            g.first = 0;
+            g.last = 0;
+            areaIn = sum(g.waveform)*arg.seqGradRasterTime;
+            wavtmp = [g.first g.waveform(:)' g.last];
+            tttmp = g.delay + [0 g.tt(:)' g.tt(end)+arg.seqGradRasterTime/2];
+        else
+            % extended trapezoid: shape specified on "corners" of waveform
+            areaIn = sum( (g.waveform(1:(end-1)) + g.waveform(2:end))/2 .* diff(g.tt) );
+            wavtmp = g.waveform(:)';
+            tttmp = g.delay + g.tt(:)';
+        end
+    else
+        % Convert trapezoid to arbitrary gradient
+        areaIn = [g.riseTime/2 + g.flatTime + g.fallTime/2] * g.amplitude;
+        [tttmp, wavtmp] = trap2arb(g);
+    end
 
-% Output sample times are on regular raster
-ttOut = [0:rasterOut:ttIn(end)]';
+    % Add delay
+    if g.delay > 0
+        wavtmp = [0 wavtmp];
+        tttmp = [0 tttmp];
+    end
 
-wavOut = interp1(ttIn, wav, ttOut); %, 'linear', 'extrap');
+    % interpolate (includes the delay)
+    tt = raster/2 : raster : tttmp(end);
+    tmp = interp1(tttmp, wavtmp, tt);
 
-% If last output sample is before ttIn(end),
-% add a sample and set value to g.last
-if ttOut(end) < ttIn(end)
-    ttOut = [ttOut; ttOut(end) + rasterOut];
-    wavOut = [wavOut; g.last];
-end
+    areaOut = sum(tmp) * raster;
 
-if any(isnan(wavOut))
-    error('gradinterp(): NaN after interpolation');
+    if any(isnan(tmp))
+        msg = sprintf('NaN in gradient trapezoid waveform after interpolation (parent block %d)', p);
+        error(msg);
+    end
+
+    % If areas don't match to better than 0.01%, throw warning
+    if abs(areaIn) > 1e-6 
+        if abs(areaIn-areaOut)/abs(areaIn) > 1e-4
+            msg = sprintf('Gradient area not preserved after interpolating to GE raster time (in: %.3f 1/m, out: %.3f). Did you wrap all gradient events in trap4ge()?', areaIn, areaOut);
+            warning(msg);
+        end
+    end
+
+    % convert to Gauss/cm
+    wav = tmp(:).' / gamma * 100; % Gauss/cm
 end
 
 return
 
+function sub_test()
 
-function sub_test
-% Try a few waveforms to see how the interpolation behaves
+sys = mr.opts();   % default settings
+fov = 24e-2;       % m
+deltak = 1/fov;
 
-rasterIn = 10e-6;   % Siemens gradient raster
-rasterOut = 4e-6;   % GE gradient raster
+% define two trapezoids: before and after wrapping in trap4ge
+g = mr.makeTrapezoid('x', sys, 'Area', 1*deltak);
+g2 = trap4ge(g, 20e-6, sys);  % ensure that sample points are on 20us boundary
+g.delay = 40e-6;              % on 20us boundary
+g2.delay = 40e-6;             % on 20us boundary
 
-% Add time 'noise' to test robustness to roundoff error
-tNoise = 1e-11;   % sec
-rasterInNoisy = rasterIn + tNoise;
+subplot(131); 
+title('Trapezoid interpolated to 4us, before wrapping in trap4ge');
+sub_test_doone(g);
 
-% Define test waveform and sample times.
-g.waveform = [1 1 0];   % gradient waveform, a.u.
-g.tt = [rasterIn/2 58e-6 20*rasterIn];    % sample times, sec
-g.first = g.waveform(1);    % waveform at start edge of first raster time
-g.last = g.waveform(end);   % waveform at end edge of last raster time
+subplot(132);
+title('Trapezoid interpolated to 4us, after wrapping in trap4ge');
+sub_test_doone(g2);
 
-gNoisy = g;
-gNoisy.tt = g.tt + tNoise*randn(1, length(g.tt));
+subplot(133);
+title('Plotted together');
+sub_test_doone(g);
+sub_test_doone(g2);
 
-% Interpolate and plot
-[gOut ttOut] = gradinterp(gNoisy, rasterInNoisy, rasterOut + tNoise);
+return
 
-hold off;
-plot(g.tt*1e6, g.waveform, 'bo', 'MarkerSize', 8);
+function sub_test_doone(g)
+
+sysGE = toppe.systemspecs();   % default settings
+raster = sysGE.raster*1e-6;   % sec
+
+wav = gradinterp(g, sysGE);
+tt = (1:length(wav))*raster - raster/2;  % us
+
+% plot in units of Gauss/cm
+g.amplitude = g.amplitude / sysGE.gamma * 100;   % G/cm
+[ttin, wavin] = trap2arb(g);
+
 hold on;
-plot(ttOut*1e6, gOut, 'rx-');
-xlabel('time (us)');
-ylabel('Waveform amplitude (a.u.)');
+plot(ttin*1e3,wavin,'b-x'); 
+plot(tt*1e3,wav,'ro'); 
+xlabel('time (ms)');
+ylabel('Gauss/cm');
 
-% Do it again for a sinusoidal waveform,
-% time samples at center of input raster times
-tNoise = 1e-11;   % sec
-rasterInNoisy = rasterIn + tNoise;
-n = 20;   % number of waveform samples
-g.tt = ([1:n]-0.5)*rasterIn;
-freq = 2000; % Hz 
-g.waveform = sin(2*pi*freq*g.tt);
-g.first = 0;
-g.last = g.waveform(end) + (g.waveform(end)-g.waveform(end-1))/2;
+areaIn = (g.riseTime/2 + g.flatTime + g.fallTime/2)*g.amplitude;
+areaOut = sum(wav) * raster;
 
-gNoisy = g;
-gNoisy.tt = g.tt + tNoise*randn(1, length(g.tt));
+legend(sprintf('In: area = %.4f G/cm*us', areaIn*1e6) , ...
+       sprintf('Out: area = %.4f G/cm*us', areaOut*1e6));
 
-[gOut, ttOut] = gradinterp(gNoisy, rasterInNoisy, rasterOut + tNoise);
-plot(g.tt*1e6, g.waveform, 'bo', 'MarkerSize', 8);
-plot(ttOut*1e6, gOut, 'rx-');
+fprintf('Areas = %.5f (in), %.5f (out) G/cm*us\n', areaIn*1e6, areaOut*1e6);
 
-% Do it again for a negative trapezoid
-% Duration not on 4us boundary
-g.waveform = [-0.2 -0.6 -0.6 0];
-g.first = g.waveform(1);
-g.last = g.waveform(end);
-g.riseTime = 50e-06;
-g.flatTime = 30e-06;
-g.fallTime = 70e-06;
-g.tt = [0 g.riseTime g.riseTime+g.flatTime g.riseTime+g.flatTime+g.fallTime];
-
-gNoisy = g;
-gNoisy.tt = g.tt + tNoise*randn(1, length(g.tt));
-
-[gOut ttOut] = gradinterp(gNoisy, rasterInNoisy, rasterOut + tNoise);
-plot(g.tt*1e6, g.waveform, 'bo', 'MarkerSize', 8);
-plot(ttOut*1e6, gOut, 'rx-');
-
-legend('Input waveform', 'Output waveform', '', '', '', '');
+return
