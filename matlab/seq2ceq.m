@@ -238,10 +238,17 @@ while n < ceq.nMax
         p = ceq.loop(n, 2);  % parent block id
         p_ij = ceq.groups(i).blockIDs(j);
         if p ~= p_ij
-            error(sprintf('Sequence contains inconsistent segment definitions. Expected parent block ID %d, found %d (block %d)', p_ij, p, n));
+            %b = ceq.parentBlocks{p};
+            %b_ij = ceq.parentBlocks{p_ij};
+            warning(sprintf('Sequence contains inconsistent segment definitions. This may occur due to programming error (possibly fatal), or if an arbitrary gradient is resembles that from another block except with opposite sign or scaled by zero (which is probably ok). Expected parent block ID %d, found %d (block %d)', p_ij, p, n));
         end
         n = n + 1;
     end
 end
 
 %fprintf('\n');
+
+% function returns true if blocks are same except for zero-scaling of RF and/or gradients 
+function sub_compareblocks(b1, b2)
+
+return
