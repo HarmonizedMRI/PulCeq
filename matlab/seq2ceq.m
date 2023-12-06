@@ -156,15 +156,17 @@ if ~arg.ignoreSegmentLabels
         b = seq.getBlock(n);
 
         if isfield(b, 'label') 
-            activeSegmentID = b.label.value;
+            if strcmp(b.label.label, 'TRID')   % marks start of segment
+                activeSegmentID = b.label.value;
 
-            if ~any(activeSegmentID == previouslyDefinedSegmentIDs)
-                % start new segment
-                firstOccurrence = true;
-                previouslyDefinedSegmentIDs = [previouslyDefinedSegmentIDs activeSegmentID];
-                Segments{activeSegmentID} = [];
-            else
-                firstOccurrence = false;
+                if ~any(activeSegmentID == previouslyDefinedSegmentIDs)
+                    % start new segment
+                    firstOccurrence = true;
+                    previouslyDefinedSegmentIDs = [previouslyDefinedSegmentIDs activeSegmentID];
+                    Segments{activeSegmentID} = [];
+                else
+                    firstOccurrence = false;
+                end
             end
         end
 
