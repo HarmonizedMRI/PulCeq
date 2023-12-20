@@ -33,6 +33,8 @@ for p = 1:ceq.nParentBlocks
 end
 
 %% Write .mod files
+b1ScalingFileIsDefined = false;  % b1ScalingFile is parent block with max RF amplitude across scan
+peakB1InSequence = 0;
 for p = 1:ceq.nParentBlocks
 
     % defaults
@@ -56,7 +58,16 @@ for p = 1:ceq.nParentBlocks
 
     % Interpolate RF waveforms and convert to Gauss
     if hasRF(p)
-        b1ScalingFile = modFiles{p};
+        if ~b1ScalingFileIsDefined
+            b1ScalingFileIsDefined = true;
+            b1ScalingFile = modFiles{p};
+            peakB1InSequence = max(abs(b.rf.signal));
+        else
+            if max(abs(b.rf.signal)) > peakB1InSequence
+                b1ScalingFile = modFiles{p};
+                peakB1InSequence = max(abs(b.rf.signal));
+            end
+        end
 
         if b.rf.delay < sysGE.rfDeadTime*1e-6
             error(sprintf('Parent block %d: RF delay must be >= sysGE.rfDeadTime', p));
