@@ -78,10 +78,10 @@ for p = 1:ceq.nParentBlocks
         end
 
         tge = raster/2 : raster : b.rf.shape_dur;
-        %rf = interp1(b.rf.t, b.rf.signal, tge, 'linear', 'extrap') / gamma * 1e4;  % Gauss
-        mag = interp1(b.rf.t, abs(b.rf.signal), tge, 'linear', 'extrap') / gamma * 1e4;  % Gauss
-        phs = interp1(b.rf.t, angle(b.rf.signal), tge, 'linear', 'extrap');              % radians
-        rf = mag.*exp(1i*phs);
+        rf = interp1(b.rf.t, b.rf.signal, tge, 'linear', 'extrap') / gamma * 1e4;  % Gauss
+        %mag = interp1(b.rf.t, abs(b.rf.signal), tge, 'linear', 'extrap') / gamma * 1e4;  % Gauss
+        %phs = interp1(b.rf.t, angle(b.rf.signal), tge, 'linear', 'extrap');              % radians
+        %rf = mag.*exp(1i*phs);
 
         npre = round(b.rf.delay/raster);
         rfres = length(rf);
