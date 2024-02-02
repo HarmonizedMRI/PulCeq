@@ -69,11 +69,12 @@ for p = 1:ceq.nParentBlocks
             end
         end
 
-        if b.rf.delay < sysGE.rfDeadTime*1e-6
+        if b.rf.delay + eps < sysGE.rfDeadTime*1e-6 
             error(sprintf('Parent block %d: RF delay must be >= sysGE.rfDeadTime', p));
         end
 
-        if b.rf.delay + b.rf.shape_dur + sysGE.rfRingdownTime*1e-6 > b.blockDuration
+        if b.rf.delay + b.rf.shape_dur + sysGE.rfRingdownTime*1e-6 > b.blockDuration + eps
+            keyboard
             error(sprintf('Parent block %d: RF ringdown extends past end of block', p));
         end
 
@@ -102,10 +103,10 @@ for p = 1:ceq.nParentBlocks
 
     % ADC
     if hasADC(p)
-        if b.adc.delay < sysGE.adcDeadTime*1e-6
+        if b.adc.delay + eps < sysGE.adcDeadTime*1e-6
             warning(sprintf('Parent block %d: ADC delay is < sysGE.adcDeadTime', p));
         end
-        if b.adc.delay + b.adc.numSamples*b.adc.dwell > b.blockDuration
+        if b.adc.delay + b.adc.numSamples*b.adc.dwell > b.blockDuration + eps
             error(sprintf('Parent block %d: ADC window extends past end of block', p));
         end
         npre = round(b.adc.delay/raster);
@@ -145,7 +146,7 @@ for p = 1:ceq.nParentBlocks
 
     % trigger out
     if isfield(b, 'trig') & ~arg.ignoreTrigger
-        if b.trig.delay < 100e-6
+        if b.trig.delay + eps < 100e-6
             warning('Requested trigger time too short. Setting to 100us');
             trigpos = 100;  % us
         else
