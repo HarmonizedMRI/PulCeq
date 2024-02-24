@@ -242,7 +242,7 @@ while n < ceq.nMax
         if p ~= p_ij
             %b = ceq.parentBlocks{p};
             %b_ij = ceq.parentBlocks{p_ij};
-            warning(sprintf('Sequence contains inconsistent segment definitions. This may occur due to programming error (possibly fatal), or if an arbitrary gradient is resembles that from another block except with opposite sign or scaled by zero (which is probably ok). Expected parent block ID %d, found %d (block %d)', p_ij, p, n));
+            warning(sprintf('Sequence contains inconsistent segment definitions. This may occur due to programming error (possibly fatal), or if an arbitrary gradient resembles that from another block except with opposite sign or scaled by zero (which is probably ok). Expected parent block ID %d, found %d (block %d)', p_ij, p, n));
         end
         n = n + 1;
     end
