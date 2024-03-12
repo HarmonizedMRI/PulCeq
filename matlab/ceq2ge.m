@@ -74,7 +74,6 @@ for p = 1:ceq.nParentBlocks
         end
 
         if b.rf.delay + b.rf.shape_dur + sysGE.rfRingdownTime*1e-6 > b.blockDuration + eps
-            keyboard
             error(sprintf('Parent block %d: RF ringdown extends past end of block', p));
         end
 

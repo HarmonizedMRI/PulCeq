@@ -12,6 +12,11 @@ function seq2ge(seqarg, sysGE, ofname)
 % Effect
 %   Writes a .tar file containing all the required scan files to run on GE scanners
 
+% Get Pulseq system struct
+fprintf('Getting Pulseq system struct from .seq file...')
+seq = mr.Sequence(); seq.read(seqarg); sys = seq.sys;
+fprintf(' done\n');
+
 % Default behavior for sysGE
 if isempty(sysGE)
     % Read in system specs defined from .seq file
@@ -33,4 +38,4 @@ end
 ceq = seq2ceq(seqarg);
 
 % Write to TOPPE files
-ceq2ge(ceq, sysGE, ofname);
+ceq2ge(ceq, sysGE, ofname, 'seqGradRasterTime', sys.gradRasterTime);
