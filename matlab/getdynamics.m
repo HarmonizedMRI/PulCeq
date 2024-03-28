@@ -29,7 +29,9 @@ for ax = {'gx','gy','gz'}
             pbmx = max(parentBlock.(ax{1}).waveform);
             pbmn = min(parentBlock.(ax{1}).waveform);
             amp.(ax{1}) = max(abs(g.waveform));
-            if xor(mx>abs(mn), pbmx>abs(pbmn))
+            % if xor(mx>abs(mn), pbmx>abs(pbmn))
+            % --DC
+            if any(g.waveform.*parentBlock.(ax{1}).waveform < 0)
                 amp.(ax{1}) = -amp.(ax{1});
             end
         end
