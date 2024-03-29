@@ -220,7 +220,9 @@ end
 ceq.nGroups = length(ceq.groups);
 
 %% Get dynamic scan information
-ceq.loop = zeros(ceq.nMax, 10);
+% Xiaoxi Liu: update for adc freq offset
+% ceq.loop = zeros(ceq.nMax, 10);
+ceq.loop = zeros(ceq.nMax, 11);
 for n = 1:ceq.nMax
     b = seq.getBlock(n);
     p = parentBlockIDs(n); 
