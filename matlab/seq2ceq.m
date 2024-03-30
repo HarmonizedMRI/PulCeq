@@ -56,7 +56,7 @@ end
 % First find unique blocks, then determine and set max amplitudes.
 % parentBlockIDs = [nMax], vector of parent block IDs for all blocks
 
-parentBlockIndex(1) = 1;  % first block is unique by definition
+parentBlockIndex = [];  % first block is unique by definition
 
 parentBlockIDs = [];
 
@@ -85,13 +85,17 @@ for n = 1:ceq.nMax
         continue;
     end
 
+    if isempty(parentBlockIndex)
+        parentBlockIndex(1) = n;
+    end
+
     for p = 1:length(parentBlockIndex)
         n2 = parentBlockIndex(p);
         IsSame(p) = compareblocks(seq, blockEvents(n,:), blockEvents(n2,:), n, n2);
     end
     if sum(IsSame) == 0
         if arg.verbose
-            fprintf('\nFound new block on line %d\n', n);
+            fprintf('\nFound new parent block on line %d\n', n);
         end
         parentBlockIndex(p+1) = n;  % add new block to list
         parentBlockIDs(n) = p+1;
