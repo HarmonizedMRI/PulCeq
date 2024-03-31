@@ -56,7 +56,7 @@ end
 % First find unique blocks, then determine and set max amplitudes.
 % parentBlockIDs = [nMax], vector of parent block IDs for all blocks
 
-parentBlockIndex = [];  % first block is unique by definition
+parentBlockIndex = []; 
 
 parentBlockIDs = [];
 
@@ -256,30 +256,32 @@ for n = 1:ceq.nMax
     end
 end
 
+
+%% Remove zero-duration (label-only) blocks from ceq.loop
+ceq.loop(parentBlockIDs == -1, :) = [];
+ceq.nMax = size(ceq.loop,1);
+
+
 %% Check that the execution of blocks throughout the sequence
 %% is consistent with the segment definitions
 n = 1;
 while n < ceq.nMax
-    if parentBlockIDs(n) == -1
-        n = n + 1;
-        continue;
-    end
     i = ceq.loop(n, 1);  % segment id
+
     if (n + ceq.groups(i).nBlocksInGroup) > ceq.nMax
         break;
     end
+
+    % loop through blocks in segment
     for j = 1:ceq.groups(i).nBlocksInGroup
+
+        % compare parent block id in ceq.loop against block id in ceq.groups(i)
         p = ceq.loop(n, 2);  % parent block id
         p_ij = ceq.groups(i).blockIDs(j);
         if p ~= p_ij
-            %b = ceq.parentBlocks{p};
-            %b_ij = ceq.parentBlocks{p_ij};
             warning(sprintf('Sequence contains inconsistent segment definitions. This may occur due to programming error (possibly fatal), or if an arbitrary gradient resembles that from another block except with opposite sign or scaled by zero (which is probably ok). Expected parent block ID %d, found %d (block %d)', p_ij, p, n));
         end
+
         n = n + 1;
     end
 end
-
-%% Remove zero-duration (label) blocks from ceq.loop
-ceq.loop(parentBlockIDs == -1, :) = [];
-ceq.nMax = size(ceq.loop,1);
