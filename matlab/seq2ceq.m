@@ -9,7 +9,7 @@ function ceq = seq2ceq(seqarg, varargin)
 %
 % Input options with defaults
 %   nMax                  [1]            Only parse the first nMax blocks in the .seq file  [all blocks]
-%   ignoreSegmentLables   true/false     Treat each block as a segment. Use with caution! [false]
+%   ignoreSegmentLabels   true/false     Treat each block as a segment. Use with caution! [false]
 %   verbose               true/false     Print some info to the terminal [false]
 %
 % Output
@@ -54,11 +54,13 @@ end
 % parent blocks = unique up to a scaling factor, or phase/frequency offsets.
 % Contains waveforms with maximum amplitude across blocks.
 % First find unique blocks, then determine and set max amplitudes.
-% parentBlockIDs = [1 nMax], vector of parent block IDs for all blocks
+% parentBlockIDs = [nMax], vector of parent block IDs for all blocks
 
-parentBlockIndex(1) = 1;  % first block is unique by definition
+parentBlockIndex = []; 
 
-fprintf('seq2ceq: Getting block %d/%d', 1, ceq.nMax); prev_n = 1; % Progress update trackers
+parentBlockIDs = [];
+
+fprintf('seq2ceq: Getting block %d/%d', 1, ceq.nMax); prev_n = 1;
 for n = 1:ceq.nMax
     if ~mod(n, 500) || n == ceq.nMax
         for ib = 1:strlength(sprintf('seq2ceq: Getting block %d/%d', prev_n, ceq.nMax))
@@ -69,11 +71,22 @@ for n = 1:ceq.nMax
         if n == ceq.nMax, fprintf('\n'), end
     end
 
-    % Pure delay blocks are handled separately
     b = seq.getBlock(n);
+
+    % Skip blocks with zero duration (only contains label(s))
+    if b.blockDuration < 2*eps
+        parentBlockIDs(n) = -1;
+        continue;
+    end
+
+    % Pure delay blocks are handled separately
     if isdelayblock(b)
         parentBlockIDs(n) = 0;
         continue;
+    end
+
+    if isempty(parentBlockIndex)
+        parentBlockIndex(1) = n;
     end
 
     for p = 1:length(parentBlockIndex)
@@ -82,7 +95,7 @@ for n = 1:ceq.nMax
     end
     if sum(IsSame) == 0
         if arg.verbose
-            fprintf('\nFound new block on line %d\n', n);
+            fprintf('\nFound new parent block on line %d\n', n);
         end
         parentBlockIndex(p+1) = n;  % add new block to list
         parentBlockIDs(n) = p+1;
@@ -105,7 +118,7 @@ for p = 1:length(parentBlockIndex)
     ceq.parentBlocks{p}.amp.gz = 0;
 
     for n = 1:ceq.nMax
-        if parentBlockIDs(n) ~= p
+        if parentBlockIDs(n) ~= p | parentBlockIDs(n) == -1
             continue; 
         end
         block = seq.getBlock(n);
@@ -148,16 +161,28 @@ end
 
 
 %% Get segment (block group) definitions
-% Segments defined by their first occurrence in the .seq file.
+% Segments are defined by their first occurrence in the .seq file
 previouslyDefinedSegmentIDs = [];
 if ~arg.ignoreSegmentLabels
     segmentIDs = zeros(1,ceq.nMax);  % keep track of which segment each block belongs to
     for n = 1:ceq.nMax
         b = seq.getBlock(n);
 
+        if parentBlockIDs(n) == -1
+            continue;    % skip
+        end
+
+        % Get segment ID label (TRID) if present
         if isfield(b, 'label') 
-            if strcmp(b.label.label, 'TRID')   % marks start of segment
-                activeSegmentID = b.label.value;
+            hasTRIDlabel = false;
+            for ii = 1:length(b.label)
+                if strcmp(b.label(ii).label, 'TRID')
+                    hasTRIDlabel = true;
+                    break;
+                end
+            end
+            if hasTRIDlabel  % marks start of segment
+                activeSegmentID = b.label(ii).value;
 
                 if ~any(activeSegmentID == previouslyDefinedSegmentIDs)
                     % start new segment
@@ -171,7 +196,7 @@ if ~arg.ignoreSegmentLabels
         end
 
         if ~exist('firstOccurrence', 'var')
-            error('First block must contain a segment ID');
+            %error('First block must contain a segment ID');
         end
 
         % add block to segment
@@ -226,31 +251,37 @@ for n = 1:ceq.nMax
     p = parentBlockIDs(n); 
     if p == 0  % delay block
         ceq.loop(n,:) = getdynamics(b, segmentID2Ind(segmentIDs(n)), p);
-    else
+    elseif p > 0
         ceq.loop(n,:) = getdynamics(b, segmentID2Ind(segmentIDs(n)), p, ceq.parentBlocks{p});
     end
 end
+
+
+%% Remove zero-duration (label-only) blocks from ceq.loop
+ceq.loop(parentBlockIDs == -1, :) = [];
+ceq.nMax = size(ceq.loop,1);
+
 
 %% Check that the execution of blocks throughout the sequence
 %% is consistent with the segment definitions
 n = 1;
 while n < ceq.nMax
     i = ceq.loop(n, 1);  % segment id
+
+    if (n + ceq.groups(i).nBlocksInGroup) > ceq.nMax
+        break;
+    end
+
+    % loop through blocks in segment
     for j = 1:ceq.groups(i).nBlocksInGroup
+
+        % compare parent block id in ceq.loop against block id in ceq.groups(i)
         p = ceq.loop(n, 2);  % parent block id
         p_ij = ceq.groups(i).blockIDs(j);
         if p ~= p_ij
-            %b = ceq.parentBlocks{p};
-            %b_ij = ceq.parentBlocks{p_ij};
             warning(sprintf('Sequence contains inconsistent segment definitions. This may occur due to programming error (possibly fatal), or if an arbitrary gradient resembles that from another block except with opposite sign or scaled by zero (which is probably ok). Expected parent block ID %d, found %d (block %d)', p_ij, p, n));
         end
+
         n = n + 1;
     end
 end
-
-%fprintf('\n');
-
-% function returns true if blocks are same except for zero-scaling of RF and/or gradients 
-function sub_compareblocks(b1, b2)
-
-return
