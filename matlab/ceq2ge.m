@@ -111,6 +111,11 @@ for p = 1:ceq.nParentBlocks
         npre = round(b.adc.delay/raster);
         rfres = round(b.adc.numSamples*b.adc.dwell/raster);
         readoutFile = modFiles{p};
+        dwell = round(b.adc.dwell*1e6);
+        numSamples = b.adc.numSamples;
+    else
+        dwell = [];
+        numSamples = [];
     end
 
     % Set nChop, which is the number of samples to trim from beginning and end of RF/ADC window
@@ -125,7 +130,7 @@ for p = 1:ceq.nParentBlocks
     if ~isDelayBlock 
         toppe.writemod(sysGE, 'ofname', modFiles{p}, ...
             'rf', rf(:), 'gx', grad.x(:), 'gy', grad.y(:), 'gz', grad.z(:), ...
-            'nChop', nChop);
+            'nChop', nChop, 'hdrints', [dwell numSamples]);
     end
 end
 
