@@ -57,34 +57,34 @@ typedef struct {
     PulseqADC  adc;
     PulseqTrig trig;
 
-    /* vectors available for use as needed by the client program */
-    int nVal1;                /* number of int values. Must be defined. */
-    int* val1;                /* to be allocated dynamically by the client program */
-    int nVal2;                /* number of float values. Must be defined. */
-    float* nVal2;             /* to be allocated dynamically by the client program */
+    /* arrays available for use as needed by the client program */
+    int nVal1;            /* number of int values. Must be defined. */
+    int* val1;            /* to be allocated dynamically by the client program */
+    int nVal2;            /* number of float values. Must be defined. */
+    float* nVal2;         /* to be allocated dynamically by the client program */
 } PulseqBlock; 
 
-/* Struct containing block IDs for all block groups */
+/* Struct containing block IDs for all segments */
 typedef struct {
-    int groupID;
-    int  nBlocksInGroup;    /* number of blocks in group */
-    int* blockIDs;          /* block id's in this group */
-} BlockGroup;
+    int  segmentID;
+    int  nBlocks;        /* number of blocks in segment */
+    int* blockIDs;       /* block id's in this segment */
+} Segment;
 
 /* struct containing entire sequence definition */
 typedef struct {
     int nParentBlocks; 
     PulseqBlock* parentBlocks;
 
-    int nGroups;    
-    BlockGroup* groups;      /* optional */
+    int nSegments;    
+    Segment* segments;      /* optional */
 
     float** loop    /* Dynamic scan settings: waveform amplitudes, phase offsets, etc.
-                       loop[n] = [groupID blockID rfamp gxamp gyamp gzamp rfFreqOffset rfPhaseOffset ...]
-                       units:    [int     int     T     mT/m  mT/m  mT/m  Hz           rad           ...]
+                       loop[n] = [segmentID blockID rfamp gxamp gyamp gzamp rfFreqOffset rfPhaseOffset ...]
+                       units:    [int       int     T     mT/m  mT/m  mT/m  Hz           rad           ...]
                     */
 
-   int nMax;         /* number of blocks (rows in BLOCKS section) in .seq file */
+    int nMax;         /* number of blocks (rows in BLOCKS section) in .seq file */
 } Ceq;
 
 /* function prototypes that this specification implements */
