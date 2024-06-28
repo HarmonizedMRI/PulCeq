@@ -8,9 +8,10 @@ ceq.nSegments     = fread(fid, 1, 'int16');
 
 for ii = 1:ceq.nParentBlocks
     ceq.blockDuration = fread(fid, 1, 'float32');
-
-    rf = sub_readrf(fid);
-    ceq.parentBlocks{ii}.rf = rf;
+    ceq.parentBlocks{ii}.rf = sub_readrf(fid);
+    ceq.parentBlocks{ii}.gx = sub_readgrad(fid);
+    ceq.parentBlocks{ii}.gy = sub_readgrad(fid);
+    ceq.parentBlocks{ii}.gz = sub_readgrad(fid);
 end
 
 fclose(fid);
@@ -31,6 +32,23 @@ if flg
     rf.phaseOffset = fread(fid, 1, 'float32');
 else
     rf = [];
+end
+
+return
+
+function g = sub_readgrad(fid)
+
+type = fread(fid, 1, 'int16');   % 0: empty; 1: trap; 2: arbitrary gradient
+
+switch type
+    case 0
+        g = [];
+    case 1
+        g.amplitude = fread(fid, 1, 'float32');
+        g.riseTime = fread(fid, 1, 'float32');
+        g.flatTime = fread(fid, 1, 'float32');
+        g.fallTime = fread(fid, 1, 'float32');
+        g.delay    = fread(fid, 1, 'float32');
 end
 
 return

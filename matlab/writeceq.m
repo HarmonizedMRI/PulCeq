@@ -7,10 +7,14 @@ fwrite(fid, ceq.nParentBlocks, 'int16');
 fwrite(fid, ceq.nSegments, 'int16');
 
 for ii = 1:ceq.nParentBlocks
+
     b = ceq.parentBlocks{ii};
 
     fwrite(fid, b.blockDuration, 'float32');
     sub_writerf(fid, b.rf);
+    sub_writegrad(fid, b.gx);
+    sub_writegrad(fid, b.gy);
+    sub_writegrad(fid, b.gz);
 end
 
 fclose(fid);
@@ -35,21 +39,24 @@ end
 
 return
 
-function sub_writegrad(fid, b)
+function sub_writegrad(fid, g)
 
-if isempty(b.rf)
-    fwrite(fid, 0, 'int16');   % flag indicating no rf event
+% first value is flag indicating gradient type:
+% 0: empty; 1: trap; 2: arbitrary gradient
+if isempty(g)
+    fwrite(fid, 0, 'int16');   % flag indicating no gradient event
 else
-    fwrite(fid, 1, 'int16');   % flag indicating that rf event is present
-    fwrite(fid, 1, 'int16');                          % type. 1 = 'rf'; 
-    fwrite(fid, length(b.rf.signal), 'int16');        % number of waveform samples
-    fwrite(fid, abs(b.rf.signal),    'float32');      % Hz
-    fwrite(fid, angle(b.rf.signal),  'float32');      % radians
-    fwrite(fid, b.rf.t,              'float32');      % sec
-    fwrite(fid, b.rf.shape_dur,      'float32');      % sec
-    fwrite(fid, b.rf.delay,          'float32');      % sec
-    fwrite(fid, b.rf.freqOffset,     'float32');      % Hz
-    fwrite(fid, b.rf.phaseOffset,    'float32');      % radians
+    if strcmp(g.type, 'trap')
+        fwrite(fid, 1, 'int16');   
+        fwrite(fid, g.amplitude, 'float32');          % Hz/m
+        fwrite(fid, g.riseTime, 'float32');           % sec
+        fwrite(fid, g.flatTime, 'float32');           % sec
+        fwrite(fid, g.fallTime, 'float32');           % sec
+        fwrite(fid, g.delay,    'float32');           % sec
+    else
+        %fwrite(fid, 2, 'int16');   
+        % TODO
+    end
 end
 
 return
