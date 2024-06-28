@@ -1,4 +1,7 @@
 function writeceq(ceq, fn)
+% function writeceq(ceq, fn)
+% 
+% Write Ceq struct to binary file
 
 fid = fopen(fn, 'wb');  % big endian (network byte order)
 
@@ -6,6 +9,7 @@ fwrite(fid, ceq.nMax, 'int32');
 fwrite(fid, ceq.nParentBlocks, 'int16');
 fwrite(fid, ceq.nSegments, 'int16');
 
+% write parent blocks
 for ii = 1:ceq.nParentBlocks
 
     b = ceq.parentBlocks{ii};
@@ -15,10 +19,12 @@ for ii = 1:ceq.nParentBlocks
     sub_writegrad(fid, b.gx);
     sub_writegrad(fid, b.gy);
     sub_writegrad(fid, b.gz);
+    sub_writeadc(fid, b.adc);
 end
 
 fclose(fid);
 
+return
 
 function sub_writerf(fid, rf)
 
@@ -26,7 +32,7 @@ if isempty(rf)
     fwrite(fid, 0, 'int16');   % flag indicating no rf event
 else
     fwrite(fid, 1, 'int16');   % flag indicating that rf event is present
-    fwrite(fid, 1, 'int16');                          % type. 1 = 'rf'; 
+    fwrite(fid, 1, 'int16');                        % type. 1 = 'rf'
     fwrite(fid, length(rf.signal), 'int16');        % number of waveform samples
     fwrite(fid, abs(rf.signal),    'float32');      % Hz
     fwrite(fid, angle(rf.signal),  'float32');      % radians
@@ -60,3 +66,16 @@ else
 end
 
 return
+
+function sub_writeadc(fid, adc)
+
+if isempty(adc)
+    fwrite(fid, 0, 'int16');
+else
+    fwrite(fid, 1, 'int16');
+    fwrite(fid, adc.numSamples, 'int32');
+    fwrite(fid, adc.dwell, 'float32');
+    fwrite(fid, adc.delay, 'float32');
+    fwrite(fid, adc.freqOffset, 'float32');
+    fwrite(fid, adc.phaseOffset, 'float32');
+end

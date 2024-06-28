@@ -1,4 +1,7 @@
 function ceq = readceq(fn)
+% function ceq = readceq(fn)
+%
+% Read Ceq struct from file created with writeceq.m
 
 fid = fopen(fn, 'rb');
 
@@ -12,9 +15,12 @@ for ii = 1:ceq.nParentBlocks
     ceq.parentBlocks{ii}.gx = sub_readgrad(fid);
     ceq.parentBlocks{ii}.gy = sub_readgrad(fid);
     ceq.parentBlocks{ii}.gz = sub_readgrad(fid);
+    ceq.parentBlocks{ii}.adc = sub_readadc(fid);
 end
 
 fclose(fid);
+
+return
 
 function rf = sub_readrf(fid)
 
@@ -49,6 +55,23 @@ switch type
         g.flatTime = fread(fid, 1, 'float32');
         g.fallTime = fread(fid, 1, 'float32');
         g.delay    = fread(fid, 1, 'float32');
+end
+
+return
+
+function adc = sub_readadc(fid)
+
+type = fread(fid, 1, 'int16');
+
+switch type
+    case 0
+        adc = [];
+    case 1
+        adc.numSamples  = fread(fid, 1, 'int32');
+        adc.dwell       = fread(fid, 1, 'float32');
+        adc.delay       = fread(fid, 1, 'float32');
+        adc.freqOffset  = fread(fid, 1, 'float32');
+        adc.phaseOffset = fread(fid, 1, 'float32');
 end
 
 return
