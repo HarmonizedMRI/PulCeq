@@ -6,5 +6,5 @@ write2DGRE;
 ceq = seq2ceq('gre2d.seq');
 
 % write Ceq struct to file. This is what tv7 will load and run.
-writeceq(ceq, 'gre2d.ceq');
+%writeceq(ceq, 'gre2d.ceq');
 

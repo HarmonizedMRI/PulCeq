@@ -209,15 +209,15 @@ if ~arg.ignoreSegmentLabels
 else
     % Each block becomes its own segment (as in TOPPE v5)
     for p = 1:ceq.nParentBlocks
-        ceq.groups(p).groupID = p;
-        ceq.groups(p).nBlocksInGroup = 1;
-        ceq.groups(p).blockIDs = p;
+        ceq.segments(p).segmentID = p;
+        ceq.segments(p).nBlocksInSegment = 1;
+        ceq.segments(p).blockIDs = p;
     end
 
     % Add delay segment (dedicated segment that's always defined)
-    ceq.groups(p+1).groupID = p+1;
-    ceq.groups(p+1).nBlocksInGroup = 1;
-    ceq.groups(p+1).blockIDs = 0;   % block ID zero is a flag indicating a delay block
+    ceq.segments(p+1).segmentID = p+1;
+    ceq.segments(p+1).nBlocksInSegment = 1;
+    ceq.segments(p+1).blockIDs = 0;   % block ID zero is a flag indicating a delay block
 
     segmentIDs = parentBlockIDs;
     segmentIDs(parentBlockIDs==0) = p+1;
@@ -234,15 +234,15 @@ if ~arg.ignoreSegmentLabels
     for segmentID = 1:length(Segments)
         if ~isempty(Segments{segmentID})
             segmentID2Ind(segmentID) = iSeg;
-            ceq.groups(iSeg).groupID = iSeg;
-            ceq.groups(iSeg).nBlocksInGroup = length(Segments{segmentID});
-            ceq.groups(iSeg).blockIDs = Segments{segmentID};
+            ceq.segments(iSeg).segmentID = iSeg;
+            ceq.segments(iSeg).nBlocksInSegment = length(Segments{segmentID});
+            ceq.segments(iSeg).blockIDs = Segments{segmentID};
             iSeg = iSeg + 1;
         end
     end
 end
 
-ceq.nGroups = length(ceq.groups);
+ceq.nSegments = length(ceq.segments);
 
 %% Get dynamic scan information
 ceq.loop = zeros(ceq.nMax, 10);
@@ -268,16 +268,16 @@ n = 1;
 while n < ceq.nMax
     i = ceq.loop(n, 1);  % segment id
 
-    if (n + ceq.groups(i).nBlocksInGroup) > ceq.nMax
+    if (n + ceq.segments(i).nBlocksInSegment) > ceq.nMax
         break;
     end
 
     % loop through blocks in segment
-    for j = 1:ceq.groups(i).nBlocksInGroup
+    for j = 1:ceq.segments(i).nBlocksInSegment
 
-        % compare parent block id in ceq.loop against block id in ceq.groups(i)
+        % compare parent block id in ceq.loop against block id in ceq.segments(i)
         p = ceq.loop(n, 2);  % parent block id
-        p_ij = ceq.groups(i).blockIDs(j);
+        p_ij = ceq.segments(i).blockIDs(j);
         if p ~= p_ij
             warning(sprintf('Sequence contains inconsistent segment definitions. This may occur due to programming error (possibly fatal), or if an arbitrary gradient resembles that from another block except with opposite sign or scaled by zero (which is probably ok). Expected parent block ID %d, found %d (block %d)', p_ij, p, n));
         end
