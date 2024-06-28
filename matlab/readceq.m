@@ -3,20 +3,31 @@ function ceq = readceq(fn)
 %
 % Read Ceq struct from file created with writeceq.m
 
+nLoopArrayColumns = 10;  % may change in future versions
+
 fid = fopen(fn, 'rb');
 
 ceq.nMax          = fread(fid, 1, 'int32');
 ceq.nParentBlocks = fread(fid, 1, 'int16');
 ceq.nSegments     = fread(fid, 1, 'int16');
 
+% read parent blocks
 for ii = 1:ceq.nParentBlocks
-    ceq.blockDuration = fread(fid, 1, 'float32');
+    ceq.parentBlocks{ii}.blockDuration = fread(fid, 1, 'float32');
     ceq.parentBlocks{ii}.rf = sub_readrf(fid);
     ceq.parentBlocks{ii}.gx = sub_readgrad(fid);
     ceq.parentBlocks{ii}.gy = sub_readgrad(fid);
     ceq.parentBlocks{ii}.gz = sub_readgrad(fid);
     ceq.parentBlocks{ii}.adc = sub_readadc(fid);
 end
+
+% read segment definitions
+for ii = 1:ceq.nSegments
+    ceq.segments(ii) = sub_readsegment(fid);
+end
+
+% read loop
+ceq.loop = sub_readloop(fid, ceq.nMax, nLoopArrayColumns);
 
 fclose(fid);
 
@@ -72,6 +83,24 @@ switch type
         adc.delay       = fread(fid, 1, 'float32');
         adc.freqOffset  = fread(fid, 1, 'float32');
         adc.phaseOffset = fread(fid, 1, 'float32');
+end
+
+return
+
+function s = sub_readsegment(fid, s)  
+    s.segmentID = fread(fid, 1, 'int16');
+    s.nBlocksInSegment = fread(fid, 1, 'int16');
+    s.blockIDs = fread(fid, s.nBlocksInSegment, 'int16');
+return
+
+function l = sub_readloop(fid, nMax, nCols)
+
+l = zeros(nMax, nCols);
+
+for ii = 1:nMax
+    for jj = 1:nCols
+        l(ii,jj) = fread(fid, 1, 'float32');
+    end
 end
 
 return

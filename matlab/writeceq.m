@@ -22,6 +22,14 @@ for ii = 1:ceq.nParentBlocks
     sub_writeadc(fid, b.adc);
 end
 
+% write segment definitions
+for ii = 1:ceq.nSegments
+    sub_writesegment(fid, ceq.segments(ii));  % write definition of one segment
+end
+
+% write loop
+sub_writeloop(fid, ceq.loop);
+
 fclose(fid);
 
 return
@@ -79,3 +87,21 @@ else
     fwrite(fid, adc.freqOffset, 'float32');
     fwrite(fid, adc.phaseOffset, 'float32');
 end
+
+return
+
+function sub_writesegment(fid, s)  % write definition of one segment
+    fwrite(fid, s.segmentID, 'int16');
+    fwrite(fid, s.nBlocksInSegment, 'int16');
+    fwrite(fid, s.blockIDs, 'int16');
+return
+
+function sub_writeloop(fid, l)
+
+for ii = 1:size(l,1)
+    for jj = 1:size(l,2)  % write in row-major order
+        fwrite(fid, l(ii,jj), 'float32');
+    end
+end
+
+return
