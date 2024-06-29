@@ -98,9 +98,7 @@ function l = sub_readloop(fid, nMax, nCols)
 l = zeros(nMax, nCols);
 
 for ii = 1:nMax
-    for jj = 1:nCols
-        l(ii,jj) = fread(fid, 1, 'float32');
-    end
+    l(ii,:) = fread(fid, nCols, 'float32');
 end
 
 return

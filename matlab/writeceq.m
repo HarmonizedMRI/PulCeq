@@ -99,9 +99,7 @@ return
 function sub_writeloop(fid, l)
 
 for ii = 1:size(l,1)
-    for jj = 1:size(l,2)  % write in row-major order
-        fwrite(fid, l(ii,jj), 'float32');
-    end
+    fwrite(fid, l(ii,:), 'float32');  % write in row-major order
 end
 
 return
