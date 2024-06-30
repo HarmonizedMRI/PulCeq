@@ -35,9 +35,8 @@ return
 
 function rf = sub_readrf(fid)
 
-flg = fread(fid, 1, 'int16');
-if flg
-    rf.type = fread(fid, 1, 'int16');
+rf.type = fread(fid, 1, 'int16');
+if rf.type
     n     = fread(fid, 1, 'int16');         % number of waveform samples
     rho   = fread(fid, n, 'float32');
     theta = fread(fid, n, 'float32');
