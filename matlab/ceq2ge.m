@@ -170,12 +170,12 @@ end
 fclose(fid);
 
 %% write segment definition file (cores.txt) and determine TOPPE version
-if ceq.nGroups > 0
+if ceq.nSegments > 0
     toppeVersion = 6;
-    for i = 1:ceq.nGroups
-        blockGroups{i} = ceq.groups(i).blockIDs;
+    for i = 1:ceq.nSegments
+        blockSegments{i} = ceq.segments(i).blockIDs;
     end
-    toppe.writecoresfile(blockGroups);
+    toppe.writecoresfile(blockSegments);
 else
     toppeVersion = 5;
 end
