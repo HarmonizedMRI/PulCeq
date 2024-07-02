@@ -3,8 +3,6 @@ function ceq = readceq(fn)
 %
 % Read Ceq struct from file created with writeceq.m
 
-nLoopArrayColumns = 10;  % may change in future versions
-
 fid = fopen(fn, 'rb');
 
 ceq.nMax          = fread(fid, 1, 'int32');
@@ -27,7 +25,7 @@ for ii = 1:ceq.nSegments
 end
 
 % read loop
-ceq.loop = sub_readloop(fid, ceq.nMax, nLoopArrayColumns);
+ceq.loop = sub_readloop(fid, ceq.nMax);
 
 fclose(fid);
 
@@ -92,12 +90,12 @@ function s = sub_readsegment(fid, s)
     s.blockIDs = fread(fid, s.nBlocksInSegment, 'int16');
 return
 
-function l = sub_readloop(fid, nMax, nCols)
+function l = sub_readloop(fid, nMax)
 
-l = zeros(nMax, nCols);
-
+nColumsInLoopArray = fread(fid, 1, 'int16');
+l = zeros(nMax, nColumsInLoopArray);
 for ii = 1:nMax
-    l(ii,:) = fread(fid, nCols, 'float32');
+    l(ii,:) = fread(fid, nColumsInLoopArray, 'float32');
 end
 
 return

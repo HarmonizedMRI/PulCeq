@@ -97,6 +97,7 @@ return
 
 function sub_writeloop(fid, l)
 
+fwrite(fid, size(l,2), 'int16'); % number of columns in loop array l
 for ii = 1:size(l,1)
     fwrite(fid, l(ii,:), 'float32');  % write in row-major order
 end
