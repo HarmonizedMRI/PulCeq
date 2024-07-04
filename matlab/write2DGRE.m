@@ -59,8 +59,8 @@ assert(all(delayTR >= mr.calcDuration(gxSpoil, gzSpoil)));
 % -10 < iY <= 0    ADC is turned on and used for receive gain calibration on GE
 % iY > 0           Image acquisition
 
-nDummyShots = 0;
-pislquant = 0;    % number of shots/ADC events used for receive gain calibration
+nDummyShots = 100;
+pislquant = 10;    % number of shots/ADC events used for receive gain calibration
 
 rf_phase = 0;
 rf_inc = 0;
