@@ -44,6 +44,7 @@ if rf.type
     rf.delay       = fread(fid, 1, 'float32');
     rf.freqOffset  = fread(fid, 1, 'float32');
     rf.phaseOffset = fread(fid, 1, 'float32');
+    rf.maxB1       = fread(fid, 1, 'float32');
 else
     rf = [];
 end

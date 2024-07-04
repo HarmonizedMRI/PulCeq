@@ -48,6 +48,7 @@ else
     fwrite(fid, rf.delay,          'float32');      % sec
     fwrite(fid, rf.freqOffset,     'float32');      % Hz
     fwrite(fid, rf.phaseOffset,    'float32');      % radians
+    fwrite(fid, max(abs(rf.signal)), 'float32');    % Hz
 end
 
 return
