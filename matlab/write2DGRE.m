@@ -13,7 +13,7 @@ sys = mr.opts('maxGrad', 50/sqrt(3), 'gradUnit','mT/m', ...
               'rfRingdownTime', 60e-6, ...
               'adcDeadTime', 40e-6, ...   % 
               'adcRasterTime', 2e-6, ...  % GE: must be multiple of 2us
-              'rfRasterTime', 2e-6, ...   % GE: must be multiple of 2us
+              'rfRasterTime', 10e-6, ...   % GE: must be multiple of 2us
               'gradRasterTime', 4e-6, ... % GE: must be multiple of 4us
               'blockDurationRaster', 4e-6, ...  % GE: not sure but safest to set as multiple of 4us
               'B0', 3.0);
