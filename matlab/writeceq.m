@@ -37,7 +37,7 @@ fwrite(fid, maxB1, 'float32');
 fwrite(fid, 0.0, 'float32');   % maxGrad
 fwrite(fid, 0.0, 'float32');   % maxSlew
 fwrite(fid, 4.7, 'float32');   % duration
-fwrite(fid, 512, 'float32');   % number of ADC events
+fwrite(fid, 512, 'int32');     % total number of ADC events in sequence
 fwrite(fid, 10, 'int32');      % number ADC events at start of scan for setting receive gain in Auto Prescan
 
 %{
@@ -78,6 +78,7 @@ if isempty(rf)
 end
 
 if strcmp(rf.type, 'rf')
+    fwrite(fid, 1, 'int16');   
     fwrite(fid, 1, 'int16');   % complex flag
     shape = utils.rf2shape(rf);
     sub_writearbitrary(fid, shape, true, true);
