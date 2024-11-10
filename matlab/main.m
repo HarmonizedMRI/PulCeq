@@ -1,5 +1,4 @@
 % create gre2d.seq
-addpath ~/github/jfnielsen/TOPPEpsdSourceCode/v6/examples/
 write2DGRE;
 
 % convert to Ceq struct
