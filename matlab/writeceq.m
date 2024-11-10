@@ -5,9 +5,6 @@ function writeceq(ceq, fn)
 
 fid = fopen(fn, 'wb');  % big endian (network byte order)
 
-%fwrite(fid, ceq.nMax, 'int32');
-%fwrite(fid, ceq.nSegments, 'int16');
-
 % write base blocks
 fwrite(fid, ceq.nParentBlocks, 'int16');
 for ii = 1:ceq.nParentBlocks
@@ -137,15 +134,6 @@ function sub_writesegment(fid, s)  % write definition of one segment
     fwrite(fid, s.blockIDs, 'int16');
 return
 
-function sub_writeloop(fid, l)
-
-fwrite(fid, size(l,2), 'int16'); % number of columns in loop array l
-for ii = 1:size(l,1)
-    fwrite(fid, l(ii,:), 'float32');  % write in row-major order
-end
-
-return
-
 function shape = sub_rf2shape(rf)
 % Convert rf event to PulseqShapeArbitrary struct
 
@@ -163,8 +151,7 @@ typedef struct {
 shape.nSamples = length(rf.signal);
 shape.raster = rf.t(2) - rf.t(1);
 shape.time = rf.t;
-tmp = abs(rf.signal);
-shape.magnitude = tmp/max(tmp);
+shape.magnitude = abs(rf.signal)/max(abs(rf.signal(:)));
 shape.phase = angle(rf.signal);
 shape.amplitude = max(shape.magnitude);
 
