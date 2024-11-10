@@ -80,31 +80,12 @@ end
 if strcmp(rf.type, 'rf')
     fwrite(fid, 1, 'int16');   
     fwrite(fid, 1, 'int16');   % complex flag
-    shape = utils.rf2shape(rf);
+    shape = sub_rf2shape(rf);
     sub_writearbitrary(fid, shape, true, true);
     fwrite(fid, rf.shape_dur, 'float32');
     fwrite(fid, rf.delay, 'float32');
     return
 end
-
-return
-
-function sub_writearbitrary(fid, shape, complexflag, regular_raster)
-
-    fwrite(fid, shape.nSamples, 'int32');
-    fwrite(fid, shape.raster, 'float32');
-
-    if ~regular_raster
-        fwrite(fid, shape.time, 'float32');
-    end
-
-    fwrite(fid, shape.magnitude, 'float32');
-
-    if complexflag
-        fwrite(fid, shape.phase, 'float32');
-    end
-
-    fwrite(fid, shape.amplitude, 'float32');
 
 return
 
@@ -162,5 +143,48 @@ fwrite(fid, size(l,2), 'int16'); % number of columns in loop array l
 for ii = 1:size(l,1)
     fwrite(fid, l(ii,:), 'float32');  % write in row-major order
 end
+
+return
+
+function shape = sub_rf2shape(rf)
+% Convert rf event to PulseqShapeArbitrary struct
+
+%{
+typedef struct {
+    int nSamples;           /* Number of waveform samples */
+    float raster;           /* Sample duration (sec) */
+    float* time;            /* Time coordinates for waveform samples (sec) */
+    float* magnitude;       /* Magnitude waveform (normalized) */
+    float* phase;           /* Phase waveform (rad), only for type COMPLEX */
+    float amplitude;        /* Hz */
+} PulseqShapeArbitrary;
+%}
+
+shape.nSamples = length(rf.signal);
+shape.raster = rf.t(2) - rf.t(1);
+shape.time = rf.t;
+tmp = abs(rf.signal);
+shape.magnitude = tmp/max(tmp);
+shape.phase = angle(rf.signal);
+shape.amplitude = max(shape.magnitude);
+
+return
+
+function sub_writearbitrary(fid, shape, complexflag, regular_raster)
+
+    fwrite(fid, shape.nSamples, 'int32');
+    fwrite(fid, shape.raster, 'float32');
+
+    if ~regular_raster
+        fwrite(fid, shape.time, 'float32');
+    end
+
+    fwrite(fid, shape.magnitude, 'float32');
+
+    if complexflag
+        fwrite(fid, shape.phase, 'float32');
+    end
+
+    fwrite(fid, shape.amplitude, 'float32');
 
 return
