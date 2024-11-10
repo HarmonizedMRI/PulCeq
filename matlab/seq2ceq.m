@@ -108,6 +108,7 @@ end
 ceq.nParentBlocks = length(parentBlockIndex);
 for p = 1:length(parentBlockIndex)
     ceq.parentBlocks{p} = seq.getBlock(parentBlockIndex(p));
+    ceq.parentBlocks{p}.ID = p;
 end
 
 % Determine max amplitude across blocks
@@ -260,6 +261,12 @@ end
 %% Remove zero-duration (label-only) blocks from ceq.loop
 ceq.loop(parentBlockIDs == -1, :) = [];
 ceq.nMax = size(ceq.loop,1);
+
+
+%% No trigger for now. TODO
+for p = 1:ceq.nParentBlocks
+    ceq.parentBlocks{p}.trig.type = 0;
+end
 
 
 %% Check that the execution of blocks throughout the sequence

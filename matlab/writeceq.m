@@ -5,73 +5,129 @@ function writeceq(ceq, fn)
 
 fid = fopen(fn, 'wb');  % big endian (network byte order)
 
-fwrite(fid, ceq.nMax, 'int32');
+%fwrite(fid, ceq.nMax, 'int32');
+%fwrite(fid, ceq.nSegments, 'int16');
+
+% write base blocks
 fwrite(fid, ceq.nParentBlocks, 'int16');
-fwrite(fid, ceq.nSegments, 'int16');
-
-% write parent blocks
 for ii = 1:ceq.nParentBlocks
-
-    b = ceq.parentBlocks{ii};
-
-    fwrite(fid, b.blockDuration, 'float32');
-    sub_writerf(fid, b.rf);
-    sub_writegrad(fid, b.gx);
-    sub_writegrad(fid, b.gy);
-    sub_writegrad(fid, b.gz);
-    sub_writeadc(fid, b.adc);
+    sub_writeblock(fid, ceq.parentBlocks{ii});
 end
 
 % write segment definitions
+fwrite(fid, ceq.nSegments, 'int16');
 for ii = 1:ceq.nSegments
     sub_writesegment(fid, ceq.segments(ii));  % write definition of one segment
 end
 
 % write loop
-sub_writeloop(fid, ceq.loop);
+fwrite(fid, ceq.nMax, 'int32');
+fwrite(fid, size(ceq.loop,2), 'int16');
+for ii = 1:size(ceq.loop,1)
+    fwrite(fid, ceq.loop(ii,:), 'float32');  % write in row-major order
+end
+
+% safety stuff. some are dummy values, TODO
+maxB1 = 0;  
+for p = 1:ceq.nParentBlocks
+    maxB1 = max(maxB1, abs(ceq.parentBlocks{p}.amp.rf));
+end
+fwrite(fid, 1, 'float32');  % maxRfPower, G^2 * sec
+fwrite(fid, maxB1, 'float32');
+fwrite(fid, 0.0, 'float32');   % maxGrad
+fwrite(fid, 0.0, 'float32');   % maxSlew
+fwrite(fid, 4.7, 'float32');   % duration
+fwrite(fid, 512, 'float32');   % number of ADC events
+fwrite(fid, 10, 'int32');      % number ADC events at start of scan for setting receive gain in Auto Prescan
+
+%{
+    fread(&(ceq->maxRfPower), sizeof(float), 1, fid);
+    fread(&(ceq->maxB1), sizeof(float), 1, fid);
+    fread(&(ceq->maxGrad), sizeof(float), 1, fid);
+    fread(&(ceq->maxSlew), sizeof(float), 1, fid);
+    fread(&(ceq->duration), sizeof(float), 1, fid);
+    fread(&(ceq->nReadouts), sizeof(int), 1, fid);
+    fread(&(ceq->nGain), sizeof(int), 1, fid);
+%}
 
 fclose(fid);
 
 return
 
+
+function sub_writeblock(fid, b)
+
+fwrite(fid, b.ID, 'int32');
+fwrite(fid, b.blockDuration, 'float32');
+sub_writerf(fid, b.rf);
+sub_writegrad(fid, b.gx);
+sub_writegrad(fid, b.gy);
+sub_writegrad(fid, b.gz);
+sub_writeadc(fid, b.adc);
+sub_writetrig(fid, b.trig);
+
+return
+
 function sub_writerf(fid, rf)
 
+% flag indicating rf event type: 0: none; 1: arbitrary; 2: extended trap rf
+
 if isempty(rf)
-    fwrite(fid, 0, 'int16');   % flag indicating no rf event
-else
-    fwrite(fid, 1, 'int16');   % flag indicating that rf event is present
-    fwrite(fid, length(rf.signal), 'int16');        % number of waveform samples
-    fwrite(fid, abs(rf.signal),    'float32');      % Hz
-    fwrite(fid, angle(rf.signal),  'float32');      % radians
-    fwrite(fid, rf.t,              'float32');      % sec
-    fwrite(fid, rf.shape_dur,      'float32');      % sec
-    fwrite(fid, rf.delay,          'float32');      % sec
-    fwrite(fid, rf.freqOffset,     'float32');      % Hz
-    fwrite(fid, rf.phaseOffset,    'float32');      % radians
-    fwrite(fid, max(abs(rf.signal)), 'float32');    % Hz
+    fwrite(fid, 0, 'int16');   
+    return
+end
+
+if strcmp(rf.type, 'rf')
+    fwrite(fid, 1, 'int16');   % complex flag
+    shape = utils.rf2shape(rf);
+    sub_writearbitrary(fid, shape, true, true);
+    fwrite(fid, rf.shape_dur, 'float32');
+    fwrite(fid, rf.delay, 'float32');
+    return
 end
 
 return
 
+function sub_writearbitrary(fid, shape, complexflag, regular_raster)
+
+    fwrite(fid, shape.nSamples, 'int32');
+    fwrite(fid, shape.raster, 'float32');
+
+    if ~regular_raster
+        fwrite(fid, shape.time, 'float32');
+    end
+
+    fwrite(fid, shape.magnitude, 'float32');
+
+    if complexflag
+        fwrite(fid, shape.phase, 'float32');
+    end
+
+    fwrite(fid, shape.amplitude, 'float32');
+
+return
+
+
 function sub_writegrad(fid, g)
 
 % first value is flag indicating gradient type:
-% 0: empty; 1: trap; 2: arbitrary gradient
+% 0: empty; 1: trap; 2: arbitrary gradient; 3: extended trap
 if isempty(g)
     fwrite(fid, 0, 'int16');   % flag indicating no gradient event
-else
-    if strcmp(g.type, 'trap')
-        fwrite(fid, 1, 'int16');   
-        fwrite(fid, g.amplitude, 'float32');          % Hz/m
-        fwrite(fid, g.riseTime, 'float32');           % sec
-        fwrite(fid, g.flatTime, 'float32');           % sec
-        fwrite(fid, g.fallTime, 'float32');           % sec
-        fwrite(fid, g.delay,    'float32');           % sec
-    else
-        %fwrite(fid, 2, 'int16');   
-        % TODO
-    end
+    return;
 end
+
+if strcmp(g.type, 'trap')
+    fwrite(fid, 1, 'int16');   
+    fwrite(fid, g.delay,    'float32');           % sec
+    fwrite(fid, g.amplitude, 'float32');          % Hz/m
+    fwrite(fid, g.riseTime, 'float32');           % sec
+    fwrite(fid, g.flatTime, 'float32');           % sec
+    fwrite(fid, g.fallTime, 'float32');           % sec
+    return;
+end
+
+% TODO: cases 2, 3
 
 return
 
@@ -84,10 +140,13 @@ else
     fwrite(fid, adc.numSamples, 'int32');
     fwrite(fid, adc.dwell, 'float32');
     fwrite(fid, adc.delay, 'float32');
-    fwrite(fid, adc.freqOffset, 'float32');
-    fwrite(fid, adc.phaseOffset, 'float32');
 end
 
+return
+
+function sub_writetrig(fid, trig)
+    % assume no trigger for now. TODO
+    fwrite(fid, trig.type, 'int16');          
 return
 
 function sub_writesegment(fid, s)  % write definition of one segment
