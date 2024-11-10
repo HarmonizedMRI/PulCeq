@@ -85,7 +85,6 @@ for iY = (-nDummyShots-pislquant+1):Ny
     % Set phase-encode gradients to zero while iY < 1
     pesc = (iY>0) * peScales(max(iY,1));  % phase-encode gradient scaling
     seq.addBlock(gxPre, mr.scaleGrad(gyPre, pesc), gzReph);
-    seq.addBlock(mr.makeDelay(delayTE));
 
     % ADC
     if isDummyTR
@@ -95,8 +94,7 @@ for iY = (-nDummyShots-pislquant+1):Ny
     end
 
     % Spoil and PE rephasing, and TR delay
-    seq.addBlock(gxSpoil, mr.scaleGrad(gyPre, -pesc), gzSpoil);
-    seq.addBlock(mr.makeDelay(delayTR));
+    seq.addBlock(gxSpoil, mr.scaleGrad(gyPre, -pesc), gzSpoil, mr.makeDelay(20e-3));
 end
 
 %% Check sequence timing
