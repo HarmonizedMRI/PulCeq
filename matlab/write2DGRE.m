@@ -1,20 +1,21 @@
 % write2DGRE.m
 %
-% 2D spoiled GRE demo sequence for Pulseq on GE v1.0 User Guide.
+% 2D spoiled GRE demo sequence for Pulseq on GE v2.0 User Guide.
 % Similar to writeGradientEcho.m from Pulseq demoSeq folder.
 
 % System/design parameters.
+% See the Pulseq on GE 2 manual for a discussion of dead times etc.
 % Reduce gradients by 1/sqrt(3) to allow for oblique scans.
 % Reduce slew a bit further to reduce PNS.
 sys = mr.opts('maxGrad', 50/sqrt(3), 'gradUnit','mT/m', ...
               'maxSlew', 120/sqrt(3), 'slewUnit', 'T/m/s', ...
               'rfDeadTime', 100e-6, ...
               'rfRingdownTime', 60e-6, ...
-              'adcDeadTime', 40e-6, ...
-              'adcRasterTime', 2e-6, ...
-              'rfRasterTime', 4e-6, ...
-              'gradRasterTime', 4e-6, ...
-              'blockDurationRaster', 4e-6, ...
+              'adcDeadTime', 40e-6, ...   % 
+              'adcRasterTime', 2e-6, ...  % GE: must be multiple of 2us
+              'rfRasterTime', 2e-6, ...   % GE: must be multiple of 2us
+              'gradRasterTime', 4e-6, ... % GE: must be multiple of 4us
+              'blockDurationRaster', 4e-6, ...  % GE: not sure but safest to set as multiple of 4us
               'B0', 3.0);
 
 % Create a new sequence object
@@ -112,7 +113,7 @@ seq.setDefinition('FOV', [fov fov sliceThickness]);
 seq.setDefinition('Name', 'gre2d');
 seq.write('gre2d.seq')       % Write to pulseq file
 
-seq.plot('timeRange', [0 3]*TR);
+%seq.plot('timeRange', [0 3]*TR);
 
 %% Optional slow step, but useful for testing during development,
 %% e.g., for the real TE, TR or for staying within slewrate limits  
