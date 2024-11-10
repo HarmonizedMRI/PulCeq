@@ -1,0 +1,10 @@
+Set ceq.maxRfPower, ceq.maxGrad, etc
+
+    fread(&(ceq->maxRfPower), sizeof(float), 1, fid);
+    fread(&(ceq->maxB1), sizeof(float), 1, fid);
+    fread(&(ceq->maxGrad), sizeof(float), 1, fid);
+    fread(&(ceq->maxSlew), sizeof(float), 1, fid);
+    fread(&(ceq->duration), sizeof(float), 1, fid);
+    fread(&(ceq->nReadouts), sizeof(int), 1, fid);
+    fread(&(ceq->nGain), sizeof(int), 1, fid);
+
