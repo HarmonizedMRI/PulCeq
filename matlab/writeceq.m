@@ -19,16 +19,18 @@ end
 
 % write loop
 fwrite(fid, ceq.nMax, 'int32');
-fwrite(fid, size(ceq.loop,2), 'int16');
+fwrite(fid, size(ceq.loop,2), 'int16');   % nColumnsInLoopArray
 for ii = 1:size(ceq.loop,1)
     fwrite(fid, ceq.loop(ii,:), 'float32');  % write in row-major order
 end
 
-% safety stuff. some are dummy values, TODO
-maxB1 = 0;  
-for p = 1:ceq.nParentBlocks
-    maxB1 = max(maxB1, abs(ceq.parentBlocks{p}.amp.rf));
+% max B1 in sequence
+maxB1 = 0;
+for n = 1:ceq.nMax
+    maxB1 = max(maxB1, abs(ceq.loop(n,3)));  % Hz
 end
+
+% safety stuff. some are dummy values, TODO
 fwrite(fid, 1, 'float32');  % maxRfPower, G^2 * sec
 fwrite(fid, maxB1, 'float32');
 fwrite(fid, 0.0, 'float32');   % maxGrad
@@ -132,6 +134,9 @@ function sub_writesegment(fid, s)  % write definition of one segment
     fwrite(fid, s.segmentID, 'int16');
     fwrite(fid, s.nBlocksInSegment, 'int16');
     fwrite(fid, s.blockIDs, 'int16');
+    fwrite(fid, s.ref.grad.energy.gx, 'float32');
+    fwrite(fid, s.ref.grad.energy.gy, 'float32');
+    fwrite(fid, s.ref.grad.energy.gz, 'float32');
 return
 
 function shape = sub_rf2shape(rf)

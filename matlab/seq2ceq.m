@@ -15,6 +15,7 @@ function ceq = seq2ceq(seqarg, varargin)
 % Output
 %   ceq        struct, based on github/HarmonizedMRI/PulCeq/src/pulCeq.h
 
+GAM = 4257.6;   % Hz/Gauss
 
 %% parse inputs
 
@@ -111,119 +112,51 @@ for p = 1:length(parentBlockIndex)
     ceq.parentBlocks{p}.ID = p;
 end
 
-% Determine max amplitude across blocks
-for p = 1:length(parentBlockIndex)
-    ceq.parentBlocks{p}.amp.rf = 0;
-    ceq.parentBlocks{p}.amp.gx = 0;  
-    ceq.parentBlocks{p}.amp.gy = 0;
-    ceq.parentBlocks{p}.amp.gz = 0;
-
-    for n = 1:ceq.nMax
-        if parentBlockIDs(n) ~= p | parentBlockIDs(n) == -1
-            continue; 
-        end
-        block = seq.getBlock(n);
-        if ~isempty(block.rf)
-            ceq.parentBlocks{p}.amp.rf = max(ceq.parentBlocks{p}.amp.rf, max(abs(block.rf.signal)));
-        end
-        for ax = {'gx','gy','gz'}
-            g = block.(ax{1});
-            if ~isempty(g)
-                if strcmp(g.type, 'trap')
-                    gamp = abs(g.amplitude);   % trapezoids are positive lobes by definition
-                else
-                    gamp = max(abs(g.waveform));
-                end
-                ceq.parentBlocks{p}.amp.(ax{1}) = max(ceq.parentBlocks{p}.amp.(ax{1}), gamp);
-            end
-        end
-    end
-end
-
-% Set parent block waveform amplitudes to max
-for p = 1:ceq.nParentBlocks
-    b = ceq.parentBlocks{p};   % shorthand
-    if ~isempty(b.rf)
-        ceq.parentBlocks{p}.rf.signal = b.rf.signal/max(abs(b.rf.signal))*b.amp.rf;
-    end
-    for ax = {'gx','gy','gz'}
-        g = b.(ax{1});
-        if ~isempty(g)
-            if strcmp(g.type, 'trap')
-                ceq.parentBlocks{p}.(ax{1}).amplitude = b.amp.(ax{1});
-            else
-                if max(abs(b.(ax{1}).waveform)) > 0
-                    ceq.parentBlocks{p}.(ax{1}).waveform = b.(ax{1}).waveform/max(abs(b.(ax{1}).waveform))*b.amp.(ax{1});
-                end
-            end
-        end
-    end
-end
-
 
 %% Get segment (block group) definitions
 % Segments are defined by their first occurrence in the .seq file
 previouslyDefinedSegmentIDs = [];
-if ~arg.ignoreSegmentLabels
-    segmentIDs = zeros(1,ceq.nMax);  % keep track of which segment each block belongs to
-    for n = 1:ceq.nMax
-        b = seq.getBlock(n);
+segmentIDs = zeros(1,ceq.nMax);  % keep track of which segment each block belongs to
+for n = 1:ceq.nMax
+    b = seq.getBlock(n);
 
-        if parentBlockIDs(n) == -1
-            continue;    % skip
-        end
-
-        % Get segment ID label (TRID) if present
-        if isfield(b, 'label') 
-            hasTRIDlabel = false;
-            for ii = 1:length(b.label)
-                if strcmp(b.label(ii).label, 'TRID')
-                    hasTRIDlabel = true;
-                    break;
-                end
-            end
-            if hasTRIDlabel  % marks start of segment
-                activeSegmentID = b.label(ii).value;
-
-                if ~any(activeSegmentID == previouslyDefinedSegmentIDs)
-                    % start new segment
-                    firstOccurrence = true;
-                    previouslyDefinedSegmentIDs = [previouslyDefinedSegmentIDs activeSegmentID];
-                    Segments{activeSegmentID} = [];
-                else
-                    firstOccurrence = false;
-                end
-            end
-        end
-
-        if ~exist('firstOccurrence', 'var')
-            %error('First block must contain a segment ID');
-        end
-
-        % add block to segment
-        if firstOccurrence
-            Segments{activeSegmentID} = [Segments{activeSegmentID} parentBlockIDs(n)];
-        end
-
-        segmentIDs(n) = activeSegmentID;
-    end
-else
-    % Each block becomes its own segment (as in TOPPE v5)
-    for p = 1:ceq.nParentBlocks
-        ceq.segments(p).segmentID = p;
-        ceq.segments(p).nBlocksInSegment = 1;
-        ceq.segments(p).blockIDs = p;
+    if parentBlockIDs(n) == -1
+        continue;    % skip
     end
 
-    % Add delay segment (dedicated segment that's always defined)
-    ceq.segments(p+1).segmentID = p+1;
-    ceq.segments(p+1).nBlocksInSegment = 1;
-    ceq.segments(p+1).blockIDs = 0;   % block ID zero is a flag indicating a delay block
+    % Get segment ID label (TRID) if present
+    if isfield(b, 'label') 
+        hasTRIDlabel = false;
+        for ii = 1:length(b.label)
+            if strcmp(b.label(ii).label, 'TRID')
+                hasTRIDlabel = true;
+                break;
+            end
+        end
+        if hasTRIDlabel  % marks start of segment
+            activeSegmentID = b.label(ii).value;
 
-    segmentIDs = parentBlockIDs;
-    segmentIDs(parentBlockIDs==0) = p+1;
+            if ~any(activeSegmentID == previouslyDefinedSegmentIDs)
+                % start new segment
+                firstOccurrence = true;
+                previouslyDefinedSegmentIDs = [previouslyDefinedSegmentIDs activeSegmentID];
+                Segments{activeSegmentID} = [];
+            else
+                firstOccurrence = false;
+            end
+        end
+    end
 
-    segmentID2Ind = 1:(p+1);
+    if ~exist('firstOccurrence', 'var')
+        %error('First block must contain a segment ID');
+    end
+
+    % add block to segment
+    if firstOccurrence
+        Segments{activeSegmentID} = [Segments{activeSegmentID} parentBlockIDs(n)];
+    end
+
+    segmentIDs(n) = activeSegmentID;
 end
 
 % In the above, the Segments array index equals the Segment ID specified in the .seq file,
@@ -246,7 +179,7 @@ end
 ceq.nSegments = length(ceq.segments);
 
 %% Get dynamic scan information
-ceq.loop = zeros(ceq.nMax, 10);
+ceq.loop = zeros(ceq.nMax, 13);
 for n = 1:ceq.nMax
     b = seq.getBlock(n);
     p = parentBlockIDs(n); 
@@ -268,6 +201,32 @@ for p = 1:ceq.nParentBlocks
     ceq.parentBlocks{p}.trig.type = 0;
 end
 
+
+%% Calculate total gradient energy in each segment (reference value)
+% This is done with all gradient amplitudes set to +1 G/cm.
+for p = 1:ceq.nParentBlocks
+    for ax = {'gx','gy','gz'}
+        if ~isempty(ceq.parentBlocks{p}.(ax{1}))
+            if strcmp(ceq.parentBlocks{p}.(ax{1}).type, 'trap')
+                ceq.parentBlocks{p}.(ax{1}).amplitude = 1*GAM*100;  % Hz/m
+            else
+                % TODO
+            end
+        end
+    end
+end
+for i = 1:ceq.nSegments
+    ceq.segments(i).ref.grad.energy.gx = 0;
+    ceq.segments(i).ref.grad.energy.gy = 0;
+    ceq.segments(i).ref.grad.energy.gz = 0;
+    for j = 1:ceq.segments(i).nBlocksInSegment
+        p = ceq.segments(i).blockIDs(j);
+        l = getdynamics(ceq.parentBlocks{p}, 0, 0);
+        ceq.segments(i).ref.grad.energy.gx = ceq.segments(i).ref.grad.energy.gx + l(11);
+        ceq.segments(i).ref.grad.energy.gy = ceq.segments(i).ref.grad.energy.gy + l(12);
+        ceq.segments(i).ref.grad.energy.gz = ceq.segments(i).ref.grad.energy.gz + l(13);
+    end
+end
 
 %% Check that the execution of blocks throughout the sequence
 %% is consistent with the segment definitions
