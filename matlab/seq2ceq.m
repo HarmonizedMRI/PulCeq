@@ -202,37 +202,11 @@ for p = 1:ceq.nParentBlocks
 end
 
 
-%% Calculate total gradient energy in each segment (reference value)
-% This is done with all gradient amplitudes set to +1 G/cm.
-for p = 1:ceq.nParentBlocks
-    for ax = {'gx','gy','gz'}
-        if ~isempty(ceq.parentBlocks{p}.(ax{1}))
-            if strcmp(ceq.parentBlocks{p}.(ax{1}).type, 'trap')
-                ceq.parentBlocks{p}.(ax{1}).amplitude = 1*GAM*100;  % Hz/m
-            else
-                % TODO
-            end
-        end
-    end
-end
-for i = 1:ceq.nSegments
-    ceq.segments(i).ref.grad.energy.gx = 0;
-    ceq.segments(i).ref.grad.energy.gy = 0;
-    ceq.segments(i).ref.grad.energy.gz = 0;
-    for j = 1:ceq.segments(i).nBlocksInSegment
-        p = ceq.segments(i).blockIDs(j);
-        l = getdynamics(ceq.parentBlocks{p}, 0, 0);
-        ceq.segments(i).ref.grad.energy.gx = ceq.segments(i).ref.grad.energy.gx + l(11);
-        ceq.segments(i).ref.grad.energy.gy = ceq.segments(i).ref.grad.energy.gy + l(12);
-        ceq.segments(i).ref.grad.energy.gz = ceq.segments(i).ref.grad.energy.gz + l(13);
-    end
-end
-
 %% Check that the execution of blocks throughout the sequence
 %% is consistent with the segment definitions
 n = 1;
 while n < ceq.nMax
-    i = ceq.loop(n, 1);  % segment id
+    i = ceq.loop(n, 1);  % segment index
 
     if (n + ceq.segments(i).nBlocksInSegment) > ceq.nMax
         break;
@@ -249,5 +223,37 @@ while n < ceq.nMax
         end
 
         n = n + 1;
+    end
+end
+
+%% Gradient heating related calculations
+
+% Get block/row index corresponding to the beginning of 
+% the segment instance with the largest combined (all axes) gradient energy.
+
+% initialize max energy field
+for i = 1:ceq.nSegments
+    ceq.segments(i).Emax.val = 0;
+end
+   
+% find segment instance with max energy
+n = 1;
+while n < ceq.nMax
+    % Calculate total energy in segment instance
+    i = ceq.loop(n, 1);  % segment index
+    Etmp.gx = 0; Etmp.gy = 0; Etmp.gz = 0;
+    nFirst = n;
+    for j = 1:ceq.segments(i).nBlocksInSegment  
+        Etmp.gx = Etmp.gx + ceq.loop(n, 11);
+        Etmp.gy = Etmp.gy + ceq.loop(n, 12);
+        Etmp.gz = Etmp.gz + ceq.loop(n, 13);
+        n = n + 1;
+    end
+    Etmp.all = Etmp.gx + Etmp.gy + Etmp.gz;
+
+    % update Emax field
+    if Etmp.all > ceq.segments(i).Emax.val
+        ceq.segments(i).Emax.n = nFirst;
+        ceq.segments(i).Emax.val = Etmp.all;
     end
 end

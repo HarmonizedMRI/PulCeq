@@ -134,9 +134,8 @@ function sub_writesegment(fid, s)  % write definition of one segment
     fwrite(fid, s.segmentID, 'int16');
     fwrite(fid, s.nBlocksInSegment, 'int16');
     fwrite(fid, s.blockIDs, 'int16');
-    fwrite(fid, s.ref.grad.energy.gx, 'float32');
-    fwrite(fid, s.ref.grad.energy.gy, 'float32');
-    fwrite(fid, s.ref.grad.energy.gz, 'float32');
+    fwrite(fid, s.Emax.val, 'float32');
+    fwrite(fid, s.Emax.n, 'int32');
 return
 
 function shape = sub_rf2shape(rf)
