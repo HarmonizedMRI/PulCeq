@@ -1,4 +1,6 @@
 % create gre2d.seq
+system('git clone git@github.com:pulseq/pulseq.git');
+addpath pulseq/matlab
 write2DGRE;
 
 % convert to Ceq struct
