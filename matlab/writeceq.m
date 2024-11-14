@@ -5,6 +5,8 @@ function writeceq(ceq, fn)
 
 fid = fopen(fn, 'wb');  % big endian (network byte order)
 
+fwrite(fid, 47, 'int16');  % for checking endianness when reading 
+
 % write base blocks
 fwrite(fid, ceq.nParentBlocks, 'int16');
 for ii = 1:ceq.nParentBlocks
