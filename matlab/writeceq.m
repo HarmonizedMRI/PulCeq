@@ -107,7 +107,6 @@ end
 if strcmp(g.type, 'trap')
     fwrite(fid, 1, 'int16');   
     fwrite(fid, g.delay,    'float32');           % sec
-    fwrite(fid, g.amplitude, 'float32');          % Hz/m
     fwrite(fid, g.riseTime, 'float32');           % sec
     fwrite(fid, g.flatTime, 'float32');           % sec
     fwrite(fid, g.fallTime, 'float32');           % sec
@@ -154,7 +153,6 @@ typedef struct {
     float* time;            /* Time coordinates for waveform samples (sec) */
     float* magnitude;       /* Magnitude waveform (normalized) */
     float* phase;           /* Phase waveform (rad), only for type COMPLEX */
-    float amplitude;        /* Hz */
 } PulseqShapeArbitrary;
 %}
 
@@ -163,7 +161,6 @@ shape.raster = rf.t(2) - rf.t(1);
 shape.time = rf.t;
 shape.magnitude = abs(rf.signal)/max(abs(rf.signal(:)));
 shape.phase = angle(rf.signal);
-shape.amplitude = max(shape.magnitude);
 
 return
 
@@ -181,7 +178,5 @@ function sub_writearbitrary(fid, shape, complexflag, regular_raster)
     if complexflag
         fwrite(fid, shape.phase, 'float32');
     end
-
-    fwrite(fid, shape.amplitude, 'float32');
 
 return
