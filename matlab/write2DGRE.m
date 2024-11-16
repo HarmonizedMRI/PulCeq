@@ -7,8 +7,8 @@
 % See the Pulseq on GE 2 manual for a discussion of dead times etc.
 % Reduce gradients by 1/sqrt(3) to allow for oblique scans.
 % Reduce slew a bit further to reduce PNS.
-sys = mr.opts('maxGrad', 50/sqrt(3), 'gradUnit','mT/m', ...
-              'maxSlew', 120/sqrt(3), 'slewUnit', 'T/m/s', ...
+sys = mr.opts('maxGrad', 50/sqrt(1), 'gradUnit','mT/m', ...
+              'maxSlew', 200/sqrt(1), 'slewUnit', 'T/m/s', ...
               'rfDeadTime', 100e-6, ...
               'rfRingdownTime', 60e-6, ...
               'adcDeadTime', 40e-6, ...   % 
@@ -68,6 +68,10 @@ pislquant = 10;    % number of shots/ADC events used for receive gain calibratio
 rf_phase = 0;
 rf_inc = 0;
 
+for run = 1:1 % make longer scan for testing
+
+fprintf('.');
+
 for iY = (-nDummyShots-pislquant+1):Ny
     isDummyTR = iY <= -pislquant;
 
@@ -96,6 +100,8 @@ for iY = (-nDummyShots-pislquant+1):Ny
 
     % Spoil and PE rephasing, and TR delay
     seq.addBlock(gxSpoil, mr.scaleGrad(gyPre, -pesc), gzSpoil, mr.makeDelay(20e-3));
+end
+
 end
 
 %% Check sequence timing
