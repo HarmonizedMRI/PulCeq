@@ -87,6 +87,8 @@ if strcmp(rf.type, 'rf')
     sub_writearbitrary(fid, shape, true, true);
     fwrite(fid, rf.shape_dur, 'float32');
     fwrite(fid, rf.delay, 'float32');
+    E = sum(shape.magnitude(1:end-1).^2 .* diff(rf.t));  % normalized pulse energy
+    fwrite(fid, E, 'float32');
     return
 end
 
