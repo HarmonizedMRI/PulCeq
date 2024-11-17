@@ -33,11 +33,8 @@ for ax = {'gx','gy','gz'}
                           + (g.amplitude/GAM/100)^2 * g.flatTime ... 
                           + (g.amplitude/GAM/100)^2 / 3 * g.fallTime;
         else
-            % need to check polarity (sign) with respect to parent block
             amp.(ax{1}) = max(abs(g.waveform));
-            if any(g.waveform.*parentBlock.(ax{1}).waveform < 0)
-                amp.(ax{1}) = -amp.(ax{1});
-            end
+            energy.(ax{1}) = sum((g.waveform(1:end-1)/GAM/100).^2 .* diff(g.tt));
         end
     end
 end
