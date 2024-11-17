@@ -3,8 +3,8 @@
 % 3D GRE demo sequence for Pulseq on GE v1.0 User Guide
 
 % System/design parameters.
-sys = mr.opts('maxGrad', 40, 'gradUnit','mT/m', ...
-              'maxSlew', 150, 'slewUnit', 'T/m/s', ...
+sys = mr.opts('maxGrad', 49, 'gradUnit','mT/m', ...
+              'maxSlew', 199, 'slewUnit', 'T/m/s', ...
               'rfDeadTime', 100e-6, ...
               'rfRingdownTime', 60e-6, ...
               'adcDeadTime', 40e-6, ...
@@ -16,7 +16,7 @@ sys = mr.opts('maxGrad', 40, 'gradUnit','mT/m', ...
 
 % Acquisition parameters
 fov = [200e-3 200e-3 10e-3];   % FOV (m)
-Nx = 100; Ny = Nx; Nz = 4;    % Matrix size
+Nx = 200; Ny = 32; Nz = 4;    % Matrix size
 slabThickness = 10e-3;         % slice thickness (m)
 TR = 15e-3;                     % sec
 dwell = 10e-6;                  % ADC sample time (s)
@@ -77,22 +77,26 @@ TRmin = mr.calcDuration(rf) + mr.calcDuration(gxPre) ...
 delayTR = TR - TRmin;
 
 % make a spiral gradient
-nleaf = 4; dt = 4e-10; 
-[sp.wav] = getspiral(1, sys.gradRasterTime, fov(1)*100, Nx);
+nleaf = 2; dt = 4e-10; 
+[sp.wav] = getspiral(nleaf, sys.gradRasterTime, fov(1)*100, Nx);
+length(sp.wav)
 sp.gx = mr.makeArbitraryGrad('x', real(sp.wav)*1e-4*sys.gamma*100, sys, ...
                         'delay', sys.adcDeadTime);
 sp.gy = mr.makeArbitraryGrad('y', imag(sp.wav)*1e-4*sys.gamma*100, sys, ...
                         'delay', sys.adcDeadTime);
 
 
-% Loop over phase encodes and define sequence blocks
+%%%%%%%%%%%% Start adding blocks to sequence %%%%%%%%%%%%%%%%%%
+
+% add a spiral spiral segment
+for ii = 1:10
+    seq.addBlock(sp.gx, sp.gy, mr.makeLabel('SET', 'TRID', 1));
+end
+
+% Acquire 3D GRE sequence
 % iZ < 0: Dummy shots to reach steady state
 % iZ = 0: ADC is turned on and used for receive gain calibration on GE scanners
 % iZ > 0: Image acquisition
-
-% first add some spirals
-seq.addBlock(sp.gx, sp.gy, mr.makeLabel('SET', 'TRID', 47));
-seq.addBlock(gx);
 
 nDummyZLoops = 0;
 
@@ -123,7 +127,7 @@ for iZ = -nDummyZLoops:Nz
         % Excitation
         % Mark start of segment (block group) by adding label.
         % Subsequent blocks in block group are NOT labelled.
-        seq.addBlock(rf, mr.makeLabel('SET', 'TRID', 2-isDummyTR));
+        seq.addBlock(rf, mr.makeLabel('SET', 'TRID', 47-isDummyTR));
         
         % Encoding
         seq.addBlock(gxPre, ...
@@ -143,9 +147,6 @@ for iZ = -nDummyZLoops:Nz
     end
 end
 
-% add some spirals
-seq.addBlock(sp.gx, sp.gy, mr.makeLabel('SET', 'TRID', 47));
-seq.addBlock(gx);
 
 fprintf('Sequence ready\n');
 
