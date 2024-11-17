@@ -1,0 +1,158 @@
+% write3DGRE.m
+%
+% 3D GRE demo sequence for Pulseq on GE v1.0 User Guide
+
+% System/design parameters.
+sys = mr.opts('maxGrad', 40, 'gradUnit','mT/m', ...
+              'maxSlew', 150, 'slewUnit', 'T/m/s', ...
+              'rfDeadTime', 100e-6, ...
+              'rfRingdownTime', 60e-6, ...
+              'adcDeadTime', 40e-6, ...
+              'adcRasterTime', 2e-6, ...
+              'gradRasterTime', 4e-6, ...
+              'blockDurationRaster', 4e-6, ...
+              'B0', 3.0);
+
+% Acquisition parameters
+fov = [200e-3 200e-3 10e-3];   % FOV (m)
+Nx = 200; Ny = Nx; Nz = 10;    % Matrix size
+TR = 10e-3;                     % sec
+dwell = 10e-6;                  % ADC sample time (s)
+alpha = 90;                      % flip angle (degrees)
+alphaPulseDuration = 0.5e-3;
+nCyclesSpoil = 2;               % number of spoiler cycles
+Tpre = 1.0e-3;                  % prephasing trapezoid duration
+rfSpoilingInc = 117;            % RF spoiling increment
+
+% Create a new sequence object
+seq = mr.Sequence(sys);           
+
+% Create non-selective pulse
+[rf] = mr.makeBlockPulse(alpha/180*pi, sys, 'Duration', alphaPulseDuration);
+
+% Define other gradients and ADC events
+% Cut the redaout gradient into two parts for optimal spoiler timing
+deltak = 1./fov;
+Tread = Nx*dwell;
+
+gyPre = mr.makeTrapezoid('y', sys, ...
+    'Area', Ny*deltak(2)/2, ...   % PE1 gradient, max positive amplitude
+    'Duration', Tpre);
+gzPre = mr.makeTrapezoid('z', sys, ...
+    'Area', Nz*deltak(3)/2, ...   % PE2 gradient, max positive amplitude
+    'Duration', Tpre);
+
+gxtmp = mr.makeTrapezoid('x', sys, ...  % readout trapezoid, temporary object
+    'Amplitude', Nx*deltak(1)/Tread, ...
+    'FlatTime', Tread);
+gxPre = mr.makeTrapezoid('x', sys, ...
+    'Area', -gxtmp.area/2, ...
+    'Duration', Tpre);
+
+adc = mr.makeAdc(Nx, sys, ...
+    'Duration', Tread,...
+    'Delay', gxtmp.riseTime);
+
+% extend flat time so we can split at end of ADC dead time
+gxtmp2 = mr.makeTrapezoid('x', sys, ...  % temporary object
+    'Amplitude', Nx*deltak(1)/Tread, ...
+    'FlatTime', Tread + adc.deadTime);   
+[gx, ~] = mr.splitGradientAt(gxtmp2, gxtmp2.riseTime + gxtmp2.flatTime);
+
+gzSpoil = mr.makeTrapezoid('z', sys, ...
+    'Area', Nx*deltak(1)*nCyclesSpoil);
+gxSpoil = mr.makeExtendedTrapezoidArea('x', gxtmp.amplitude, 0, gzSpoil.area, sys);
+
+% y/z PE steps
+pe1Steps = ((0:Ny-1)-Ny/2)/Ny*2;
+pe2Steps = ((0:Nz-1)-Nz/2)/Nz*2;
+
+% Calculate TR delay
+TRmin = mr.calcDuration(rf) + mr.calcDuration(gxPre) ...
+   + mr.calcDuration(gx) + mr.calcDuration(gxSpoil);
+delayTR = TR - TRmin;
+
+% Loop over phase encodes and define sequence blocks
+% iZ < 0: Dummy shots to reach steady state
+% iZ = 0: ADC is turned on and used for receive gain calibration on GE scanners
+% iZ > 0: Image acquisition
+
+nDummyZLoops = 0;
+
+rf_phase = 0;
+rf_inc = 0;
+
+for iZ = -nDummyZLoops:Nz
+    isDummyTR = iZ < 0;
+
+    msg = sprintf('z encode %d of %d   ', iZ, Nz);
+    for ibt = 1:(length(msg) + 2)
+        fprintf('\b');
+    end
+    fprintf(msg);
+
+    for iY = 1:Ny
+        % Turn on y and z prephasing lobes, except during dummy scans and
+        % receive gain calibration (auto prescan)
+        yStep = (iZ > 0) * pe1Steps(iY);
+        zStep = (iZ > 0) * pe2Steps(max(1,iZ));
+
+        % RF spoiling
+        rf.phaseOffset = rf_phase/180*pi;
+        adc.phaseOffset = rf_phase/180*pi;
+        rf_inc = mod(rf_inc+rfSpoilingInc, 360.0);
+        rf_phase = mod(rf_phase+rf_inc, 360.0);
+        
+        % Excitation
+        % Mark start of segment (block group) by adding label.
+        % Subsequent blocks in block group are NOT labelled.
+        seq.addBlock(rf, mr.makeLabel('SET', 'TRID', 2-isDummyTR));
+        
+        % Encoding
+        seq.addBlock(gxPre, ...
+            mr.scaleGrad(gyPre, yStep), ...
+            mr.scaleGrad(gzPre, zStep));
+        if isDummyTR
+            seq.addBlock(gx);
+        else
+            seq.addBlock(gx, adc);
+        end
+
+        % rephasing/spoiling and TR delay
+        seq.addBlock(gxSpoil, ...
+            mr.scaleGrad(gyPre, -yStep), ...
+            mr.scaleGrad(gzPre, -zStep));
+        seq.addBlock(mr.makeDelay(delayTR));
+    end
+end
+fprintf('Sequence ready\n');
+
+% Check sequence timing
+[ok, error_report]=seq.checkTiming;
+if (ok)
+    fprintf('Timing check passed successfully\n');
+else
+    fprintf('Timing check failed! Error listing follows:\n');
+    fprintf([error_report{:}]);
+    fprintf('\n');
+end
+
+% Output for execution
+seq.setDefinition('FOV', fov);
+seq.setDefinition('Name', 'gre');
+%seq.write('gre3d.seq');
+
+%% Optional plots
+
+% Plot sequence
+Noffset = Ny*(nDummyZLoops+1);
+%seq.plot('timerange',[Noffset Noffset+4]*TR, 'timedisp', 'ms');
+
+return
+
+% Plot k-space (2d)
+[ktraj_adc,t_adc,ktraj,t_ktraj,t_excitation,t_refocusing] = seq.calculateKspacePP();
+figure; plot(ktraj(1,:),ktraj(2,:),'b'); % a 2D k-space plot
+axis('equal'); % enforce aspect ratio for the correct trajectory display
+hold;plot(ktraj_adc(1,:),ktraj_adc(2,:),'r.'); % plot the sampling points
+title('full k-space trajectory (k_x x k_y)');
