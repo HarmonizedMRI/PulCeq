@@ -21,7 +21,6 @@ slabThickness = 10e-3;         % slice thickness (m)
 TR = 15e-3;                     % sec
 dwell = 10e-6;                  % ADC sample time (s)
 alpha = 90;                      % flip angle (degrees)
-alphaPulseDuration = 0.5e-3;
 nCyclesSpoil = 2;               % number of spoiler cycles
 Tpre = 1.0e-3;                  % prephasing trapezoid duration
 rfSpoilingInc = 117;            % RF spoiling increment
@@ -29,10 +28,13 @@ rfSpoilingInc = 117;            % RF spoiling increment
 % Create a new sequence object
 seq = mr.Sequence(sys);           
 
-% Create slab-selective pulse
+% Create slab-selective pulse (waveform sampled on regular raster)
 [rf] = mr.makeSincPulse(alpha*pi/180, 'Duration', 3e-3, ...
     'SliceThickness', slabThickness, 'apodization', 0.42, ...
     'timeBwProduct', 4, 'system', sys);
+
+% Non-selective hard pulse (waveform sampled on corner points)
+[rf2] = mr.makeBlockPulse(alpha/180*pi, sys, 'Duration', 0.5e-3);
 
 % Define spin-warp gradients and ADC events
 % Cut the redaout gradient into two parts for optimal spoiler timing
@@ -77,7 +79,7 @@ TRmin = mr.calcDuration(rf) + mr.calcDuration(gxPre) ...
 delayTR = TR - TRmin;
 
 % make a spiral gradient
-nleaf = 2; dt = 4e-10; 
+nleaf = 8; dt = 4e-10; 
 [sp.wav] = getspiral(nleaf, sys.gradRasterTime, fov(1)*100, Nx);
 length(sp.wav)
 sp.gx = mr.makeArbitraryGrad('x', real(sp.wav)*1e-4*sys.gamma*100, sys, ...
@@ -88,9 +90,17 @@ sp.gy = mr.makeArbitraryGrad('y', imag(sp.wav)*1e-4*sys.gamma*100, sys, ...
 
 %%%%%%%%%%%% Start adding blocks to sequence %%%%%%%%%%%%%%%%%%
 
-% add a spiral spiral segment
+% add a spiral segment
+for ii = 1:200
+    seq.addBlock(sp.gx, sp.gy, mr.makeLabel('SET', 'TRID', 3));
+end
+
+% add segment with different rf pulses
 for ii = 1:10
-    seq.addBlock(sp.gx, sp.gy, mr.makeLabel('SET', 'TRID', 1));
+    seq.addBlock(rf, mr.makeLabel('SET', 'TRID', 4), mr.makeDelay(4e-3));
+    seq.addBlock(rf2, gxPre);
+    seq.addBlock(gx);
+    seq.addBlock(gxSpoil);
 end
 
 % Acquire 3D GRE sequence
