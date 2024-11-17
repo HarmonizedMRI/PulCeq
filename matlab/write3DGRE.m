@@ -9,14 +9,16 @@ sys = mr.opts('maxGrad', 40, 'gradUnit','mT/m', ...
               'rfRingdownTime', 60e-6, ...
               'adcDeadTime', 40e-6, ...
               'adcRasterTime', 2e-6, ...
+              'rfRasterTime', 10e-6, ...   % GE: must be multiple of 2us
               'gradRasterTime', 4e-6, ...
               'blockDurationRaster', 4e-6, ...
               'B0', 3.0);
 
 % Acquisition parameters
 fov = [200e-3 200e-3 10e-3];   % FOV (m)
-Nx = 200; Ny = Nx; Nz = 10;    % Matrix size
-TR = 10e-3;                     % sec
+Nx = 200; Ny = Nx; Nz = 4;    % Matrix size
+slabThickness = 10e-3;         % slice thickness (m)
+TR = 15e-3;                     % sec
 dwell = 10e-6;                  % ADC sample time (s)
 alpha = 90;                      % flip angle (degrees)
 alphaPulseDuration = 0.5e-3;
@@ -28,7 +30,10 @@ rfSpoilingInc = 117;            % RF spoiling increment
 seq = mr.Sequence(sys);           
 
 % Create non-selective pulse
-[rf] = mr.makeBlockPulse(alpha/180*pi, sys, 'Duration', alphaPulseDuration);
+%[rf] = mr.makeBlockPulse(alpha/180*pi, sys, 'Duration', alphaPulseDuration);
+[rf] = mr.makeSincPulse(alpha*pi/180, 'Duration', 3e-3, ...
+    'SliceThickness', slabThickness, 'apodization', 0.42, ...
+    'timeBwProduct', 4, 'system', sys);
 
 % Define other gradients and ADC events
 % Cut the redaout gradient into two parts for optimal spoiler timing

@@ -26,7 +26,7 @@ for ii = 1:size(ceq.loop,1)
     fwrite(fid, ceq.loop(ii,:), 'float32');  % write in row-major order
 end
 
-% max B1 and gradient in sequence
+% get max B1 and gradient in sequence
 maxB1 = 0;
 maxGrad = 0;
 for n = 1:ceq.nMax
@@ -98,7 +98,7 @@ return
 function sub_writegrad(fid, g)
 
 % first value is flag indicating gradient type:
-% 0: empty; 1: trap; 2: arbitrary gradient; 3: extended trap
+% 0: empty; 1: trap; 2: raster; 3: cornerpoints
 if isempty(g)
     fwrite(fid, 0, 'int16');   % flag indicating no gradient event
     return;
@@ -113,7 +113,36 @@ if strcmp(g.type, 'trap')
     return;
 end
 
-% TODO: cases 2, 3
+nSamples = length(g.waveform);
+magnitude = g.waveform/max(abs(g.waveform));    % normalized waveform
+
+if g.tt(1) > 0
+    % waveform sampled on center of raster times
+    assert(nSamples > 2, 'raster gradient must have more than 2 samples');
+    assert(all(diff(diff(g.tt)) == 0), 'raster gradient sample times must be regularly spaced');
+    assert(abs(g.tt(1)) > 10*eps, 'raster gradient: first sample time cannot be at time 0');
+
+    raster = g.tt(2) - g.tt(1);
+    assert(raster > 0, 'raster gradient: detected negative raster time');
+
+    fwrite(fid, 2, 'int16');   
+    fwrite(fid, g.delay,    'float32');           % sec
+    fwrite(fid, nSamples, 'int32');
+    fwrite(fid, raster, 'float32');               % sec
+    fwrite(fid, magnitude, 'float32');
+
+    return;
+end
+
+% waveform specified on corner points
+assert(abs(g.tt(1)) < 10*eps, 'first corner point must be sampled at time 0');
+
+fwrite(fid, 3, 'int16');   
+fwrite(fid, g.delay,    'float32');      % sec
+fwrite(fid, nSamples, 'int32');
+fwrite(fid, 0, 'float32');               % dummy raster time
+fwrite(fid, g.tt,    'float32');         % sec
+fwrite(fid, magnitude, 'float32');
 
 return
 

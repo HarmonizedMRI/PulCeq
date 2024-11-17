@@ -7,8 +7,9 @@
 % See the Pulseq on GE 2 manual for a discussion of dead times etc.
 % Reduce gradients by 1/sqrt(3) to allow for oblique scans.
 % Reduce slew a bit further to reduce PNS.
-sys = mr.opts('maxGrad', 50/sqrt(1), 'gradUnit','mT/m', ...
-              'maxSlew', 200/sqrt(1), 'slewUnit', 'T/m/s', ...
+if 1
+sys = mr.opts('maxGrad', 40/sqrt(1), 'gradUnit','mT/m', ...
+              'maxSlew', 150/sqrt(1), 'slewUnit', 'T/m/s', ...
               'rfDeadTime', 100e-6, ...
               'rfRingdownTime', 60e-6, ...
               'adcDeadTime', 40e-6, ...   % 
@@ -17,6 +18,10 @@ sys = mr.opts('maxGrad', 50/sqrt(1), 'gradUnit','mT/m', ...
               'gradRasterTime', 4e-6, ... % GE: must be multiple of 4us
               'blockDurationRaster', 4e-6, ...  % GE: not sure but safest to set as multiple of 4us
               'B0', 3.0);
+else
+    sys.blockDurationRaster = 10e-6;
+    sys.gradRasterTime = 10e-6;
+end
 
 % Create a new sequence object
 seq = mr.Sequence(sys);             
@@ -99,7 +104,10 @@ for iY = (-nDummyShots-pislquant+1):Ny
     end
 
     % Spoil and PE rephasing, and TR delay
-    seq.addBlock(gxSpoil, mr.scaleGrad(gyPre, -pesc), gzSpoil, mr.makeDelay(20e-3));
+    seq.addBlock(gxSpoil, mr.scaleGrad(gyPre, -pesc), gzSpoil); %, mr.makeDelay(20e-3));
+
+    % Test dynamically changing TR
+    seq.addBlock(mr.makeDelay( max(iY,1) * 100e-6));
 end
 
 end
@@ -117,7 +125,7 @@ end
 %% Output for execution and plot
 seq.setDefinition('FOV', [fov fov sliceThickness]);
 seq.setDefinition('Name', 'gre2d');
-seq.write('gre2d.seq')       % Write to pulseq file
+%seq.write('gre2d.seq')       % Write to pulseq file
 
 %seq.plot('timeRange', [0 3]*TR);
 
