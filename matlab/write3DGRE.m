@@ -82,7 +82,7 @@ delayTR = TR - TRmin;
 % iZ = 0: ADC is turned on and used for receive gain calibration on GE scanners
 % iZ > 0: Image acquisition
 
-nDummyZLoops = 0;
+nDummyZLoops = 1;
 
 rf_phase = 0;
 rf_inc = 0;
@@ -99,8 +99,8 @@ for iZ = -nDummyZLoops:Nz
     for iY = 1:Ny
         % Turn on y and z prephasing lobes, except during dummy scans and
         % receive gain calibration (auto prescan)
-        yStep = (iZ > 0) * pe1Steps(iY);
-        zStep = (iZ > 0) * pe2Steps(max(1,iZ));
+        yStep = (iZ > 0) * pe1Steps(iY) + eps;
+        zStep = (iZ > 0) * pe2Steps(max(1,iZ)) + eps;
 
         % RF spoiling
         rf.phaseOffset = rf_phase/180*pi;
