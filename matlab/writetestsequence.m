@@ -29,13 +29,12 @@ rfSpoilingInc = 117;            % RF spoiling increment
 % Create a new sequence object
 seq = mr.Sequence(sys);           
 
-% Create non-selective pulse
-%[rf] = mr.makeBlockPulse(alpha/180*pi, sys, 'Duration', alphaPulseDuration);
+% Create slab-selective pulse
 [rf] = mr.makeSincPulse(alpha*pi/180, 'Duration', 3e-3, ...
     'SliceThickness', slabThickness, 'apodization', 0.42, ...
     'timeBwProduct', 4, 'system', sys);
 
-% Define other gradients and ADC events
+% Define spin-warp gradients and ADC events
 % Cut the redaout gradient into two parts for optimal spoiler timing
 deltak = 1./fov;
 Tread = Nx*dwell;
@@ -76,6 +75,15 @@ pe2Steps = ((0:Nz-1)-Nz/2)/Nz*2;
 TRmin = mr.calcDuration(rf) + mr.calcDuration(gxPre) ...
    + mr.calcDuration(gx) + mr.calcDuration(gxSpoil);
 delayTR = TR - TRmin;
+
+% make a spiral gradient
+nleaf = 4; dt = 4e-10; 
+[sp.wav] = getspiral(1, sys.gradRasterTime, fov(1)*100, Nx);
+sp.gx = mr.makeArbitraryGrad('x', real(gspwavtmp)*1e-4*sys.gamma*100, sys, ...
+                        'delay', sys.adcDeadTime);
+sp.gy = mr.makeArbitraryGrad('y', imag(gspwavtmp)*1e-4*sys.gamma*100, sys, ...
+                        'delay', sys.adcDeadTime);
+
 
 % Loop over phase encodes and define sequence blocks
 % iZ < 0: Dummy shots to reach steady state
