@@ -119,7 +119,7 @@ magnitude = g.waveform/max(abs(g.waveform));    % normalized waveform
 if g.tt(1) > 0
     % waveform sampled on center of raster times
     assert(nSamples > 2, 'raster gradient must have more than 2 samples');
-    assert(all(diff(diff(g.tt)) == 0), 'raster gradient sample times must be regularly spaced');
+    assert(all(abs(diff(diff(g.tt))) < 10*eps), 'raster gradient sample times must be regularly spaced');
     assert(abs(g.tt(1)) > 10*eps, 'raster gradient: first sample time cannot be at time 0');
 
     raster = g.tt(2) - g.tt(1);

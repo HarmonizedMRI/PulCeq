@@ -234,6 +234,7 @@ end
 % initialize max energy field
 for i = 1:ceq.nSegments
     ceq.segments(i).Emax.val = 0;
+    ceq.segments(i).Emax.n = 1;
 end
    
 % find segment instance with max energy
