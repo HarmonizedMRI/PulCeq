@@ -126,10 +126,10 @@ if g.tt(1) > 0
     assert(raster > 0, 'raster gradient: detected negative raster time');
 
     fwrite(fid, 2, 'int16');   
-    fwrite(fid, g.delay,    'float32');           % sec
-    fwrite(fid, nSamples, 'int32');
-    fwrite(fid, raster, 'float32');               % sec
-    fwrite(fid, magnitude, 'float32');
+    fwrite(fid, g.delay,   'float32');           % sec
+    fwrite(fid, nSamples,  'int32');
+    fwrite(fid, raster,    'float32');           % sec
+    fwrite(fid, magnitude, 'float32');           % normalized
 
     return;
 end
@@ -138,10 +138,10 @@ end
 assert(abs(g.tt(1)) < 10*eps, 'first corner point must be sampled at time 0');
 
 fwrite(fid, 3, 'int16');   
-fwrite(fid, g.delay,    'float32');      % sec
-fwrite(fid, nSamples, 'int32');
-fwrite(fid, 0, 'float32');               % dummy raster time
-fwrite(fid, g.tt,    'float32');         % sec
+fwrite(fid, g.delay,   'float32');    % sec
+fwrite(fid, nSamples,  'int32');
+fwrite(fid, 0,         'float32');    % dummy raster time, ignored by interpreter
+fwrite(fid, g.tt,      'float32');    % sec
 fwrite(fid, magnitude, 'float32');
 
 return
