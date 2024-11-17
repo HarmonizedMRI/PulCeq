@@ -16,7 +16,7 @@ sys = mr.opts('maxGrad', 40, 'gradUnit','mT/m', ...
 
 % Acquisition parameters
 fov = [200e-3 200e-3 10e-3];   % FOV (m)
-Nx = 200; Ny = Nx; Nz = 4;    % Matrix size
+Nx = 100; Ny = Nx; Nz = 4;    % Matrix size
 slabThickness = 10e-3;         % slice thickness (m)
 TR = 15e-3;                     % sec
 dwell = 10e-6;                  % ADC sample time (s)
@@ -79,9 +79,9 @@ delayTR = TR - TRmin;
 % make a spiral gradient
 nleaf = 4; dt = 4e-10; 
 [sp.wav] = getspiral(1, sys.gradRasterTime, fov(1)*100, Nx);
-sp.gx = mr.makeArbitraryGrad('x', real(gspwavtmp)*1e-4*sys.gamma*100, sys, ...
+sp.gx = mr.makeArbitraryGrad('x', real(sp.wav)*1e-4*sys.gamma*100, sys, ...
                         'delay', sys.adcDeadTime);
-sp.gy = mr.makeArbitraryGrad('y', imag(gspwavtmp)*1e-4*sys.gamma*100, sys, ...
+sp.gy = mr.makeArbitraryGrad('y', imag(sp.wav)*1e-4*sys.gamma*100, sys, ...
                         'delay', sys.adcDeadTime);
 
 
@@ -90,7 +90,11 @@ sp.gy = mr.makeArbitraryGrad('y', imag(gspwavtmp)*1e-4*sys.gamma*100, sys, ...
 % iZ = 0: ADC is turned on and used for receive gain calibration on GE scanners
 % iZ > 0: Image acquisition
 
-nDummyZLoops = 1;
+% first add some spirals
+seq.addBlock(sp.gx, sp.gy, mr.makeLabel('SET', 'TRID', 47));
+seq.addBlock(gx);
+
+nDummyZLoops = 0;
 
 rf_phase = 0;
 rf_inc = 0;
@@ -138,6 +142,11 @@ for iZ = -nDummyZLoops:Nz
         seq.addBlock(mr.makeDelay(delayTR));
     end
 end
+
+% add some spirals
+seq.addBlock(sp.gx, sp.gy, mr.makeLabel('SET', 'TRID', 47));
+seq.addBlock(gx);
+
 fprintf('Sequence ready\n');
 
 % Check sequence timing
