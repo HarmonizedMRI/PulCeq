@@ -90,14 +90,9 @@ sp.gy = mr.makeArbitraryGrad('y', imag(sp.wav)*1e-4*sys.gamma*100, sys, ...
 
 %%%%%%%%%%%% Start adding blocks to sequence %%%%%%%%%%%%%%%%%%
 
-% add a spiral segment
-for ii = 1:200
-    seq.addBlock(sp.gx, sp.gy, mr.makeLabel('SET', 'TRID', 3));
-end
-
 % add segment with different rf pulses
 for ii = 1:10
-    seq.addBlock(rf, mr.makeLabel('SET', 'TRID', 4), mr.makeDelay(4e-3));
+    seq.addBlock(rf, mr.makeLabel('SET', 'TRID', 1), mr.makeDelay(4e-3));
     seq.addBlock(rf2, gxPre);
     seq.addBlock(gx);
     seq.addBlock(gxSpoil);
@@ -155,6 +150,12 @@ for iZ = -nDummyZLoops:Nz
             mr.scaleGrad(gzPre, -zStep));
         seq.addBlock(mr.makeDelay(delayTR));
     end
+end
+
+% add a spiral segment
+for ii = 1:200
+    seq.addBlock(sp.gx, sp.gy, mr.makeLabel('SET', 'TRID', 3), mr.makeDelay(50e-3));
+    %seq.addBlock(mr.makeDelay(82.6e-3));
 end
 
 
