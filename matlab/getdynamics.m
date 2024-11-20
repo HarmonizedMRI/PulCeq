@@ -10,6 +10,8 @@ amp.gx = 0;
 amp.gy = 0;
 amp.gz = 0;
 recphs = 0;
+% Xiaoxi: update for adc freq offset
+recfreq = 0;
 
 if ~isempty(block.rf)
     rfamp = max(abs(block.rf.signal));
@@ -40,7 +42,10 @@ end
 
 if ~isempty(block.adc)
     recphs = block.adc.phaseOffset;
+    % Xiaoxi: saving adc freq offset
+    recfreq = block.adc.freqOffset;
 end
 
-loop = [segmentID parentBlockID rfamp rfphs rffreq amp.gx amp.gy amp.gz recphs block.blockDuration];
-    
+% Xiaoxi: update for adc freq offset
+% loop = [segmentID parentBlockID rfamp rfphs rffreq amp.gx amp.gy amp.gz recphs block.blockDuration];
+loop = [segmentID parentBlockID rfamp rfphs rffreq amp.gx amp.gy amp.gz recphs block.blockDuration recfreq];    
