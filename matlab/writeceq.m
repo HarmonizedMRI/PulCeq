@@ -80,17 +80,33 @@ if isempty(rf)
     return
 end
 
-if strcmp(rf.type, 'rf')
+nSamples = length(rf.signal);
+magnitude = rf.signal/max(abs(rf.signal));    % normalized waveform
+
+shape = sub_rf2shape(rf);
+
+if nSamples > 3 & all(diff(diff(rf.t)) < 10*eps)
+    % waveform sampled on center of raster times
+    assert(rf.t(1) > 10*eps, 'raster gradient: first sample time cannot be at time 0');
+    assert(rf.t(2) - rf.t(1) > 0, 'raster gradient: detected non-positive raster time');
+
     fwrite(fid, 1, 'int16');   
     fwrite(fid, 1, 'int16');   % complex flag
-    shape = sub_rf2shape(rf);
     sub_writearbitrary(fid, shape, true, true);
-    fwrite(fid, rf.shape_dur, 'float32');
-    fwrite(fid, rf.delay, 'float32');
-    E = sum(shape.magnitude(1:end-1).^2 .* diff(rf.t));  % normalized pulse energy
-    fwrite(fid, E, 'float32');
-    return
+
+else
+    % waveform specified on corner points
+    assert(abs(rf.t(1)) < 10*eps, 'extended trapezoid rf: first corner point must be sampled at time 0');
+
+    fwrite(fid, 2, 'int16');   
+    fwrite(fid, 1, 'int16');   % complex flag
+    sub_writearbitrary(fid, shape, true, false);
 end
+
+fwrite(fid, rf.shape_dur, 'float32');
+fwrite(fid, rf.delay, 'float32');
+E = sum(shape.magnitude(1:end-1).^2 .* diff(rf.t));  % normalized pulse energy
+fwrite(fid, E, 'float32');
 
 return
 
