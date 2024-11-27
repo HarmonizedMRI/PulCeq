@@ -179,15 +179,24 @@ end
 
 ceq.nSegments = length(ceq.segments);
 
-%% Get dynamic scan information
-ceq.loop = zeros(ceq.nMax, 13);
+
+%% Get dynamic scan information, including cardiac trigger
+ceq.loop = zeros(ceq.nMax, 14);
+physioTrigger = false;
 for n = 1:ceq.nMax
     b = seq.getBlock(n);
+    if isfield(b, 'trig')
+        if strcmp(b.trig.channel, 'physio1')
+            physioTrigger = true;
+        end
+    end
     p = parentBlockIDs(n); 
-    if p == 0  % delay block
-        ceq.loop(n,:) = getdynamics(b, segmentID2Ind(segmentIDs(n)), p);
-    elseif p > 0
-        ceq.loop(n,:) = getdynamics(b, segmentID2Ind(segmentIDs(n)), p, ceq.parentBlocks{p});
+    if p > -1 % if p == 0  % delay block
+        ceq.loop(n,:) = getdynamics(b, segmentID2Ind(segmentIDs(n)), p, physioTrigger);
+        physioTrigger = false;
+    %end
+    %if p > 0
+    %    ceq.loop(n,:) = getdynamics(b, segmentID2Ind(segmentIDs(n)), p, ceq.parentBlocks{p});
     end
 end
 
