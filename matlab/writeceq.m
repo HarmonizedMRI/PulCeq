@@ -184,8 +184,8 @@ function sub_writesegment(fid, s)  % write definition of one segment
     fwrite(fid, s.segmentID, 'int16');
     fwrite(fid, s.nBlocksInSegment, 'int16');
     fwrite(fid, s.blockIDs, 'int16');
-    fwrite(fid, s.Emax.val, 'float32');
-    fwrite(fid, s.Emax.n, 'int32');
+    %fwrite(fid, s.Emax.val, 'float32');
+    fwrite(fid, s.Emax.n, 'int32'); % block/row index of first block in segment instance with max gradient energy
 return
 
 function shape = sub_rf2shape(rf)
