@@ -75,8 +75,8 @@ for n = 1:ceq.nMax
 
     b = seq.getBlock(n);
 
-    % Skip blocks with zero duration (only contains label(s))
-    if b.blockDuration < 2*eps
+    % Skip blocks with zero duration or cardiac trigger blocks
+    if iscardiactriggerblock(b) | b.blockDuration < 2*eps
         parentBlockIDs(n) = -1;
         continue;
     end
@@ -191,12 +191,9 @@ for n = 1:ceq.nMax
         end
     end
     p = parentBlockIDs(n); 
-    if p > -1 % if p == 0  % delay block
+    if p > -1 
         ceq.loop(n,:) = getdynamics(b, segmentID2Ind(segmentIDs(n)), p, physioTrigger);
         physioTrigger = false;
-    %end
-    %if p > 0
-    %    ceq.loop(n,:) = getdynamics(b, segmentID2Ind(segmentIDs(n)), p, ceq.parentBlocks{p});
     end
 end
 
