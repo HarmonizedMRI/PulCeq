@@ -87,11 +87,14 @@ sp.gx = mr.makeArbitraryGrad('x', real(sp.wav)*1e-4*sys.gamma*100, sys, ...
 sp.gy = mr.makeArbitraryGrad('y', imag(sp.wav)*1e-4*sys.gamma*100, sys, ...
                         'delay', sys.adcDeadTime);
 
+% make a cardiac trigger event
+trig = mr.makeTrigger('physio1', 'duration', 2000e-6);  % dummy duration -- ignored by GE interpreter
+
 
 %%%%%%%%%%%% Start adding blocks to sequence %%%%%%%%%%%%%%%%%%
 
 % add segment with different rf pulses
-for ii = 1:10
+for ii = 1:0
     seq.addBlock(rf, mr.makeLabel('SET', 'TRID', 1), mr.makeDelay(4e-3));
     seq.addBlock(rf2, gxPre);
     seq.addBlock(gx);
@@ -117,6 +120,9 @@ for iZ = -nDummyZLoops:Nz
     end
     fprintf(msg);
 
+    % add a cardiac trigger even for testing
+    seq.addBlock(trig);
+
     for iY = 1:Ny
         % Turn on y and z prephasing lobes, except during dummy scans and
         % receive gain calibration (auto prescan)
@@ -132,7 +138,7 @@ for iZ = -nDummyZLoops:Nz
         % Excitation
         % Mark start of segment (block group) by adding label.
         % Subsequent blocks in block group are NOT labelled.
-        seq.addBlock(rf, mr.makeLabel('SET', 'TRID', 47-isDummyTR));
+        seq.addBlock(rf, mr.makeLabel('SET', 'TRID', 47-isDummyTR), trig);
         
         % Encoding
         seq.addBlock(gxPre, ...
