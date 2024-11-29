@@ -18,9 +18,9 @@ if abs(b1.blockDuration - b2.blockDuration) > tol
 end
 
 % Is a trigger present/absent in both blocks
-if isfield(b1, 'trig') ~= isfield(b2, 'trig')
-    issame = false; return;
-end
+%if isfield(b1, 'trig') ~= isfield(b2, 'trig')
+%    issame = false; return;
+%end
 
 % Are gradients non-unique (same shapes)
 for ax = {'gx','gy','gz'}
