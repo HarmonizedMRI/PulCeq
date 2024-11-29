@@ -17,6 +17,8 @@ function ceq = seq2ceq(seqarg, varargin)
 
 GAM = 4257.6;   % Hz/Gauss
 
+minDelayBlockDuration = 20e-6 + 100*eps; 
+
 %% parse inputs
 
 % defaults
@@ -52,17 +54,22 @@ end
 
 
 
-%% Get parent blocks
+%% Get parent blocks. This is the slowest step.
 % parent blocks = unique up to a scaling factor, or phase/frequency offsets.
-% Contains waveforms with maximum amplitude across blocks.
-% First find unique blocks, then determine and set max amplitudes.
-% parentBlockIDs = [nMax], vector of parent block IDs for all blocks
+% Contains normalized waveforms; amplitudes in physical units are specified in loop array.
+% parentBlockIDs = [nMax], vector of parent block IDs for all blocks.
 
-parentBlockIndex = []; 
+parentBlockIndex = zeros(1,100); 
+parentBlockIndex(1) = -99;  % flag to help initiate array
+ceq.nParentBlocks = 0;
 
-parentBlockIDs = [];
+parentBlockIDs = zeros(1,ceq.nMax);
+
+%parentBlockIndex = [];
+%parentBlockIDs = [];
 
 fprintf('seq2ceq: Getting block %d/%d', 1, ceq.nMax); prev_n = 1;
+tic
 for n = 1:ceq.nMax
     if ~mod(n, 500) || n == ceq.nMax
         for ib = 1:strlength(sprintf('seq2ceq: Getting block %d/%d', prev_n, ceq.nMax))
@@ -75,23 +82,27 @@ for n = 1:ceq.nMax
 
     b = seq.getBlock(n);
 
-    % Skip blocks with zero duration or cardiac trigger blocks
-    if iscardiactriggerblock(b) | b.blockDuration < 2*eps
+    T = getblocktype(b);
+
+    % Skip blocks with "zero" duration, defined as 20us or less
+    if b.blockDuration < minDelayBlockDuration
         parentBlockIDs(n) = -1;
+        assert(sum(T(2:3)) > 0, 'A "zero-duration" block must contain a TRID label and/or cardiac trigger');
         continue;
     end
 
     % Pure delay blocks are handled separately
-    if isdelayblock(b)
+    if T(4)  % isdelayblock(b)
         parentBlockIDs(n) = 0;
         continue;
     end
 
-    if isempty(parentBlockIndex)
+    if parentBlockIndex(1) == -99
         parentBlockIndex(1) = n;
+        ceq.nParentBlocks = ceq.nParentBlocks + 1;
     end
 
-    for p = 1:length(parentBlockIndex)
+    for p = 1:ceq.nParentBlocks % length(parentBlockIndex)
         n2 = parentBlockIndex(p);
         IsSame(p) = compareblocks(seq, blockEvents(n,:), blockEvents(n2,:), n, n2);
     end
@@ -100,15 +111,17 @@ for n = 1:ceq.nMax
             fprintf('\nFound new parent block on line %d\n', n);
         end
         parentBlockIndex(p+1) = n;  % add new block to list
+        ceq.nParentBlocks = ceq.nParentBlocks + 1;
         parentBlockIDs(n) = p+1;
     else
         I = find(IsSame);
         parentBlockIDs(n) = I;
     end
 end
+toc
 
-ceq.nParentBlocks = length(parentBlockIndex);
-for p = 1:length(parentBlockIndex)
+%ceq.nParentBlocks = nParentBlocks;  %length(parentBlockIndex);
+for p = 1:ceq.nParentBlocks  % length(parentBlockIndex)
     ceq.parentBlocks{p} = seq.getBlock(parentBlockIndex(p));
     ceq.parentBlocks{p}.ID = p;
 end
@@ -120,6 +133,8 @@ previouslyDefinedSegmentIDs = [];
 segmentIDs = zeros(1,ceq.nMax);  % keep track of which segment each block belongs to
 for n = 1:ceq.nMax
     b = seq.getBlock(n);
+
+    T = getblocktype(b);
 
     if parentBlockIDs(n) == -1
         continue;    % skip
@@ -185,11 +200,11 @@ ceq.loop = zeros(ceq.nMax, 14);
 physioTrigger = false;
 for n = 1:ceq.nMax
     b = seq.getBlock(n);
-    if isfield(b, 'trig')
-        if strcmp(b.trig.channel, 'physio1')
-            physioTrigger = true;
-        end
-    end
+
+    % set cardiac trigger
+    T = getblocktype(b);
+    physioTrigger = T(3);
+
     p = parentBlockIDs(n); 
     if p > -1 
         ceq.loop(n,:) = getdynamics(b, segmentID2Ind(segmentIDs(n)), p, physioTrigger);
@@ -201,12 +216,6 @@ end
 %% Remove zero-duration (label-only) blocks from ceq.loop
 ceq.loop(parentBlockIDs == -1, :) = [];
 ceq.nMax = size(ceq.loop,1);
-
-
-%% No trigger for now. TODO
-for p = 1:ceq.nParentBlocks
-    ceq.parentBlocks{p}.trig.type = 0;
-end
 
 
 %% Check that the execution of blocks throughout the sequence
@@ -225,8 +234,15 @@ while n < ceq.nMax
         % compare parent block id in ceq.loop against block id in ceq.segments(i)
         p = ceq.loop(n, 2);  % parent block id
         p_ij = ceq.segments(i).blockIDs(j);
+        msg = ['Sequence contains inconsistent segment definitions. ' ...
+               'This may occur due to programming error (possibly fatal), ' ...
+               'or if an arbitrary gradient resembles that from another block ' ...
+               'except with opposite sign or scaled by zero (which is probably ok). ' ...
+               'Often, a solution to this is to scale gradients to "eps" instead of ' ...
+               'identically zero, when calling mr.scaleGrad().'];
         if p ~= p_ij
-            warning(sprintf('Sequence contains inconsistent segment definitions. This may occur due to programming error (possibly fatal), or if an arbitrary gradient resembles that from another block except with opposite sign or scaled by zero (which is probably ok). Expected parent block ID %d, found %d (block %d)', p_ij, p, n));
+            %warning(sprintf('Sequence contains inconsistent segment definitions. This may occur due to programming error (possibly fatal), or if an arbitrary gradient resembles that from another block except with opposite sign or scaled by zero (which is probably ok). Often, a solution to this is to scale gradients to "eps" instead of identically zero, when calling mr.scaleGrad(). Expected parent block ID %d, found %d (block %d)', p_ij, p, n));
+            warning(sprintf('%s\nExpected parent block ID %d, found %d (block %d)', msg, p_ij, p, n));
         end
 
         n = n + 1;
@@ -235,8 +251,8 @@ end
 
 %% Gradient heating related calculations
 
-% Get block/row index corresponding to the beginning of 
-% the segment instance with the largest combined (all axes) gradient energy.
+% Get block/row index corresponding to the beginning of the segment instance
+% instance with the largest combined (all axes) gradient energy.
 
 % initialize max energy field
 for i = 1:ceq.nSegments
