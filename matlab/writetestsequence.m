@@ -81,14 +81,13 @@ delayTR = TR - TRmin;
 % make a spiral gradient
 nleaf = 8; dt = 4e-10; 
 [sp.wav] = getspiral(nleaf, sys.gradRasterTime, fov(1)*100, Nx);
-length(sp.wav)
 sp.gx = mr.makeArbitraryGrad('x', real(sp.wav)*1e-4*sys.gamma*100, sys, ...
                         'delay', sys.adcDeadTime);
 sp.gy = mr.makeArbitraryGrad('y', imag(sp.wav)*1e-4*sys.gamma*100, sys, ...
                         'delay', sys.adcDeadTime);
 
 % make a cardiac trigger event
-trig = mr.makeTrigger('physio1', 'duration', 2000e-6);  % dummy duration -- ignored by GE interpreter
+trig = mr.makeTrigger('physio1', 'duration', 20e-6);  % dummy duration -- ignored by GE interpreter
 
 
 %%%%%%%%%%%% Start adding blocks to sequence %%%%%%%%%%%%%%%%%%
@@ -159,7 +158,7 @@ for iZ = -nDummyZLoops:Nz
 end
 
 % add a spiral segment
-for ii = 1:200
+for ii = 1:2
     seq.addBlock(sp.gx, sp.gy, mr.makeLabel('SET', 'TRID', 3), mr.makeDelay(50e-3));
     %seq.addBlock(mr.makeDelay(82.6e-3));
 end
@@ -180,7 +179,7 @@ end
 % Output for execution
 seq.setDefinition('FOV', fov);
 seq.setDefinition('Name', 'gre');
-%seq.write('gre3d.seq');
+seq.write('test.seq');
 
 %% Optional plots
 
