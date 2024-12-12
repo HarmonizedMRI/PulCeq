@@ -15,6 +15,11 @@ function ceq = seq2ceq(seqarg, varargin)
 % Output
 %   ceq        struct, based on github/HarmonizedMRI/PulCeq/src/pulCeq.h
 
+% Definitions:
+% n, row        row index in .seq file
+% i             segment array index, starting from 1
+% j             block number within a segment, starting from 1
+
 GAM = 4257.6;   % Hz/Gauss
 
 minDelayBlockDuration = 20e-6 + 100*eps; 
@@ -74,185 +79,83 @@ end
 
 
 %% Get list of (virtual) segments
-% These are distinct from segment 'instances'.
+%% These are distinct from segment 'instances'.
 
 [uniqueTridLabels, I] = unique(tridLabels);
 nBlocksPerTridLabel = diff(tridLabelsIndex); % this misses the last segment instance -- TODO
-nSegments = length(uniqueTridLabels);
-for i = 1:nSegments
+ceq.nSegments = length(uniqueTridLabels);
+for i = 1:ceq.nSegments
     ceq.segments(i).nBlocksInSegment = nBlocksPerTridLabel(I(i));
     ceq.segments(i).segmentID = i;
     ceq.segments(i).rows = tridLabelsIndex(I(i)) + [0:ceq.segments(i).nBlocksInSegment-1];
 end
 
-keyboard
 
-% ceq.segments(iSeg).segmentID = iSeg;
-% ceq.segments(iSeg).nBlocksInSegment = length(Segments{segmentID});
-% ceq.segments(iSeg).blockIDs = Segments{segmentID};
-    
+%% Get parent blocks, by parsing first instance of each segment.
+%% Also fill in the sequence of parent blocks for each segment.
+%% Pure delay blocks are assigned parent block ID = 0
 
-%% Get parent blocks, by parsing first instance of each segment
-
-[uniqueTridLabels, I] = unique(tridLabels);
-for ii = 1:length(uniqueTridLabels)
-    n = tridLabelsIndex(I(ii));
-    end
-%for ii = 1:length(
-
-
-%% Get parent blocks, parent block ID for all rows. 
-%% This is the slowest step due to the compareblocks() calls.
-% parent blocks = unique up to a scaling factor, or phase/frequency offsets.
-% Contains normalized waveforms; amplitudes in physical units are specified in loop array.
-% parentBlockIDs = [nMax], vector of parent block IDs for all blocks.
-
-parentBlockIndex = zeros(1,100); 
-parentBlockIndex(1) = -99;  % flag to help initiate array
+ceq.parentBlocks(1).row = -1;
 ceq.nParentBlocks = 0;
 
-parentBlockIDs = zeros(1,ceq.nMax);
+for i = 1:ceq.nSegments
 
-%parentBlockIndex = [];
-%parentBlockIDs = [];
+    for j = 1:ceq.segments(i).nBlocksInSegment
 
-fprintf('seq2ceq: Getting block %d/%d', 1, ceq.nMax); prev_n = 1;
-tic
-for n = 1:ceq.nMax
-    if ~mod(n, 500) || n == ceq.nMax
-        for ib = 1:strlength(sprintf('seq2ceq: Getting block %d/%d', prev_n, ceq.nMax))
-            fprintf('\b');
+        n = ceq.segments(i).rows(j);
+
+        b = seq.getBlock(n);
+        T = getblocktype(b);
+
+        % Skip blocks with "zero" duration, defined as 20us or less
+        if b.blockDuration < minDelayBlockDuration
+            continue;
         end
-        prev_n = n;
-        fprintf(sprintf('seq2ceq: Getting block %d/%d', n, ceq.nMax));
-        if n == ceq.nMax, fprintf('\n'), end
-    end
 
-    b = seq.getBlock(n);
-
-    T = getblocktype(b);
-
-    % Skip blocks with "zero" duration, defined as 20us or less
-    if b.blockDuration < minDelayBlockDuration
-        parentBlockIDs(n) = -1;
-        assert(sum(T(2:3)) > 0, 'A "zero-duration" block must contain a TRID label and/or cardiac trigger');
-        continue;
-    end
-
-    % Pure delay blocks are handled separately
-    if T(4)  % isdelayblock(b)
-        parentBlockIDs(n) = 0;
-        continue;
-    end
-
-    if parentBlockIndex(1) == -99
-        parentBlockIndex(1) = n;
-        ceq.nParentBlocks = ceq.nParentBlocks + 1;
-    end
-
-    IsSame = [];
-    P = 1:ceq.nParentBlocks;
-%    P = circshift(
-    for p = 1:ceq.nParentBlocks % length(parentBlockIndex)
-        n2 = parentBlockIndex(p);
-        IsSame(p) = compareblocks(seq, blockEvents(n,:), blockEvents(n2,:), n, n2);
-        if IsSame(end) == true
-            break;
+        % The first non-zero block is a parent block by definition.
+        % This can be a pure delay block, or a block with rf/gradient/adc events.
+        if ceq.parentBlocks(1).row == -1
+            ceq.nParentBlocks = ceq.nParentBlocks + 1;
+            ceq.parentBlocks(ceq.nParentBlocks).row = n;
+            ceq.parentBlocks(ceq.nParentBlocks).block = b;
+            ceq.parentBlocks(ceq.nParentBlocks).ID = ceq.nParentBlocks;
+            ceq.segments(i).blockIDs(j) = ceq.nParentBlocks;
+            continue;
         end
-    end
-    if sum(IsSame) == 0
-        if arg.verbose
-            fprintf('\nFound new parent block on line %d\n', n);
-        end
-        parentBlockIndex(p+1) = n;  % add new block to list
-        ceq.nParentBlocks = ceq.nParentBlocks + 1;
-        parentBlockIDs(n) = p+1;
-    else
-        I = find(IsSame);
-        parentBlockIDs(n) = I;
-    end
-end
-toc
 
-%ceq.nParentBlocks = nParentBlocks;  %length(parentBlockIndex);
-for p = 1:ceq.nParentBlocks  % length(parentBlockIndex)
-    ceq.parentBlocks{p} = seq.getBlock(parentBlockIndex(p));
-    ceq.parentBlocks{p}.ID = p;
-end
-
-
-%% Get segment (block group) definitions
-% Segments are defined by their first occurrence in the .seq file
-previouslyDefinedSegmentIDs = [];
-segmentIDs = zeros(1,ceq.nMax);  % keep track of which segment each block belongs to
-for n = 1:ceq.nMax
-    b = seq.getBlock(n);
-
-    T = getblocktype(b);
-
-    if parentBlockIDs(n) == -1
-        continue;    % skip
-    end
-
-    % Get segment ID label (TRID) if present
-    if isfield(b, 'label') 
-        hasTRIDlabel = false;
-        for ii = 1:length(b.label)
-            if strcmp(b.label(ii).label, 'TRID')
-                hasTRIDlabel = true;
+        % Check if block is similar to an existing parent block
+        issame = false;
+        for p = 1:ceq.nParentBlocks
+            np = ceq.parentBlocks(p).row; 
+            if compareblocks(seq, blockEvents(n,:), blockEvents(np,:), n, np)
+                issame = true;
+                ceq.segments(i).blockIDs(j) = ceq.parentBlocks(p).ID;
+                pParent = p;
                 break;
             end
         end
-        if hasTRIDlabel  % marks start of segment
-            activeSegmentID = b.label(ii).value;
 
-            if ~any(activeSegmentID == previouslyDefinedSegmentIDs)
-                % start new segment
-                firstOccurrence = true;
-                previouslyDefinedSegmentIDs = [previouslyDefinedSegmentIDs activeSegmentID];
-                Segments{activeSegmentID} = [];
-            else
-                firstOccurrence = false;
+        % If not similar, add as a new parent block
+        if ~issame
+            if arg.verbose
+                fprintf('\nFound new parent block on line %d\n', n);
             end
-        end
-    end
-
-    if ~exist('firstOccurrence', 'var')
-        %error('First block must contain a segment ID');
-    end
-
-    % add block to segment
-    if firstOccurrence
-        Segments{activeSegmentID} = [Segments{activeSegmentID} parentBlockIDs(n)];
-    end
-
-    segmentIDs(n) = activeSegmentID;
-end
-
-% In the above, the Segments array index equals the Segment ID specified in the .seq file,
-% which is an arbitrary integer.
-% Now we squash the Segments array and redefine the Segment IDs accordingly;
-% this is needed since the interpreter assumes that segment ID = index into segment array.
-if ~arg.ignoreSegmentLabels
-    iSeg = 1;    % segment array index
-    for segmentID = 1:length(Segments)
-        if ~isempty(Segments{segmentID})
-            segmentID2Ind(segmentID) = iSeg;
-            ceq.segments(iSeg).segmentID = iSeg;
-            ceq.segments(iSeg).nBlocksInSegment = length(Segments{segmentID});
-            ceq.segments(iSeg).blockIDs = Segments{segmentID};
-            iSeg = iSeg + 1;
+            ceq.nParentBlocks = ceq.nParentBlocks + 1;
+            ceq.parentBlocks(ceq.nParentBlocks).row = n;
+            ceq.parentBlocks(ceq.nParentBlocks).block = b;
+            ceq.parentBlocks(ceq.nParentBlocks).ID = ceq.nParentBlocks;
+            ceq.segments(i).blockIDs(j) = ceq.nParentBlocks;
         end
     end
 end
-
-ceq.nSegments = length(ceq.segments);
 
 
 %% Get dynamic scan information, including cardiac trigger
 ceq.loop = zeros(ceq.nMax, 14);
 physioTrigger = false;
-for n = 1:ceq.nMax
+activeSegmentID = [];
+n = tridLabelsIndex(1);  % start of first segment instance
+while n < ceq.nMax
     b = seq.getBlock(n);
 
     % set cardiac trigger
