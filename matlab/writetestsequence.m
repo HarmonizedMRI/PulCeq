@@ -16,13 +16,13 @@ sys = mr.opts('maxGrad', 49, 'gradUnit','mT/m', ...
 
 % Acquisition parameters
 fov = [200e-3 200e-3 10e-3];   % FOV (m)
-Nx = 200; Ny = 32; Nz = 4;    % Matrix size
+Nx = 200; Ny = 128; Nz = 4;    % Matrix size
 slabThickness = 10e-3;         % slice thickness (m)
 TR = 15e-3;                     % sec
 dwell = 10e-6;                  % ADC sample time (s)
 alpha = 90;                      % flip angle (degrees)
 nCyclesSpoil = 2;               % number of spoiler cycles
-Tpre = 1.0e-3;                  % prephasing trapezoid duration
+Tpre = 2.0e-3;                  % prephasing trapezoid duration
 rfSpoilingInc = 117;            % RF spoiling increment
 
 % Create a new sequence object
@@ -158,7 +158,7 @@ for iZ = -nDummyZLoops:Nz
 end
 
 % add a spiral segment
-for ii = 1:2
+for ii = 1:10
     seq.addBlock(sp.gx, sp.gy, mr.makeLabel('SET', 'TRID', 3), mr.makeDelay(50e-3));
     %seq.addBlock(mr.makeDelay(82.6e-3));
 end

@@ -6,7 +6,7 @@ if 1
     writetestsequence;   % test.seq
 end
 
-ceq = seq2ceq2('test.seq');
+ceq = seq2ceq('test.seq');
 
 % write Ceq struct to file. This is what pge2 will load and run.
 writeceq(ceq, 'test.tar');

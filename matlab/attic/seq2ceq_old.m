@@ -69,7 +69,6 @@ parentBlockIDs = zeros(1,ceq.nMax);
 %parentBlockIDs = [];
 
 fprintf('seq2ceq: Getting block %d/%d', 1, ceq.nMax); prev_n = 1;
-tic
 for n = 1:ceq.nMax
     if ~mod(n, 500) || n == ceq.nMax
         for ib = 1:strlength(sprintf('seq2ceq: Getting block %d/%d', prev_n, ceq.nMax))
@@ -118,7 +117,6 @@ for n = 1:ceq.nMax
         parentBlockIDs(n) = I;
     end
 end
-toc
 
 %ceq.nParentBlocks = nParentBlocks;  %length(parentBlockIndex);
 for p = 1:ceq.nParentBlocks  % length(parentBlockIndex)
