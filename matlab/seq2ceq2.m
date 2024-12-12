@@ -8,8 +8,6 @@ function ceq = seq2ceq(seqarg, varargin)
 %   seqarg     a seq object, or name of a .seq file
 %
 % Input options with defaults
-%   nMax                  [1]            Only parse the first nMax blocks in the .seq file  [all blocks]
-%   ignoreSegmentLabels   true/false     Treat each block as a segment. Use with caution! [false]
 %   verbose               true/false     Print some info to the terminal [false]
 %
 % Output
@@ -51,14 +49,10 @@ blockEvents = cell2mat(seq.blockEvents);
 blockEvents = reshape(blockEvents, [nEvents, length(seq.blockEvents)]).'; 
 
 % number of blocks (rows in .seq file) to step through
-if isempty(arg.nMax)
-    ceq.nMax = size(blockEvents, 1);
-else
-    ceq.nMax = arg.nMax;
-end
+ceq.nMax = size(blockEvents, 1);
 
 
-%% Get all TRID labels and corresponding row indeces
+%% Get TRID labels and corresponding row indeces for all segment instances
 %tridLabels = -1 * ones(1, ceq.nMax);
 nTRIDlabels = 0;
 for n = 1:ceq.nMax
@@ -69,6 +63,7 @@ for n = 1:ceq.nMax
             if strcmp(b.label(ii).label, 'TRID')
                 nTRIDlabels = nTRIDlabels + 1;
                 tridLabels(nTRIDlabels) = b.label(ii).value;
+                trids(n) = b.label(ii).value;
                 tridLabelsIndex(nTRIDlabels) = n;
                 break;
             end
@@ -82,11 +77,12 @@ end
 %% These are distinct from segment 'instances'.
 
 [uniqueTridLabels, I] = unique(tridLabels);
-nBlocksPerTridLabel = diff(tridLabelsIndex); % this misses the last segment instance -- TODO
+nBlocksPerTridLabel = diff([tridLabelsIndex ceq.nMax+1]);
 ceq.nSegments = length(uniqueTridLabels);
 for i = 1:ceq.nSegments
     ceq.segments(i).nBlocksInSegment = nBlocksPerTridLabel(I(i));
-    ceq.segments(i).segmentID = i;
+    ceq.segments(i).TRID = tridLabels(I(i));
+    ceq.segments(i).ID = i;
     ceq.segments(i).rows = tridLabelsIndex(I(i)) + [0:ceq.segments(i).nBlocksInSegment-1];
 end
 
@@ -118,7 +114,7 @@ for i = 1:ceq.nSegments
             ceq.nParentBlocks = ceq.nParentBlocks + 1;
             ceq.parentBlocks(ceq.nParentBlocks).row = n;
             ceq.parentBlocks(ceq.nParentBlocks).block = b;
-            ceq.parentBlocks(ceq.nParentBlocks).ID = ceq.nParentBlocks;
+            ceq.parentBlocks(ceq.nParentBlocks).block.ID = ceq.nParentBlocks;
             ceq.segments(i).blockIDs(j) = ceq.nParentBlocks;
             continue;
         end
@@ -129,8 +125,7 @@ for i = 1:ceq.nSegments
             np = ceq.parentBlocks(p).row; 
             if compareblocks(seq, blockEvents(n,:), blockEvents(np,:), n, np)
                 issame = true;
-                ceq.segments(i).blockIDs(j) = ceq.parentBlocks(p).ID;
-                pParent = p;
+                ceq.segments(i).blockIDs(j) = p;
                 break;
             end
         end
@@ -143,36 +138,62 @@ for i = 1:ceq.nSegments
             ceq.nParentBlocks = ceq.nParentBlocks + 1;
             ceq.parentBlocks(ceq.nParentBlocks).row = n;
             ceq.parentBlocks(ceq.nParentBlocks).block = b;
-            ceq.parentBlocks(ceq.nParentBlocks).ID = ceq.nParentBlocks;
+            ceq.parentBlocks(ceq.nParentBlocks).block.ID = ceq.nParentBlocks;
             ceq.segments(i).blockIDs(j) = ceq.nParentBlocks;
         end
     end
 end
 
+for p = 1:ceq.nParentBlocks
+    ceq.parentBlocks(p).ID = p;
+end
 
-%% Get dynamic scan information, including cardiac trigger
+
+%% Get dynamic scan information, including cardiac trigger.
+%% TODO: Write identity rotation matrix (for now)
 ceq.loop = zeros(ceq.nMax, 14);
 physioTrigger = false;
 activeSegmentID = [];
 n = tridLabelsIndex(1);  % start of first segment instance
-while n < ceq.nMax
+while n < ceq.nMax + 1
+    
     b = seq.getBlock(n);
 
-    % set cardiac trigger
-    T = getblocktype(b);
-    physioTrigger = T(3);
+    % skip zero-length blocks that are not part of any segment
+    if trids(n) == 0
+        n = n + 1;
+        continue;
+    end
 
-    p = parentBlockIDs(n); 
-    if p > -1 
-        ceq.loop(n,:) = getdynamics(b, segmentID2Ind(segmentIDs(n)), p, physioTrigger);
-        physioTrigger = false;
+    % Loop over blocks in segment instance.
+    % If any block contains physio trigger, the segment is triggered as a whole
+    physioTrigger = false;
+    i = find(uniqueTridLabels == trids(n));  % segment array index
+
+    %[i n trids(n)]
+
+    for j = 1:ceq.segments(i).nBlocksInSegment
+        b = seq.getBlock(n);
+
+        % set cardiac trigger
+        T = getblocktype(b);
+        if T(3)
+            physioTrigger = true;
+        end
+
+        p = ceq.segments(i).blockIDs(j);
+
+        ceq.loop(n,:) = getdynamics(b, i, p, physioTrigger);
+
+        n = n + 1;
     end
 end
 
 
 %% Remove zero-duration (label-only) blocks from ceq.loop
-ceq.loop(parentBlockIDs == -1, :) = [];
+ceq.loop(ceq.loop(:,1) == 0, :) = [];
 ceq.nMax = size(ceq.loop,1);
+
 
 
 %% Check that the execution of blocks throughout the sequence
@@ -238,3 +259,6 @@ while n < ceq.nMax
         ceq.segments(i).Emax.val = Etmp.all;
     end
 end
+
+function sub_trid2segmentindex
+return

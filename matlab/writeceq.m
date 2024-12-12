@@ -10,7 +10,7 @@ fwrite(fid, 47, 'int16');  % for checking endianness when reading
 % write base blocks
 fwrite(fid, ceq.nParentBlocks, 'int16');
 for ii = 1:ceq.nParentBlocks
-    sub_writeblock(fid, ceq.parentBlocks{ii});
+    sub_writeblock(fid, ceq.parentBlocks(ii).block);
 end
 
 % write segment definitions
@@ -67,7 +67,8 @@ sub_writegrad(fid, b.gx);
 sub_writegrad(fid, b.gy);
 sub_writegrad(fid, b.gz);
 sub_writeadc(fid, b.adc);
-sub_writetrig(fid, b.trig);
+trig.type = 0;
+sub_writetrig(fid, trig);
 
 return
 
@@ -181,7 +182,7 @@ function sub_writetrig(fid, trig)
 return
 
 function sub_writesegment(fid, s)  % write definition of one segment
-    fwrite(fid, s.segmentID, 'int16');
+    fwrite(fid, s.ID, 'int16');
     fwrite(fid, s.nBlocksInSegment, 'int16');
     fwrite(fid, s.blockIDs, 'int16');
     %fwrite(fid, s.Emax.val, 'float32');
