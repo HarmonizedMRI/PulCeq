@@ -1,16 +1,12 @@
 system('git clone git@github.com:pulseq/pulseq.git');
 addpath pulseq/matlab
 
-if 0
+if 1
     addpath test
     writetestsequence;   % test.seq
-
-    % convert to Ceq struct
-    %ceq = seq2ceq('test.seq');
-    ceq = seq2ceq(seq);
-else
-    ceq = seq2ceq('test.seq');
 end
+
+ceq = seq2ceq2('test.seq');
 
 % write Ceq struct to file. This is what pge2 will load and run.
 writeceq(ceq, 'test.tar');
