@@ -113,12 +113,13 @@ function issame = compareadc(seq, n1, n2)
         issame = false; return;
     end
 
-    if (adc1.numSamples == adc2.numSamples | ...
-        adc1.dwell == adc2.dwell | ...
+    if (adc1.numSamples == adc2.numSamples & ...
+        adc1.dwell == adc2.dwell & ...
         adc1.delay == adc2.delay)
         issame = true;
     else
-        error(sprintf('blocks %d, %d: ADC numsamples/dwell/delay must be same for all ADC events', n1, n2));
+        issame = false;
+        %error(sprintf('blocks %d, %d: ADC numsamples/dwell/delay must be same for all ADC events', n1, n2));
     end
 
 return

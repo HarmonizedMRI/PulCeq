@@ -111,6 +111,11 @@ for p = 1:ceq.nParentBlocks
         npre = round(b.adc.delay/raster);
         rfres = round(b.adc.numSamples*b.adc.dwell/raster);
         readoutFile = modFiles{p};
+        dwell = round(b.adc.dwell*1e6);
+        numSamples = b.adc.numSamples;
+    else
+        dwell = [];
+        numSamples = [];
     end
 
     % Set nChop, which is the number of samples to trim from beginning and end of RF/ADC window
@@ -125,7 +130,7 @@ for p = 1:ceq.nParentBlocks
     if ~isDelayBlock 
         toppe.writemod(sysGE, 'ofname', modFiles{p}, ...
             'rf', rf(:), 'gx', grad.x(:), 'gy', grad.y(:), 'gz', grad.z(:), ...
-            'nChop', nChop);
+            'nChop', nChop, 'hdrints', [dwell numSamples]);
     end
 end
 
@@ -144,15 +149,16 @@ for p = 1:ceq.nParentBlocks
     end
 
     % trigger out
+    trigpos = -1;  % default: no trigger
     if isfield(b, 'trig') & ~arg.ignoreTrigger
-        if b.trig.delay + eps < 100e-6
-            warning('Requested trigger time too short. Setting to 100us');
-            trigpos = 100;  % us
-        else
-            trigpos = round(b.trig.delay*1e6);   % us
+        if ~strcmp(b.trig.channel, 'physio1')
+            if b.trig.delay + eps < 100e-6
+                warning('Requested trigger time too short. Setting to 100us');
+                trigpos = 100;  % us
+            else
+                trigpos = round(b.trig.delay*1e6);   % us
+            end
         end
-    else
-        trigpos = -1;    % no trigger
     end
 
     rf = toppe.readmod(modFiles{p});
@@ -259,6 +265,7 @@ for n = 1:ceq.nMax
         'textra',      0, ...  
         'waveform',    1, ...
         'trigout',     trigout, ...
+        'trig',        ceq.loop(n, 11), ...
         'core', i);
 
 end
