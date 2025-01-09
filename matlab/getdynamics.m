@@ -1,6 +1,10 @@
-function loop = getdynamics(block, segmentID, parentBlockID, parentBlock)
+function loop = getdynamics(block, segmentID, parentBlockID, parentBlock, physioTrigger)
 % Return vector containing waveform amplitudes, RF/ADC phase, etc,
 % for a Pulseq block, in physical (Pulseq) units.
+
+if nargin < 5
+    physioTrigger = false;
+end
 
 % defaults
 rfamp = 0;
@@ -42,5 +46,5 @@ if ~isempty(block.adc)
     recphs = block.adc.phaseOffset;
 end
 
-loop = [segmentID parentBlockID rfamp rfphs rffreq amp.gx amp.gy amp.gz recphs block.blockDuration];
+loop = [segmentID parentBlockID rfamp rfphs rffreq amp.gx amp.gy amp.gz recphs block.blockDuration physioTrigger];
     
