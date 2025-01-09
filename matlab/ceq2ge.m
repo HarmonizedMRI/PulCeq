@@ -149,15 +149,16 @@ for p = 1:ceq.nParentBlocks
     end
 
     % trigger out
+    trigpos = -1;  % default: no trigger
     if isfield(b, 'trig') & ~arg.ignoreTrigger
-        if b.trig.delay + eps < 100e-6
-            warning('Requested trigger time too short. Setting to 100us');
-            trigpos = 100;  % us
-        else
-            trigpos = round(b.trig.delay*1e6);   % us
+        if ~strcmp(b.trig.channel, 'physio1')
+            if b.trig.delay + eps < 100e-6
+                warning('Requested trigger time too short. Setting to 100us');
+                trigpos = 100;  % us
+            else
+                trigpos = round(b.trig.delay*1e6);   % us
+            end
         end
-    else
-        trigpos = -1;    % no trigger
     end
 
     rf = toppe.readmod(modFiles{p});
