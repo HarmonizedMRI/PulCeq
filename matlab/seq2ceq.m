@@ -54,7 +54,12 @@ ceq.nMax = size(blockEvents, 1);
 
 %% Get TRID labels and corresponding row indeces for all segment instances
 nTRIDlabels = 0;
+%fprintf('Getting TRID labels (%d
+textprogressbar('seq2ceq: Reading TRID labels: ');
 for n = 1:ceq.nMax
+    if ~mod(n, 100) || n == ceq.nMax
+        textprogressbar(n/ceq.nMax*100);
+    end
     b = seq.getBlock(n);
     if isfield(b, 'label') 
         for ii = 1:length(b.label)
@@ -68,6 +73,7 @@ for n = 1:ceq.nMax
         end
     end
 end
+textprogressbar(''); 
 
 
 %% Get list of (virtual) segments.
@@ -152,7 +158,11 @@ ceq.loop = zeros(ceq.nMax, 14);
 physioTrigger = false;
 activeSegmentID = [];
 n = tridLabels.index(1);  % start of first segment instance
+textprogressbar('seq2ceq: Getting dynamic scan information: ');
 while n < ceq.nMax + 1
+    if ~mod(n, 10) || n == ceq.nMax
+        textprogressbar(n/ceq.nMax*100);
+    end
     
     b = seq.getBlock(n);
 
@@ -182,6 +192,8 @@ while n < ceq.nMax + 1
         n = n + 1;
     end
 end
+textprogressbar(100);
+textprogressbar(''); 
 
 
 %% Remove zero-duration (label-only) blocks from ceq.loop
