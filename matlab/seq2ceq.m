@@ -53,37 +53,34 @@ ceq.nMax = size(blockEvents, 1);
 
 
 %% Get TRID labels and corresponding row indeces for all segment instances
-%tridLabels = -1 * ones(1, ceq.nMax);
 nTRIDlabels = 0;
 for n = 1:ceq.nMax
     b = seq.getBlock(n);
     if isfield(b, 'label') 
-        hasTRIDlabel = false;
         for ii = 1:length(b.label)
             if strcmp(b.label(ii).label, 'TRID')
                 nTRIDlabels = nTRIDlabels + 1;
-                tridLabels(nTRIDlabels) = b.label(ii).value;
+                tridLabels.val(nTRIDlabels) = b.label(ii).value;
                 trids(n) = b.label(ii).value;
-                tridLabelsIndex(nTRIDlabels) = n;
+                tridLabels.index(nTRIDlabels) = n;
                 break;
             end
         end
     end
 end
-%tridLabels = tridLabels(1:nTRIDlabels);
 
 
-%% Get list of (virtual) segments
+%% Get list of (virtual) segments.
 %% These are distinct from segment 'instances'.
 
-[uniqueTridLabels, I] = unique(tridLabels);
-nBlocksPerTridLabel = diff([tridLabelsIndex ceq.nMax+1]);
+[uniqueTridLabels, I] = unique(tridLabels.val);
+nBlocksPerTridLabel = diff([tridLabels.index ceq.nMax+1]);
 ceq.nSegments = length(uniqueTridLabels);
 for i = 1:ceq.nSegments
     ceq.segments(i).nBlocksInSegment = nBlocksPerTridLabel(I(i));
-    ceq.segments(i).TRID = tridLabels(I(i));
+    ceq.segments(i).TRID = tridLabels.val(I(i));
     ceq.segments(i).ID = i;
-    ceq.segments(i).rows = tridLabelsIndex(I(i)) + [0:ceq.segments(i).nBlocksInSegment-1];
+    ceq.segments(i).rows = tridLabels.index(I(i)) + [0:ceq.segments(i).nBlocksInSegment-1];
 end
 
 
@@ -154,23 +151,20 @@ end
 ceq.loop = zeros(ceq.nMax, 14);
 physioTrigger = false;
 activeSegmentID = [];
-n = tridLabelsIndex(1);  % start of first segment instance
+n = tridLabels.index(1);  % start of first segment instance
 while n < ceq.nMax + 1
     
     b = seq.getBlock(n);
 
-    % skip zero-length blocks that are not part of any segment
+    % skip if not the first block in segment instance
     if trids(n) == 0
         n = n + 1;
         continue;
     end
 
-    % Loop over blocks in segment instance.
-    % If any block contains physio trigger, the segment is triggered as a whole
+    % Loop over blocks in segment instance
     physioTrigger = false;
     i = find(uniqueTridLabels == trids(n));  % segment array index
-
-    %[i n trids(n)]
 
     for j = 1:ceq.segments(i).nBlocksInSegment
         b = seq.getBlock(n);
@@ -191,8 +185,8 @@ end
 
 
 %% Remove zero-duration (label-only) blocks from ceq.loop
-ceq.loop(ceq.loop(:,1) == 0, :) = [];
-ceq.nMax = size(ceq.loop,1);
+%ceq.loop(ceq.loop(:,1) == 0, :) = [];
+%ceq.nMax = size(ceq.loop,1);
 
 
 
@@ -219,7 +213,6 @@ while n < ceq.nMax
                'Often, a solution to this is to scale gradients to "eps" instead of ' ...
                'identically zero, when calling mr.scaleGrad().'];
         if p ~= p_ij
-            %warning(sprintf('Sequence contains inconsistent segment definitions. This may occur due to programming error (possibly fatal), or if an arbitrary gradient resembles that from another block except with opposite sign or scaled by zero (which is probably ok). Often, a solution to this is to scale gradients to "eps" instead of identically zero, when calling mr.scaleGrad(). Expected parent block ID %d, found %d (block %d)', p_ij, p, n));
             warning(sprintf('%s\nExpected parent block ID %d, found %d (block %d)', msg, p_ij, p, n));
         end
 
@@ -260,5 +253,3 @@ while n < ceq.nMax
     end
 end
 
-function sub_trid2segmentindex
-return
