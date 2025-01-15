@@ -119,8 +119,8 @@ for iZ = -nDummyZLoops:Nz
     end
     fprintf(msg);
 
-    % add a cardiac trigger even for testing
-    seq.addBlock(trig);
+    % add a cardiac trigger event for testing
+    %seq.addBlock(trig);
 
     for iY = 1:Ny
         % Turn on y and z prephasing lobes, except during dummy scans and
