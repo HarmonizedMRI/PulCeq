@@ -35,8 +35,10 @@ arg = vararg_pair(arg, varargin);
 
 %% Get seq object
 if isa(seqarg, 'char')
+    fprintf('Reading .seq file... ');
     seq = mr.Sequence();
     seq.read(seqarg);
+    fprintf(' done\n');
 else
     if ~isa(seqarg, 'mr.Sequence')
         error('First argument is not an mr.Sequence object');
