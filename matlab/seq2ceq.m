@@ -254,7 +254,7 @@ for n = 1:ceq.nMax
     physioTrigger = T(3);
     p = parentBlockIDs(n); 
     if p == 0  % delay block
-        ceq.loop(n,:) = getdynamics(b, segmentID2Ind(segmentIDs(n)), p);
+        ceq.loop(n,:) = getdynamics(b, segmentID2Ind(segmentIDs(n)), p, [], physioTrigger);
     elseif p > 0
         ceq.loop(n,:) = getdynamics(b, segmentID2Ind(segmentIDs(n)), p, ceq.parentBlocks{p}, physioTrigger);
     end

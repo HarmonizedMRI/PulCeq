@@ -207,6 +207,7 @@ for n = 1:ceq.nMax
     if p == 0  % delay block
         toppe.write2loop('delay', sysGE, ...
             'textra', round(ceq.loop(n, 10)*1e6)/1e3, ... % msec
+            'trig',        ceq.loop(n, 11), ...
             'core', i);
         continue;
     end
