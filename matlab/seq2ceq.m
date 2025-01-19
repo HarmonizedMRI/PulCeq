@@ -57,12 +57,17 @@ ceq.nMax = size(blockEvents, 1);
 %% Get TRID labels and corresponding row indeces for all segment instances
 nTRIDlabels = 0;
 %fprintf('Getting TRID labels (%d
-textprogressbar('seq2ceq: Reading TRID labels: ');
+textprogressbar('seq2ceq: Reading TRID labels and counting ADC events: ');
+ceq.nReadouts = 0;
 for n = 1:ceq.nMax
-    if ~mod(n, 100) || n == ceq.nMax
-        textprogressbar(n/ceq.nMax*100);
-    end
+    textprogressbar(n/ceq.nMax*100);
+
     b = seq.getBlock(n);
+
+    if ~isempty(b.adc)
+        ceq.nReadouts = ceq.nReadouts + 1;
+    end
+
     if isfield(b, 'label') 
         for ii = 1:length(b.label)
             if strcmp(b.label(ii).label, 'TRID')
@@ -162,9 +167,7 @@ activeSegmentID = [];
 n = tridLabels.index(1);  % start of first segment instance
 textprogressbar('seq2ceq: Getting dynamic scan information: ');
 while n < ceq.nMax + 1
-    if ~mod(n, 10) || n == ceq.nMax
-        textprogressbar(n/ceq.nMax*100);
-    end
+    textprogressbar(n/ceq.nMax*100);
     
     b = seq.getBlock(n);
 
@@ -198,10 +201,14 @@ textprogressbar(100);
 textprogressbar(''); 
 
 
+%% Set sequence duration
+% This is a bit inaccurate for now -- doesn't account for ssi time
+ceq.duration = seq.duration;
+
+
 %% Remove zero-duration (label-only) blocks from ceq.loop
 %ceq.loop(ceq.loop(:,1) == 0, :) = [];
 %ceq.nMax = size(ceq.loop,1);
-
 
 
 %% Check that the execution of blocks throughout the sequence

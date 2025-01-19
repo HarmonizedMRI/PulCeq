@@ -39,8 +39,8 @@ fwrite(fid, 1, 'float32');  % maxRfPower, G^2 * sec
 fwrite(fid, maxB1, 'float32');
 fwrite(fid, maxGrad, 'float32');   % maxGrad
 fwrite(fid, 0.0, 'float32');   % maxSlew
-fwrite(fid, 4.7, 'float32');   % duration
-fwrite(fid, 512, 'int32');     % total number of ADC events in sequence
+fwrite(fid, ceq.duration, 'float32');   % duration
+fwrite(fid, ceq.nReadouts, 'int32');     % total number of ADC events in sequence
 fwrite(fid, 10, 'int32');      % number ADC events at start of scan for setting receive gain in Auto Prescan
 
 %{

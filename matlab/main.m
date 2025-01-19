@@ -6,7 +6,8 @@ if 0
     writetestsequence;   % test.seq
     ceq = seq2ceq('test.seq');
 else
-    ceq = seq2ceq('epidiff_3_shot_ref_2p0mm_60sli.seq');
+    %ceq = seq2ceq('~/Downloads/se_30sli_2mm_R3_15dir_b1k.seq');
+    ceq = seq2ceq('~/Downloads/epidiff_3_shot_ref_2p0mm_30sli.seq');
 end
 
 
