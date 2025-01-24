@@ -35,7 +35,7 @@ arg = vararg_pair(arg, varargin);
 
 %% Get seq object
 if isa(seqarg, 'char')
-    fprintf('Reading .seq file... ');
+    fprintf(sprintf('Reading %s ... ', seqarg));
     seq = mr.Sequence();
     seq.read(seqarg);
     fprintf(' done\n');
