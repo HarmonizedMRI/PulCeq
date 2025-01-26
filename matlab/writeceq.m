@@ -1,7 +1,14 @@
-function writeceq(ceq, fn)
+function writeceq(ceq, fn, varargin)
 % function writeceq(ceq, fn)
+%
+% Options
+%   pislquant     default: 1      number of ADC events at start of scan for setting Rx gain
 % 
 % Write Ceq struct to binary file
+
+% parse optional inputs
+arg.pislquant = 1;  
+arg = vararg_pair(arg, varargin);
 
 fid = fopen(fn, 'wb');  % big endian (network byte order)
 
@@ -40,8 +47,8 @@ fwrite(fid, maxB1, 'float32');
 fwrite(fid, maxGrad, 'float32');   % maxGrad
 fwrite(fid, 0.0, 'float32');   % maxSlew
 fwrite(fid, ceq.duration, 'float32');   % duration
-fwrite(fid, ceq.nReadouts, 'int32');     % total number of ADC events in sequence
-fwrite(fid, 10, 'int32');      % number ADC events at start of scan for setting receive gain in Auto Prescan
+fwrite(fid, ceq.nReadouts, 'int32');    % total number of ADC events in sequence
+fwrite(fid, arg.pislquant, 'int32');    % number ADC events at start of scan for setting receive gain in Auto Prescan
 
 %{
     fread(&(ceq->maxRfPower), sizeof(float), 1, fid);
