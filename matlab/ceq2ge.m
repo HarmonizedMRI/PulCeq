@@ -251,7 +251,12 @@ for n = 1:ceq.nMax
 
     DAQphase = ceq.loop(n, 9);
 
-    trigout = 1 * isfield(ceq.parentBlocks{p}, 'trig');
+    trigout = 0;   % default
+    if isfield(ceq.parentBlocks{p}, 'trig')
+        if ~strcmp(ceq.parentBlocks{p}.trig.channel, 'physio1')
+            trigout = 1;
+        end
+    end
 
     toppe.write2loop(modFiles{p}, sysGE, ...
         'Gamplitude',  [amp.gx amp.gy amp.gz]', ...
