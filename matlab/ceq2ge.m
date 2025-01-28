@@ -301,12 +301,14 @@ end
 %% clean up (unless in verbose mode)
 if ~arg.verbose
     if toppeVersion > 5
-        system('rm toppeN.entry seqstamp.txt modules.txt scanloop.txt cores.txt');
+        % system('rm toppeN.entry seqstamp.txt modules.txt scanloop.txt cores.txt');
+        delete('toppeN.entry', 'seqstamp.txt', 'modules.txt', 'scanloop.txt', 'cores.txt');
     else
         system('rm toppeN.entry seqstamp.txt modules.txt scanloop.txt');
     end
     for p = 1:ceq.nParentBlocks
-        system(sprintf('rm %s', modFiles{p}));
+        %system(sprintf('rm %s', modFiles{p}));
+        delete(modFiles{p});
     end
 end
 
