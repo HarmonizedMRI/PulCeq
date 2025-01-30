@@ -85,7 +85,7 @@ else
     % If areas don't match to better than 0.01%, throw warning
     if abs(areaIn) > 1e-6 
         if abs(areaIn-areaOut)/abs(areaIn) > 1e-4
-            msg = sprintf('Gradient area not preserved after interpolating to GE raster time (in: %.3f 1/m, out: %.3f). Did you wrap all gradient events in trap4ge()?', areaIn, areaOut);
+            msg = sprintf('Gradient area not preserved after interpolating to GE raster time (in: %.3f 1/m, out: %.3f). For trapezoids and extended trapezoid, this issue can probably be fixed by wrapping those gradient events in trap4ge() and exttrap4ge(), respectively.', areaIn, areaOut);
             warning(msg);
         end
     end
