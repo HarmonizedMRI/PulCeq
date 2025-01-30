@@ -14,6 +14,8 @@ function gout = arb4ge(gin, commonRasterTime, sys)
 % Output
 %  gout       struct     Pulseq arbitrary gradient event
 
+assert(strcmp(gin.type, 'grad'), "Input gradient must be of type 'grad'");
+
 % initialize
 gout.type = gin.type;
 gout.channel = gin.channel;
