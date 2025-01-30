@@ -48,8 +48,8 @@ else
         tt_rast=g.tt/arg.seqGradRasterTime+0.5;
         if all(abs(tt_rast-(1:length(tt_rast))')<1e-6)  % samples assumed to be on center of raster intervals
             % arbitrary gradient on a regular raster
-            g.first = 0;
-            g.last = 0;
+            %g.first = 0;
+            %g.last = 0;
             areaIn = sum(g.waveform)*arg.seqGradRasterTime;
             wavtmp = [g.first g.waveform(:)' g.last];
             tttmp = g.delay + [0 g.tt(:)' g.tt(end)+arg.seqGradRasterTime/2];
