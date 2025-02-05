@@ -55,7 +55,7 @@ for ii = 1:nd
     end
 end
 
-% Get rotation axis
+% Get rotation axis for each sample time
 C = cross(G2, G1, 2);
 
 % If all cross products are zero, return identity
@@ -82,5 +82,4 @@ alpha = acos(mode(D));  % radians. This will probably fail if waveform contains 
 R = angleaxis2rotmat(alpha, u);
 
 % check that rotating b2 indeed matches the gradients in b1
-norm(G1' - R*G2')/norm(G1)
 assert(norm(G1' - R*G2')/norm(G1) < 1e-3, 'Rotation detection failed');
