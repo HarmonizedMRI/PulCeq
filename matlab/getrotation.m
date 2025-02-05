@@ -2,7 +2,7 @@ function R = getrotation(b1, b2)
 % function R = getrotation(b1, b2)
 %
 % Determine if a rotation matrix R exists that takes (arbitrary) gradients from
-% block b1 to those in b2.
+% Pulseq block b1 to those in b2.
 %
 % If a trapezoid is rotated, this function isn't necessary since
 % rotation just results in a trapezoid scaling which seq2ceq already detects.
@@ -14,7 +14,7 @@ function R = getrotation(b1, b2)
 % Output
 %  R    [3 3] or []    Rotation matrix taking gradients in b1 to those in b2.
 
-% Get number of samples.
+% Get number of samples N
 N = 0;
 N2 = 0;
 tt  = [];   % sample times
@@ -32,8 +32,7 @@ for ax = {'gx','gy','gz'}
     end
 end
 
-% If not the same number of samples, return []
-if ~all(tt == tt2) | N ~= N2
+if ~all(abs(tt-tt2) < eps) | N ~= N2
     R = [];
     return;
 end
