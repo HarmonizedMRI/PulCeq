@@ -3,6 +3,9 @@ function loop = getdynamics(block, segmentID, parentBlockID, physioTrigger)
 % for a Pulseq block, in physical (Pulseq) units.
 %
 % Also return the gradient energy on each axis in (G/cm)^2*sec 
+%
+% This function just inserts identity rotation matrix --
+% the calling function is responsible for updating R as needed.
 
 % defaults
 rfamp = 0;
@@ -15,6 +18,8 @@ recphs = 0;
 energy.gx = 0;
 energy.gy = 0;
 energy.gz = 0;
+
+R = eye(3);
 
 GAM = 4257.6;   % Hz/Gauss
 
@@ -49,5 +54,6 @@ loop = [segmentID parentBlockID ...
         recphs ...
         block.blockDuration ...
         energy.gx energy.gy energy.gz ...
-        physioTrigger];
+        physioTrigger ...
+        R(:)'];
     
