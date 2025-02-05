@@ -82,4 +82,5 @@ alpha = acos(mode(D));  % radians. This will probably fail if waveform contains 
 R = angleaxis2rotmat(alpha, u);
 
 % check that rotating b2 indeed matches the gradients in b1
-assert(norm(G1' - R*G2')/norm(G1) < 1e-1, 'Rotation detection failed');
+norm(G1' - R*G2')/norm(G1)
+assert(norm(G1' - R*G2')/norm(G1) < 1e-3, 'Rotation detection failed');
