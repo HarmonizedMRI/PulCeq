@@ -57,6 +57,10 @@ end
 C = cross(G2, G1, 2);
 
 % If rotation axis not the same for all samples, return []
+if rank(C) < 100*eps
+    R = eye(3);
+    return;
+end
 if abs(rank(C)-1) > 100*eps
     R = []; 
     return;
@@ -72,3 +76,5 @@ D = dot(G1, G2, 2)./[vecnorm(G1,2,2).*vecnorm(G2,2,2)];
 alpha = acos(max(D));  % radians
 
 R = angleaxis2rotmat(alpha, u);
+
+assert(norm(G1' - R*G2')/norm(G1) < 1e-1, 'Rotation detection failed');
