@@ -159,8 +159,10 @@ for p = 1:ceq.nParentBlocks
 end
 
 
-%% Get dynamic scan information, including cardiac trigger.
-%% TODO: Write identity rotation matrix (for now)
+%% Get dynamic scan information, including cardiac trigger
+%% and gradient rotation.
+%% NB! The last block in segment determinse the rotation
+%% for the whole segment.
 ceq.loop = zeros(ceq.nMax, 14);
 physioTrigger = false;
 activeSegmentID = [];
@@ -184,13 +186,14 @@ while n < ceq.nMax + 1
     for j = 1:ceq.segments(i).nBlocksInSegment
         b = seq.getBlock(n);
 
-        % set cardiac trigger
+        % get cardiac trigger
         T = getblocktype(b);
-        if T(3)
-            physioTrigger = true;
-        end
+        physioTrigger = T(3);
 
-        p = ceq.segments(i).blockIDs(j);
+        p = ceq.segments(i).blockIDs(j);  % parent block index
+
+        R = getrotation(b, ceq.parentBlocks(p).block);
+        % TODO: add R to loop
 
         ceq.loop(n,:) = getdynamics(b, i, p, physioTrigger);
 
