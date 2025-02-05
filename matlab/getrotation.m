@@ -73,7 +73,7 @@ u = C(I,:);
 
 % Rotation angle alpha
 D = dot(G1, G2, 2)./[vecnorm(G1,2,2).*vecnorm(G2,2,2)];
-alpha = acos(max(D));  % radians
+alpha = acos(mode(D));  % radians
 
 R = angleaxis2rotmat(alpha, u);
 
