@@ -4,7 +4,7 @@ function R = getrotation(b1, b2)
 % Determine if a rotation matrix R exists that takes (arbitrary) gradients from
 % block b1 to those in b2.
 %
-% Note that if a trapezoid is rotated, this function isn't necessary since
+% If a trapezoid is rotated, this function isn't necessary since
 % rotation just results in a trapezoid scaling which seq2ceq already detects.
 %
 % Inputs
@@ -15,7 +15,6 @@ function R = getrotation(b1, b2)
 %  R    [3 3] or []    Rotation matrix taking gradients in b1 to those in b2.
 
 % Get number of samples.
-% If not the same, return []
 N = 0;
 N2 = 0;
 tt  = [];   % sample times
@@ -33,12 +32,13 @@ for ax = {'gx','gy','gz'}
     end
 end
 
+% If not the same number of samples, return []
 if ~all(tt == tt2) | N ~= N2
     R = [];
     return;
 end
 
-% Construct vectors 
+% Construct 3D vectors 
 nd = 3;
 G1 = zeros(N, nd);
 G2 = zeros(N, nd);
@@ -54,13 +54,22 @@ for ii = 1:nd
     end
 end
 
-% Get rotation axis (cross product)
-C = zeros(N,nd);
-for n = 1:N
-    C(n,:) = cross(G1(n,:), G2(n,:));
+% Get rotation axis
+C = cross(G2, G1, 2);
+
+% If rotation axis not the same for all samples, return []
+if abs(rank(C)-1) > 100*eps
+    R = []; 
+    return;
 end
 
-%if all(diff(C(n)) < eps) & norm(
-%    'success'
-%end
+% Axis of rotation u
+A = vecnorm(C');
+I = find(A == max(A));
+u = C(I,:);   
 
+% Rotation angle alpha
+D = dot(G1, G2, 2)./[vecnorm(G1,2,2).*vecnorm(G2,2,2)];
+alpha = acos(max(D));  % radians
+
+R = angleaxis2rotmat(alpha, u);
