@@ -161,9 +161,9 @@ end
 
 %% Get dynamic scan information, including cardiac trigger
 %% and gradient rotation.
-%% NB! The last block in segment determinse the rotation
+%% NB! The last block in segment determines the rotation
 %% for the whole segment.
-ceq.loop = zeros(ceq.nMax, 14);
+ceq.loop = zeros(ceq.nMax, 23);
 physioTrigger = false;
 activeSegmentID = [];
 n = tridLabels.index(1);  % start of first segment instance
@@ -179,9 +179,11 @@ while n < ceq.nMax + 1
         continue;
     end
 
-    % Loop over blocks in segment instance
+    % Loop over blocks in segment instance.
     physioTrigger = false;
     i = find(uniqueTridLabels == trids(n));  % segment array index
+
+    R = []; 
 
     for j = 1:ceq.segments(i).nBlocksInSegment
         b = seq.getBlock(n);
@@ -192,13 +194,25 @@ while n < ceq.nMax + 1
 
         p = ceq.segments(i).blockIDs(j);  % parent block index
 
-        R = getrotation(b, ceq.parentBlocks(p).block);
-        % TODO: add R to loop
+        Rtmp = getrotation(b, ceq.parentBlocks(p).block);
+        keyboard
+        if ~isempty(Rtmp) & isempty(R)
+            if norm(Rtmp - eye(3))
+                R = Rtmp;
+            end
+        end
+        if isempty(R)
+            R = eye(3);
+        end
 
         ceq.loop(n,:) = getdynamics(b, i, p, physioTrigger);
 
         n = n + 1;
     end
+
+    % R in last block in segment instance
+    ceq.loop(n-1, 15:23) = R(:)';
+
 end
 textprogressbar(100);
 textprogressbar(''); 
