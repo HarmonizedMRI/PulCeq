@@ -59,6 +59,7 @@ end
 C = cross(G2, G1, 2);
 
 % If all cross products are zero, return identity
+% This also works if C = [] (i.e., block has no gradients)
 if rank(C) < 100*eps
     R = eye(3);
     return;
