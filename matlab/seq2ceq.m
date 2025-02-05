@@ -194,23 +194,23 @@ while n < ceq.nMax + 1
 
         p = ceq.segments(i).blockIDs(j);  % parent block index
 
-        Rtmp = getrotation(b, ceq.parentBlocks(p).block);
-        keyboard
-        if ~isempty(Rtmp) & isempty(R)
-            if norm(Rtmp - eye(3))
-                R = Rtmp;
-            end
-        end
-        if isempty(R)
-            R = eye(3);
-        end
-
         ceq.loop(n,:) = getdynamics(b, i, p, physioTrigger);
+
+        % Get rotation
+        Rtmp = getrotation(b, ceq.parentBlocks(p).block);
+        assert(~isempty(Rtmp), ...
+            sprintf('row/segment/block = %d/%d/%d: waveform is inconsistent with parent block', n, i, j));
+        if norm(Rtmp - eye(3), "fro") > 1e-6
+            R = Rtmp;
+        end
 
         n = n + 1;
     end
 
-    % R in last block in segment instance
+    % set rotation for last block in segment instance
+    if isempty(R)
+        R = eye(3);
+    end
     ceq.loop(n-1, 15:23) = R(:)';
 
 end
