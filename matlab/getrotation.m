@@ -74,7 +74,7 @@ end
 % Axis of rotation u
 A = vecnorm(C');
 I = find(A == max(A));  % avoid samples with zero gradient amplitude
-u = C(I,:);   
+u = C(I(1),:);   
 
 % Rotation angle alpha
 D = dot(G1, G2, 2)./[vecnorm(G1,2,2).*vecnorm(G2,2,2)];
