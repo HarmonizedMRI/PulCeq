@@ -38,7 +38,7 @@ maxB1 = 0;
 maxGrad = 0;
 for n = 1:ceq.nMax
     maxB1 = max(maxB1, abs(ceq.loop(n,3)));  % Hz
-    maxGrad = max([maxGrad abs(ceq.loop(n, 6:8))]);
+    maxGrad = max([maxGrad abs(ceq.loop(n, [6 8 10]))]);
 end
 
 % safety stuff. some are dummy values, TODO

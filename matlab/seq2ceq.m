@@ -159,9 +159,11 @@ for p = 1:ceq.nParentBlocks
 end
 
 
-%% Get dynamic scan information, including cardiac trigger.
-%% TODO: Write identity rotation matrix (for now)
-ceq.loop = zeros(ceq.nMax, 14);
+%% Get dynamic scan information, including cardiac trigger
+%% and gradient rotation.
+%% NB! The last block in segment determines the rotation
+%% for the whole segment.
+ceq.loop = zeros(ceq.nMax, 23);
 physioTrigger = false;
 activeSegmentID = [];
 n = tridLabels.index(1);  % start of first segment instance
@@ -177,25 +179,40 @@ while n < ceq.nMax + 1
         continue;
     end
 
-    % Loop over blocks in segment instance
+    % Loop over blocks in segment instance.
     physioTrigger = false;
     i = find(uniqueTridLabels == trids(n));  % segment array index
+
+    R = []; 
 
     for j = 1:ceq.segments(i).nBlocksInSegment
         b = seq.getBlock(n);
 
-        % set cardiac trigger
+        % get cardiac trigger
         T = getblocktype(b);
-        if T(3)
-            physioTrigger = true;
-        end
+        physioTrigger = T(3);
 
-        p = ceq.segments(i).blockIDs(j);
+        p = ceq.segments(i).blockIDs(j);  % parent block index
 
         ceq.loop(n,:) = getdynamics(b, i, p, physioTrigger);
 
+        % Get rotation
+        Rtmp = getrotation(b, ceq.parentBlocks(p).block);
+        assert(~isempty(Rtmp), ...
+            sprintf('row/segment/block = %d/%d/%d: waveform is inconsistent with parent block', n, i, j));
+        if norm(Rtmp - eye(3), "fro") > 1e-6
+            R = Rtmp;
+        end
+
         n = n + 1;
     end
+
+    % set rotation for last block in segment instance
+    if isempty(R)
+        R = eye(3);
+    end
+    ceq.loop(n-1, 15:23) = R(:)';
+
 end
 textprogressbar(100);
 textprogressbar(''); 

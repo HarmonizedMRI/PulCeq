@@ -3,6 +3,9 @@ function loop = getdynamics(block, segmentID, parentBlockID, physioTrigger)
 % for a Pulseq block, in physical (Pulseq) units.
 %
 % Also return the gradient energy on each axis in (G/cm)^2*sec 
+%
+% This function just inserts identity rotation matrix --
+% the calling function is responsible for updating R as needed.
 
 % defaults
 rfamp = 0;
@@ -15,6 +18,8 @@ recphs = 0;
 energy.gx = 0;
 energy.gy = 0;
 energy.gz = 0;
+
+R = eye(3);
 
 GAM = 4257.6;   % Hz/Gauss
 
@@ -29,12 +34,13 @@ for ax = {'gx','gy','gz'}
     if ~isempty(g)
         if strcmp(g.type, 'trap')
             amp.(ax{1}) = g.amplitude;
-            energy.(ax{1}) = (g.amplitude/GAM/100)^2 / 3 * g.riseTime ...   % (G/cm)^2*sec
-                          + (g.amplitude/GAM/100)^2 * g.flatTime ... 
-                          + (g.amplitude/GAM/100)^2 / 3 * g.fallTime;
+            energy.(ax{1}) = (g.amplitude)^2 / 3 * g.riseTime ...   % (Hz/m)^2*sec
+                          + (g.amplitude)^2 * g.flatTime ... 
+                          + (g.amplitude)^2 / 3 * g.fallTime;
         else
             amp.(ax{1}) = max(abs(g.waveform));
-            energy.(ax{1}) = sum((g.waveform(1:end-1)/GAM/100).^2 .* diff(g.tt));
+            energy.(ax{1}) = sum((g.waveform(1:end-1)).^2 .* diff(g.tt));
+            % energy.(ax{1}) = sum((g.waveform(1:end-1)/GAM/100).^2 .* diff(g.tt));
         end
     end
 end
@@ -45,9 +51,11 @@ end
 
 loop = [segmentID parentBlockID ...
         rfamp rfphs rffreq ...
-        amp.gx amp.gy amp.gz ...
+        amp.gx energy.gx ...
+        amp.gy energy.gy ...
+        amp.gz energy.gz ...
         recphs ...
         block.blockDuration ...
-        energy.gx energy.gy energy.gz ...
-        physioTrigger];
+        physioTrigger ...
+        R(:)'];
     
