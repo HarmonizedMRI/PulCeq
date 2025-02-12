@@ -129,6 +129,12 @@ for i = 1:ceq.nSegments
             continue;
         end
 
+        % If pure delay block, assign parent block 0 and continue to next row
+        if T(4)
+            ceq.segments(i).blockIDs(j) = 0;
+            continue;
+        end
+
         % Check if block is similar to an existing parent block
         issame = false;
         for p = 1:ceq.nParentBlocks
@@ -195,6 +201,11 @@ while n < ceq.nMax + 1
         p = ceq.segments(i).blockIDs(j);  % parent block index
 
         ceq.loop(n,:) = getdynamics(b, i, p, physioTrigger);
+
+        if p == 0  % pure delay block
+            n = n + 1;
+            continue;
+        end
 
         % Get rotation
         Rtmp = getrotation(b, ceq.parentBlocks(p).block);
