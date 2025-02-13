@@ -4,7 +4,7 @@ function R = getrotation(b1, b2)
 % Determine if a rotation matrix R exists that takes (arbitrary) gradients from
 % Pulseq block b2 to those in b1.
 %
-% For trapezoids, this function isn't necessary since rotation just
+% For trapezoids, just return identity since rotation just
 % results in a trapezoid scaling on each axis which seq2ceq already detects.
 %
 % Inputs
@@ -22,11 +22,22 @@ tt  = [];   % sample times
 tt2 = [];
 for ax = {'gx','gy','gz'}
     g = b1.(ax{1});
+
+    % If trapezoid, just return identity
+    if isfield(g, 'type')
+        if strcmp(g.type, 'trap')
+            R = eye(3);
+            return;
+        end
+    end
+
     g2 = b2.(ax{1});
+
     if isfield(g, 'waveform')
         N = max(N, length(g.waveform));
         tt = g.tt;
     end
+
     if isfield(g2, 'waveform')
         N2 = max(N2, length(g2.waveform));
         tt2 = g2.tt;
@@ -83,4 +94,7 @@ alpha = acos(mode(D));  % radians. This will probably fail if waveform contains 
 R = angleaxis2rotmat(alpha, u);
 
 % check that rotating b2 indeed matches the gradients in b1
+%if norm(G1' - R*G2', "fro")/norm(G1, "fro") > 1e-3
+%    keyboard
+%end
 assert(norm(G1' - R*G2', "fro")/norm(G1, "fro") < 1e-3, 'Rotation detection failed');
