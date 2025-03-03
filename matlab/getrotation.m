@@ -75,6 +75,13 @@ end
 [U,~,V] = svd(G1' * G2);
 R = U*V';
 
+% If R is improper (negative determinant), fix it
+if det(R) < 0
+    % Otherwise, fix by flipping the last column of V
+    V(:, end) = -V(:, end);
+    R = U * V';
+end
+
 % check that rotating b2 indeed matches the gradients in b1, otherwise
 % assume b1 is not a rotation of b2
 if norm(G1' - R*G2', "fro")/norm(G1, "fro") > 1e-3
