@@ -222,6 +222,7 @@ while n < ceq.nMax + 1
     if isempty(R)
         R = eye(3);
     end
+    R = R';
     ceq.loop(n-1, 15:23) = R(:)';
 
 end
