@@ -66,35 +66,25 @@ for ii = 1:nd
     end
 end
 
-% Get rotation axis for each sample time
-C = cross(G2, G1, 2);
+% Solve for rotation using Procruste's analysis:
+% i.e. for given set of points A and B, where B is a unitary transformation
+% of A (no scaling/translation),
+% solve for unitary matrix Q* = argmin_Q ||QA - B||^2
+% --> closed form solution: Q* = UV' where BA' = USV'
+% let B = G1', A = G2':
+[U,~,V] = svd(G1' * G2);
+R = U*V';
 
-% If all cross products are zero, return identity
-% This also works if C = [] (i.e., block has no gradients)
-if rank(C) < 100*eps
-    R = eye(3);
-    return;
+% If R is improper (negative determinant), fix it
+if det(R) < 0
+    % Otherwise, fix by flipping the last column of V
+    V(:, end) = -V(:, end);
+    R = U * V';
 end
 
-% If rotation axis not the same for all samples, return []
-if abs(rank(C)-1) > 100*eps
-    R = [];  
-    return;
+% check that rotating b2 indeed matches the gradients in b1, otherwise
+% assume b1 is not a rotation of b2
+if norm(G1' - R*G2', "fro")/norm(G1, "fro") > 1e-3
+    R = [];
 end
 
-% Axis of rotation u
-A = vecnorm(C');
-I = find(A == max(A));  % avoid samples with zero gradient amplitude
-u = C(I(1),:);   
-
-% Rotation angle alpha
-D = dot(G1, G2, 2)./[vecnorm(G1,2,2).*vecnorm(G2,2,2)];
-alpha = acos(mode(D));  % radians. This will probably fail if waveform contains mostly zeros.
-
-R = angleaxis2rotmat(alpha, u);
-
-% check that rotating b2 indeed matches the gradients in b1
-%if norm(G1' - R*G2', "fro")/norm(G1, "fro") > 1e-3
-%    keyboard
-%end
-assert(norm(G1' - R*G2', "fro")/norm(G1, "fro") < 1e-3, 'Rotation detection failed');
