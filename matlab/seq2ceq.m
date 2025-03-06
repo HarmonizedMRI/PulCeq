@@ -208,7 +208,7 @@ while n < ceq.nMax + 1
         end
 
         % Get rotation
-        Rtmp = getrotation(b, ceq.parentBlocks(p).block);
+        [Rtmp, scale] = getrotation(b, ceq.parentBlocks(p).block);
         assert(~isempty(Rtmp), ...
             sprintf('row/segment/block = %d/%d/%d: waveform is inconsistent with parent block', n, i, j));
 
@@ -216,8 +216,8 @@ while n < ceq.nMax + 1
             % found a rotation, so save this
             R = Rtmp;
 
-            % and set gradient amplitudes equal to those in the parent block
-            ceq.loop(n, [6 8 10]) = ceq.loop(ceq.parentBlocks(p).row, [6 8 10]);
+            % and set gradient amplitudes equal to those in the parent block (possibly scaled)
+            ceq.loop(n, [6 8 10]) = scale * ceq.loop(ceq.parentBlocks(p).row, [6 8 10]);
         end
 
         n = n + 1;
