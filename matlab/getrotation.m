@@ -1,5 +1,5 @@
-function R = getrotation(b1, b2)
-% function R = getrotation(b1, b2)
+function [R,scale] = getrotation(b1, b2)
+% function [R,scale] = getrotation(b1, b2)
 %
 % Determine if a rotation matrix R exists that takes (arbitrary) gradients from
 % Pulseq block b2 to those in b1.
@@ -14,6 +14,7 @@ function R = getrotation(b1, b2)
 % Output
 %  R    [3 3] or []    Rotation matrix taking gradients in b2 to those in b1.
 %                      If none is found return empty matrix.
+%  scale               Scaling factor from gradients in b2 to b1
 
 % Get number of samples N
 N = 0;
@@ -75,16 +76,21 @@ end
 [U,~,V] = svd(G1' * G2);
 R = U*V';
 
-% If R is improper (negative determinant), fix it
+% If R is improper (negative determinant), fix it by negating last RSV
 if det(R) < 0
-    % Otherwise, fix by flipping the last column of V
     V(:, end) = -V(:, end);
     R = U * V';
 end
 
+% Determine scale factor
+% after finding Q* which is a scale invariant solution,
+% solve for scaling factor alpha* = argmin_q ||alphaQ*A - B||^2
+% --> closed form solution: alpha* = trace(S)/trace(A'A)
+scale = trace(S)/norm(G2','fro')^2;
+
 % check that rotating b2 indeed matches the gradients in b1, otherwise
 % assume b1 is not a rotation of b2
-if norm(G1' - R*G2', "fro")/norm(G1, "fro") > 1e-3
+if norm(G1' - scale*R*G2', "fro")/norm(G1, "fro") > 1e-3
     R = [];
 end
 
