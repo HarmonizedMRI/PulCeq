@@ -27,6 +27,7 @@ for ax = {'gx','gy','gz'}
     % If trapezoid, just return identity
     if isfield(g, 'type')
         if strcmp(g.type, 'trap')
+            scale = 1.0;
             R = eye(3);
             return;
         end
@@ -48,6 +49,7 @@ end
 % Insist the sample times and number of waveform samples are the same 
 if ~all(abs(tt-tt2) < eps) | N ~= N2
     R = [];
+    scale = [];
     return;
 end
 
@@ -73,7 +75,7 @@ end
 % solve for unitary matrix Q* = argmin_Q ||QA - B||^2
 % --> closed form solution: Q* = UV' where BA' = USV'
 % let B = G1', A = G2':
-[U,~,V] = svd(G1' * G2);
+[U,S,V] = svd(G1' * G2);
 R = U*V';
 
 % If R is improper (negative determinant), fix it by negating last RSV
