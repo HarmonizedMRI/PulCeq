@@ -24,7 +24,7 @@ end
 % write segment definitions
 fwrite(fid, ceq.nSegments, 'int16');
 for ii = 1:ceq.nSegments
-    sub_writesegment(fid, ceq.segments(ii));  % write definition of one segment
+    sub_writesegment(fid, ceq.segments(ii), ceq.parentBlocks);  % write definition of one segment
 end
 
 % write loop
@@ -204,12 +204,28 @@ function sub_writetrig(fid, trig)
     fwrite(fid, trig.type, 'int16');          
 return
 
-function sub_writesegment(fid, s)  % write definition of one segment
+function sub_writesegment(fid, s, parentBlocks)  % write definition of one segment
     fwrite(fid, s.ID, 'int16');
     fwrite(fid, s.nBlocksInSegment, 'int16');
     fwrite(fid, s.blockIDs, 'int16');
     %fwrite(fid, s.Emax.val, 'float32');
     fwrite(fid, s.Emax.n, 'int32'); % block/row index of first block in segment instance with max gradient energy
+
+    % determine if segment contains any gradients (needed by gradient heating check in interpreter)
+    nGradEvents = 0;
+    for j = 1:s.nBlocksInSegment
+        p = s.blockIDs(j);
+        if p > 0
+            for ax = {'gx','gy','gz'}
+                g = parentBlocks(p).block.(ax{1});
+                if ~isempty(g)
+                    nGradEvents = nGradEvents + 1; 
+                end
+            end
+        end
+    end
+    fwrite(fid, 1*(nGradEvents>0), 'int16');          
+
 return
 
 function shape = sub_rf2shape(rf)
