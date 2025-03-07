@@ -1,12 +1,18 @@
+# A vendor-agnostic representation of MRI pulse sequences
 
-![logo](doc/logo.svg)
+<!-- ![logo](doc/logo.svg) -->
 
-THIS REPO IS IN DEVELOPMENT
+This repository contains MATLAB code for converting a 
+[Pulseq](https://pulseq.github.io/) 
+MRI pulse sequence file
+to a format suitable for GE (and perhaps other) scanners.
 
-A C representation of arbitrary magnetic resonance pulse sequences, 
-based on a "scaled parent block" description.
+For usage information and examples, and for a description
+of the Pulseq GE interpreter and its relation to the current repository, 
+see: https://github.com/HarmonizedMRI/SequenceExamples-GE/tree/main/pge2
 
-The idea is to represent the sequence as a (typically small) collection of parent/prototype
+The idea behind this repository is to represent an MRI pulseq sequence as a 
+(typically small) collection of parent/prototype
 [Pulseq](https://pulseq.github.io/)
 blocks, that are played out repeatedly during the scan with different
 RF/gradient amplitudes, RF/DAQ frequency/phase offsets, etc:
@@ -14,17 +20,8 @@ RF/gradient amplitudes, RF/DAQ frequency/phase offsets, etc:
 ![model](doc/model.svg)
 
 The goal of this repository is to provide an **open standard** specification
-for encapsulating this sequence description in C code.
+for encapsulating this sequence description.
+At present, this specification is formally expressed as a nested C struct named **Ceq**, however
+equivalent representations in other programming languages may be used in practice.
 
-This specification is contained in the ./src/ folder, which contains the following:
-* **pulCeq.h**: defines `Ceq`, a nested struct containing the entire sequence, and
-function declarations (interfaces) for various tasks including
-   * serializing to file
-   * allocating and freeing up memory
-   * <...>
-* **pulCeq.c**: implementation
-
-## Example usage
-
-* Planned: PulCeq.h will be used in the upcoming version of the Pulseq sequence interpreter for GE scanners (TOPPE v6)
 
