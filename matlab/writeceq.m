@@ -8,6 +8,7 @@ function writeceq(ceq, fn, varargin)
 
 % parse optional inputs
 arg.pislquant = 1;  
+arg.NMAXBLOCKSFORGRADHEATCHECK = 64000; 
 arg = vararg_pair(arg, varargin);
 
 fid = fopen(fn, 'wb');  % big endian (network byte order)
@@ -49,6 +50,21 @@ fwrite(fid, 0.0, 'float32');   % maxSlew
 fwrite(fid, ceq.duration, 'float32');   % duration
 fwrite(fid, ceq.nReadouts, 'int32');    % total number of ADC events in sequence
 fwrite(fid, arg.pislquant, 'int32');    % number ADC events at start of scan for setting receive gain in Auto Prescan
+
+% Determine number of blocks (rows) to use for
+% sliding window gradient/RF safety check
+n = 1;
+while n < min(ceq.nMax, arg.NMAXBLOCKSFORGRADHEATCHECK)
+    i = ceq.loop(n, 1);
+    %nBlocksForGreadHeatCheck = nBlocksForGreadHeatCheck + ceq.segments(i).nBlocksInSegment;
+    n = n + ceq.segments(i).nBlocksInSegment;
+    if n > arg.NMAXBLOCKSFORGRADHEATCHECK
+        n = n - ceq.segments(i).nBlocksInSegment;
+        break;
+    end
+end
+n = n - 1;
+fwrite(fid, n, 'int32');   
 
 %{
     fread(&(ceq->maxRfPower), sizeof(float), 1, fid);
