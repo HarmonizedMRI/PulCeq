@@ -12,9 +12,10 @@ function [R,scale] = getrotation(b1, b2)
 %  b2   Pulseq block containing arbitrary gradients
 %
 % Output
-%  R    [3 3] or []    Rotation matrix taking gradients in b2 to those in b1.
-%                      If none is found return empty matrix.
-%  scale               Scaling factor from gradients in b2 to b1
+%  R       [3 3] or []    Rotation matrix taking gradients in b2 to those in b1.
+%                         If none is found return empty matrix.
+%  scale   [1] or []      Scaling factor from gradients in b2 to b1. 
+%                         If no rotation found, return empty.
 
 % Get number of samples N
 N = 0;
@@ -94,5 +95,6 @@ scale = trace(S)/norm(G2','fro')^2;
 % assume b1 is not a rotation of b2
 if norm(G1' - scale*R*G2', "fro")/norm(G1, "fro") > 1e-3
     R = [];
+    scale = [];
 end
 

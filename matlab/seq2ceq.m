@@ -167,8 +167,8 @@ end
 
 %% Get dynamic scan information, including cardiac trigger
 %% and gradient rotation.
-%% NB! The last block in segment determines the rotation
-%% for the whole segment.
+%% NB! The last block with non-identity rotation in a segment 
+%% determines the rotation for the whole segment.
 ceq.loop = zeros(ceq.nMax, 23);
 physioTrigger = false;
 activeSegmentID = [];
@@ -209,26 +209,29 @@ while n < ceq.nMax + 1
 
         % Get rotation
         [Rtmp, scale] = getrotation(b, ceq.parentBlocks(p).block);
-        assert(~isempty(Rtmp), ...
-            sprintf('row/segment/block = %d/%d/%d: waveform is inconsistent with parent block', n, i, j));
+        %assert(~isempty(Rtmp), ...
+        %    sprintf('row/segment/block = %d/%d/%d: waveform is inconsistent with parent block', n, i, j));
 
-        if norm(Rtmp - eye(3), "fro") > 1e-6
-            % found a rotation, so save this
-            R = Rtmp;
+        if ~isempty(Rtmp)
+            if norm(Rtmp - eye(3), "fro") > 1e-6
+                % found a rotation, so use it (unless overwritten by a later block in this segment)
+                R = Rtmp;
 
-            % and set gradient amplitudes equal to those in the parent block (possibly scaled)
-            ceq.loop(n, [6 8 10]) = scale * ceq.loop(ceq.parentBlocks(p).row, [6 8 10]);
+                % and set gradient amplitudes equal to those in the parent block (possibly scaled)
+                ceq.loop(n, [6 8 10]) = scale * ceq.loop(ceq.parentBlocks(p).row, [6 8 10]);
+            end
         end
 
         n = n + 1;
     end
 
-    % set rotation for last block in segment instance
+    % Set rotation for last block in segment instance; 
+    % the interpreter uses this to set the rotation for the whole segment
     if isempty(R)
         R = eye(3);
     end
     R = R';
-    ceq.loop(n-1, 15:23) = R(:)';
+    ceq.loop(n-1, 15:23) = R(:)';   % write R in row-major order
 
 end
 textprogressbar(100);
@@ -236,7 +239,7 @@ textprogressbar('');
 
 
 %% Set sequence duration
-% This is a bit inaccurate for now -- doesn't account for ssi time
+% This is a bit inaccurate for now -- doesn't account for ssi time  TODO
 ceq.duration = seq.duration;
 
 
