@@ -1,9 +1,4 @@
-# Convert Pulseq file to Pulserver format
+# Convert Pulseq file to Pulserver/pge2 format
 
-## Requirements
+See https://github.com/HarmonizedMRI/SequenceExamples-GE/tree/main/pge2 for further details.
 
-* A block must contain at least one of the following Pulseq events: rf, gradient, delay, adc
-
-For GE:
-* RF raster time must be multiple of 2us 
-* Gradient raster time must be multiple of 4us
