@@ -27,4 +27,9 @@ for encapsulating this sequence description.
 At present, this specification is formally expressed as a nested C struct named **Ceq**, however
 equivalent representations in other programming languages may be used in practice.
 
+There are actually two versions in use:
+1. For tv6, use `seq2ge.m` in the main branch.
+2. For pge2, use `seq2ceq.m` and `writeceq.m` in the tv7 branch.
+See https://github.com/HarmonizedMRI/SequenceExamples-GE/.
+
 
