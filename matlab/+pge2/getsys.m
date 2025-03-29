@@ -1,4 +1,12 @@
-function sys = getsys(psd_rf_wait, psd_grd_wait, b1_max, g_max, slew_max, varargin)
+function sys = getsys(psd_rf_wait, psd_grd_wait, b1_max, g_max, slew_max, gamma, varargin)
+%
+% Inputs:
+%  psd_rf_wait    [sec]
+%  psd_grd_wait    [sec]
+%  b1_max          [Gauss]
+%  g_max          [Gauss/cm]
+%  slew_max          [Gauss/cm/ms]
+%  gamma            [Hz/Gauss]
 
 arg.GRAD_UPDATE_TIME = 4e-6;  % block duration, and gradient waveform duration, must be an integer multiple of this value
 arg.RF_UPDATE_TIME = 2e-6;    % RF pulse duration must be an integer multiple of this value
@@ -14,6 +22,7 @@ sys.psd_grd_wait = psd_grd_wait;
 sys.b1_max = b1_max;
 sys.g_max = g_max;
 sys.slew_max = slew_max;
+sys.gamma = gamma;
 
 assert(all([sys.psd_rf_wait sys.psd_grd_wait sys.GRAD_UPDATE_TIME sys.RF_UPDATE_TIME sys.adc_raster_time] < 1e-3), ...
    'Times must be specified in units of sec');
