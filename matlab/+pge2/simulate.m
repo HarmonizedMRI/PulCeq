@@ -5,10 +5,10 @@ function simulate(ceq, sys)
 %
 % Times are in us throughout (inputs, and in code)
 
-% Check that parent blocks are compatible with GE timing requirements
+% Check that parent block timing is compatible with GE timing requirements
 for p = 1:ceq.nParentBlocks
     b = ceq.parentBlocks(p).block;
-    [ok, msg] = pge2.checkblock(b, sys);
+    [ok, msg] = pge2.checkblocktiming(b, sys);
     if ~ok
         error(sprintf('%s (parent block %d)', msg, p));
     end

@@ -1,7 +1,7 @@
 function [ok, msg] = checkblocktiming(b, sys)
 % function [ok, msg] = checkblocktiming(b, sys)
 %
-% Check that parent block timing is compatible with GE hardware.
+% Check if parent block timing is compatible with GE hardware.
 %
 % Inputs
 %    b        Pulseq block
@@ -43,6 +43,23 @@ for ax = {'gx','gy','gz'}
     g = b.(ax{1});
     [ok, msg] = sub_checkgradient(g, sys);
     if ~ok; return; end;
+end
+
+% check adc event
+if ~isempty(b.adc)
+    res = b.adc.dwell/sys.adc_raster_time;
+    if abs(res - round(res)) > 1e-9
+        ok = false;
+        msg = sprintf('ADC dwell time (%.3e) not an integer multiple of adc raster time (%.1e)', b.adc.dwell, sys.adc_raster_time);
+        return;
+    end
+
+    res = b.adc.delay/sys.GRAD_UPDATE_TIME;
+    if abs(res - round(res)) > 1e-6
+        ok = false;
+        msg = sprintf('ADC delay (%.3e) not on GRAD_UPDATE_TIME (%.0e s) boundary', b.adc.delay, sys.GRAD_UPDATE_TIME);
+        return;
+    end
 end
 
 return
