@@ -1,12 +1,11 @@
-function simulate(ceq, sys)
+function ok = validate(ceq, sys)
 %
-% Construct sequence (assemble waveforms) and plot.
-% This function also checks compatibility with the 'Pulseq on GE v2' interpreter.
-%
-% Times are in us throughout (inputs, and in code)
+% Check compatibility of a 'ceq' sequence object with the 'Pulseq on GE v2' interpreter.
 
-% Check that parent block timing is compatible with GE timing requirements
-for p = 1:ceq.nParentBlocks
+% Check parent block timing.
+% Parent blocks are 'virtual' (waveform amplitudes are arbitrary or normalized to 1), so only check
+% timing here; waveforms will be checked below for each segment instances in the scan loop.
+for p = 1:ceq.nParentBlocks         % we use 'p' to count parent blocks here and in the EPIC code
     b = ceq.parentBlocks(p).block;
     [ok, msg] = pge2.checkblocktiming(b, sys);
     if ~ok
@@ -14,6 +13,22 @@ for p = 1:ceq.nParentBlocks
     end
 end
 
-% Construct base (virtual) segments. 
+% Check segment timing.
+% Here we construct base (virtual) segments and check that:
+%  - gradients start/end on zero at the start/end of each segment, respectively
+%  - RF/ADC events have sufficient gaps before/after to allow for RF/ADC 'turn on'/'turn off' times
+for i  = 1:ceq.nSegments      % we use 'i' to count segments here and in the EPIC code
+    blockIDs = ceq.segments(i).blockIDs;
+    %sub_checkvirtualsegment(ceq, i)
+end
 
+
+% Check scan loop.
+% This is where waveform amplitudes are set, so for each segment instance we must check that:
+%  - RF amplitude does not exceed hardware limit
+%  - gradient amplitude on each axis does not exceed hardware limit
+%  - gradient slew rate on each axis does not exceed hardware limit
+%  - gradients are continuous across block boundaries
+
+return
 
