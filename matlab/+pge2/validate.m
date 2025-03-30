@@ -14,13 +14,10 @@ for p = 1:ceq.nParentBlocks         % we use 'p' to count parent blocks here and
     end
 end
 
-% Check segment timing.
-% Here we construct base (virtual) segments and check that:
-%  - gradients start/end on zero at the start/end of each segment, respectively
-%  - RF events, ADC events, and pure delay blocks are not too close together
+% Check base (virtual) segments.
 for i = 1:ceq.nSegments      % we use 'i' to count segments here and in the EPIC code
     try 
-        pge2.constructvirtualsegment(ceq.segments(i).blockIDs, ceq.parentBlocks, sys);
+        Sv{i} = pge2.constructvirtualsegment(ceq.segments(i).blockIDs, ceq.parentBlocks, sys);
     catch ME
         fprintf('Error: Base (virtual) segment %d: %s\n', i, ME.message);
     end
@@ -36,4 +33,10 @@ a = input('Check scan loop? It might take a while. (y/n) ', "S");
 if ~strcmp(a, 'y') 
     return;
 end
+
+n = 1;   % block (row) number
+while n < ceq.nMax
+    i = ceq.loop(n, 1);   % segment id
+end
+
 
