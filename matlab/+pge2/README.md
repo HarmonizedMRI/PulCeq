@@ -13,7 +13,7 @@ The goal here is to realize the following workflow:
 >> slew_max = 20;         % Gauss/cm/ms
 >> sys = getsys(psd_rf_wait, psd_grd_wait, b1_max, g_max, slew_max, gamma);
 
-% Check hardware compatibility
+% Check 'ceq' is compatible with the parameters in 'sys'
 >> pge2.validate(ceq, sys);
 
 % Write sequence to file

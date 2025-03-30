@@ -35,6 +35,7 @@ for j = 1:length(blockIDs)
         S.duration = S.duration + 8e-6;
     else
         S.duration = S.duration + parentBlocks(p).block.blockDuration;
+        r(j) = rem(parentBlocks(p).block.blockDuration, sys.GRAD_UPDATE_TIME);
     end
 end
 
@@ -43,7 +44,7 @@ end
 % in connection with an RF event, ADC event, or pure delay block.
 HI = 1;              
 LO = 0;
-n = S.duration/sys.GRAD_UPDATE_TIME;
+n = round(S.duration/sys.GRAD_UPDATE_TIME);
 S.SSP.signal = LO*ones(n,1);
 
 % Construct segment waveforms
@@ -152,7 +153,7 @@ subplot(5,1,1);
 plot([0; S.rf.t; S.duration], [0; abs(S.rf.signal); 0], 'o');
 ylabel('RF (a.u.)');
 subplot(5,1,2);
-n = S.duration/sys.GRAD_UPDATE_TIME;
+n = round(S.duration/sys.GRAD_UPDATE_TIME);
 plot(((1:n)-0.5)*sys.GRAD_UPDATE_TIME, S.SSP.signal, 'o');
 ylabel('SSP (a.u.)');
 sp = 3;

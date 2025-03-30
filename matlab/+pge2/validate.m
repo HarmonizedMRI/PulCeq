@@ -1,4 +1,4 @@
-function ok = validate(ceq, sys)
+function validate(ceq, sys)
 %
 % Check compatibility of a PulCeq (Ceq) sequence object with the 'Pulseq on GE v2' interpreter.
 
@@ -7,9 +7,10 @@ function ok = validate(ceq, sys)
 % timing here; waveforms will be checked below for each segment instance in the scan loop.
 for p = 1:ceq.nParentBlocks         % we use 'p' to count parent blocks here and in the EPIC code
     b = ceq.parentBlocks(p).block;
-    [ok, msg] = pge2.checkblocktiming(b, sys);
-    if ~ok
-        error(sprintf('%s (parent block %d)', msg, p));
+    try
+        pge2.checkblocktiming(b, sys);
+    catch ME
+        fprintf('Error: parent block %d: %s\n', p, ME.message);
     end
 end
 
@@ -21,7 +22,7 @@ for i = 1:ceq.nSegments      % we use 'i' to count segments here and in the EPIC
     try 
         pge2.constructvirtualsegment(ceq.segments(i).blockIDs, ceq.parentBlocks, sys);
     catch ME
-        error(sprintf('Base (virtual) segment %d, %s', i, ME.message));
+        fprintf('Error: Base (virtual) segment %d: %s\n', i, ME.message);
     end
 end
 
@@ -31,6 +32,8 @@ end
 %  - gradient amplitude on each axis does not exceed hardware limit
 %  - gradient slew rate on each axis does not exceed hardware limit
 %  - gradients are continuous across block boundaries
-
-return
+a = input('Check scan loop? It might take a while. (y/n) ', "S");
+if ~strcmp(a, 'y') 
+    return;
+end
 
