@@ -3,8 +3,8 @@ function ok = validate(ceq, sys)
 % Check compatibility of a 'ceq' sequence object with the 'Pulseq on GE v2' interpreter.
 
 % Check parent block timing.
-% Parent blocks are 'virtual' (waveform amplitudes are arbitrary or normalized to 1), so only check
-% timing here; waveforms will be checked below for each segment instances in the scan loop.
+% Parent blocks are 'virtual' (waveform amplitudes are arbitrary/normalized), so only check
+% timing here; waveforms will be checked below for each segment instance in the scan loop.
 for p = 1:ceq.nParentBlocks         % we use 'p' to count parent blocks here and in the EPIC code
     b = ceq.parentBlocks(p).block;
     [ok, msg] = pge2.checkblocktiming(b, sys);
