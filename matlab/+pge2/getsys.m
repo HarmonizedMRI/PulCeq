@@ -1,12 +1,12 @@
 function sys = getsys(psd_rf_wait, psd_grd_wait, b1_max, g_max, slew_max, gamma, varargin)
 %
 % Inputs:
-%  psd_rf_wait    [sec]
+%  psd_rf_wait     [sec]
 %  psd_grd_wait    [sec]
 %  b1_max          [Gauss]
-%  g_max          [Gauss/cm]
-%  slew_max          [Gauss/cm/ms]
-%  gamma            [Hz/Gauss]
+%  g_max           [Gauss/cm]
+%  slew_max        [Gauss/cm/ms]
+%  gamma           [Hz/Gauss]
 
 % defaults. Some are determined empirically using WTools.
 % You probably don't want to change these.
@@ -34,6 +34,4 @@ sys.g_max = g_max;
 sys.slew_max = slew_max;
 sys.gamma = gamma;
 
-%assert(all([sys.psd_rf_wait sys.psd_grd_wait sys.GRAD_UPDATE_TIME sys.RF_UPDATE_TIME sys.adc_raster_time] < 1e-3), ...
-%   'Times must be specified in units of sec');
 assert(abs(sys.b1_max) < 1, 'b1_max must be specified in unit of G (typically this limit is 0.25 or a bit smaller)');
