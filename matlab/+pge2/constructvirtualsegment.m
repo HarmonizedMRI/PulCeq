@@ -1,23 +1,36 @@
-function S = constructvirtualsegment(blockIDs, parentBlocks, sys)
+function S = constructvirtualsegment(blockIDs, parentBlocks, sys, plotSegment)
 %
 % Inputs:
 %  
 % Output:
 % S               struct containing segment sequencer waveforms:
-%   S.gx/gy/gz    gradient waveform samples and times (amplitude normalized to 1)
-%   S.rf          rf waveform samples and times (amplitude normalized to 1)
-%   S.SSP         hardware instruction signals, represented here as a waveform on GRAD_UPDATE_TIME raster.
+%   S.rf          RF waveform samples and times (amplitude normalized to 1)
+%   S.SSP         A somewhat loose representation of the hardware instruction signals
+%                 on the SSP bus. SSP is represented here as a waveform on 4us raster,
+%                 with amplitude HI...
+%                  - during RF and ADC events, including the dead and ringdown intervals, and
+%                  - at the start of pure delay blocks.
+%                 The important thing here is that SSP instructions from different
+%                 RF/ADC/pure delay events cannot overlap.
+%   S.gx/gy/gz    Gradient waveform samples and times (amplitude normalized to 1)
 %
 % Example:
-%  >> sys = pge2.getsys(150e-6, 150e-6, 0.25, 5, 20, 4.2576e3);
+%  >> ceq = seq2ceq('gre2d.seq');
+%  >> psd_rf_wait = 150e-6; psd_grd_wait = 100e-6; % sec
+%  >> b1_max = 0.25;   % Gauss
+%  >> g_max = 5;       % Gauss/cm
+%  >> slew_max = 20;   % Gauss/cm/ms
+%  >> sys = getsys(psd_rf_wait, psd_grd_wait, b1_max, g_max, slew_max, gamma);
 %  >> S = pge2.constructvirtualsegment(ceq.segments(1).blockIDs, ceq.parentBlocks, sys);
 
-nSegments = length(blockIDs);
+if nargin < 4
+    plotSegment = false;
+end
 
 % Get segment duration
 S.duration = 0;
-for i = 1:nSegments
-    p = blockIDs(i);  % parent block index
+for j = 1:length(blockIDs)
+    p = blockIDs(j);  % parent block index
     if p == 0  % pure delay block
         S.duration = S.duration + 8e-6;
     else
@@ -26,7 +39,8 @@ for i = 1:nSegments
 end
 
 % Initialize SSP waveform
-% SSP set to HI just means that some hardware instruction is being transmitted -- here we don't care about the actual value
+% SSP set to HI just means that some hardware instruction is being transmitted
+% in connection with an RF event, ADC event, or pure delay block.
 HI = 1;              
 LO = 0;
 n = S.duration/sys.GRAD_UPDATE_TIME;
@@ -41,8 +55,11 @@ for ax = {'gx','gy','gz'}
 end
 
 tic = 0;          % running time counter marking block boundary
-for i = 1:nSegments
-    p = blockIDs(i);  % parent block index
+
+for j = 1:length(blockIDs)
+    p = blockIDs(j);  % parent block index
+
+    msg1 = sprintf('block %d (parent block %d; block start time %.e s)', j, p, tic);
 
     if p == 0  % pure delay block
         n1 = tic/sys.GRAD_UPDATE_TIME + 1;
@@ -56,7 +73,7 @@ for i = 1:nSegments
 
     n = round(b.blockDuration/sys.GRAD_UPDATE_TIME);
     if abs(n - b.blockDuration/sys.GRAD_UPDATE_TIME) > 1e-7
-        throw(MException('block:duration', sprintf('Parent block %d duration not on sys.GRAD_UPDATE_TIME boundary', p))); 
+        throw(MException('block:duration', sprintf('%s: Parent block duration not on sys.GRAD_UPDATE_TIME boundary', msg1))); 
     end
 
     if ~isempty(b.rf)
@@ -69,13 +86,13 @@ for i = 1:nSegments
         n1 = (tic + sys.psd_rf_wait + b.rf.delay - sys.rf_dead_time)/sys.GRAD_UPDATE_TIME + 1;
         n2 = (tic + sys.psd_rf_wait + b.rf.delay + b.rf.t(end) + raster/2 + sys.rf_ringdown_time)/sys.GRAD_UPDATE_TIME;
         if abs(n1 - abs(n1)) > 1e-7 
-            throw(MException('rf:starttime', 'RF waveform must start on a sys.GRAD_UPDATE_TIME boundary'));
+            throw(MException('rf:starttime', sprintf('%s: RF waveform must start on a sys.GRAD_UPDATE_TIME boundary', msg1)));
         end
         if abs(n2 - abs(n2)) > 1e-7 
-            throw(MException('rf:endtime', 'RF waveform must end on a sys.GRAD_UPDATE_TIME boundary'));
+            throw(MException('rf:endtime', sprintf('%s: RF waveform must end on a sys.GRAD_UPDATE_TIME boundary', msg1)));
         end
         if n2 > S.duration/sys.GRAD_UPDATE_TIME 
-            throw(MException('rf:endofsegment', 'RF ringdown extends past end of segment'));
+            throw(MException('rf:endofsegment', sprintf('%s: RF ringdown extends past end of segment', msg1)));
         end
         S.SSP.signal(round(n1:n2)) = S.SSP.signal(round(n1:n2)) + HI;
     end
@@ -84,13 +101,13 @@ for i = 1:nSegments
         n1 = (tic + sys.psd_grd_wait + b.adc.delay - sys.adc_dead_time)/sys.GRAD_UPDATE_TIME + 1;
         n2 = (tic + sys.psd_grd_wait + b.adc.delay + b.adc.dwell*b.adc.numSamples + sys.adc_ringdown_time)/sys.GRAD_UPDATE_TIME;
         if abs(n1 - abs(n1)) > 1e-7 
-            throw(MException('adc:starttime', 'ADC window must start on a sys.GRAD_UPDATE_TIME boundary'));
+            throw(MException('adc:starttime', sprintf('%s: ADC window must start on a sys.GRAD_UPDATE_TIME boundary', msg1)));
         end
         if abs(n2 - abs(n2)) > 1e-7 
-            throw(MException('adc:endtime', 'ADC window must end on a sys.GRAD_UPDATE_TIME boundary'));
+            throw(MException('adc:endtime', sprintf('%s: ADC window must end on a sys.GRAD_UPDATE_TIME boundary', msg1)));
         end
         if n2 > S.duration/sys.GRAD_UPDATE_TIME 
-            throw(MException('adc:endofsegment', 'ADC ringdown extends past end of segment'));
+            throw(MException('adc:endofsegment', sprintf('%s: ADC ringdown extends past end of segment', msg1)));
         end
         S.SSP.signal(round(n1:n2)) = S.SSP.signal(round(n1:n2)) + HI;
     end
@@ -101,16 +118,33 @@ for i = 1:nSegments
             if strcmp(g.type, 'trap');
                 S.(ax{1}).t = [S.(ax{1}).t; tic + g.delay + [0 g.riseTime g.riseTime+g.flatTime g.riseTime+g.flatTime+g.fallTime]'];
                 S.(ax{1}).signal = [S.(ax{1}).signal; 0; 1; 1; 0]; % normalized amplitude
+            else
+                % arbitrary gradient or extended trapezoid.  TODO
+
+                % If j==1, or previous block is a pure delay block, gradient must start near zero
+                max_delta_g_per_sample = sys.slew_max*sys.GRAD_UPDATE_TIME*1e3;
+                %if abs(S.(ax{1}).signal(1)) > max_delta_g_per_sample
+                %    throw(MException('grad:start', sprintf('%s: Gradients must be (near) zero at start of segment.', msg1)));
+                %end
+
+                % If j==length(blockIDs) or next block is a pure delay block, gradient must end near zero
+                %if abs(S.(ax{1}).signal(end)) > max_delta_g_per_sample
+                %    throw(MException('grad:end', sprintf('%s: Gradients must be (near) zero at end of segment.', msg1)));
+                %end
             end
         end
     end
 
     tic = tic + b.blockDuration;
+
+    % Check for overlapping SSP messages
+    if any(S.SSP.signal > 1.5*HI)
+        throw(MException('SSP:overlap', sprintf('%s: SSP messages overlap. Try increasing the separation between RF events, ADC events, and pure delay blocks.', msg1)));
+    end
 end
 
-% Check for overlapping SSP messages
-if any(S.SSP.signal > 1.5*HI)
-    throw(MException('SSP:overlap', 'SSP messages overlap. Try increasing the separation between RF events, ADC events, and pure delay blocks.'));
+if ~plotSegment
+    return;
 end
 
 % plot

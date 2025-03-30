@@ -16,10 +16,14 @@ end
 % Check segment timing.
 % Here we construct base (virtual) segments and check that:
 %  - gradients start/end on zero at the start/end of each segment, respectively
-%  - RF/ADC events have sufficient gaps before/after to allow for RF/ADC 'turn on'/'turn off' times
+%  - RF events, ADC events, and pure delay blocks are not too close together
+
 for i  = 1:ceq.nSegments      % we use 'i' to count segments here and in the EPIC code
-    blockIDs = ceq.segments(i).blockIDs;
-    %sub_checkvirtualsegment(ceq, i)
+    try 
+        pge2.constructvirtualsegment(ceq.segments(i).blockIDs, ceq.parentBlocks, sys);
+    catch ME
+        error(sprintf('Base (virtual) segment %d, %s', i, ME.message));
+    end
 end
 
 
