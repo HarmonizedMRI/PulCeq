@@ -6,7 +6,7 @@ function S = constructvirtualsegment(blockIDs, parentBlocks, sys)
 % S               struct containing segment sequencer waveforms:
 %   S.gx/gy/gz    gradient waveform samples and times (amplitude normalized to 1)
 %   S.rf          rf waveform samples and times (amplitude normalized to 1)
-%   S.SSP         hardware instruction signals ('waveform'), waveform on GRAD_UPDATE_TIME raster.
+%   S.SSP         hardware instruction signals, represented here as a waveform on GRAD_UPDATE_TIME raster.
 %
 % Example:
 %  >> sys = pge2.getsys(150e-6, 150e-6, 0.25, 5, 20, 4.2576e3);
@@ -55,8 +55,9 @@ for i = 1:nSegments
     b = parentBlocks(p).block;    % parent block
 
     n = round(b.blockDuration/sys.GRAD_UPDATE_TIME);
-    assert(abs(n - b.blockDuration/sys.GRAD_UPDATE_TIME) < 1e-7, ...
-        sprintf('Parent block %d duration not on sys.GRAD_UPDATE_TIME boundary', p));
+    if abs(n - b.blockDuration/sys.GRAD_UPDATE_TIME) > 1e-7
+        throw(MException('block:duration', sprintf('Parent block %d duration not on sys.GRAD_UPDATE_TIME boundary', p))); 
+    end
 
     if ~isempty(b.rf)
         % get raster time. Assume arbitrary waveform for now. TODO: support ext trap rf
@@ -67,13 +68,30 @@ for i = 1:nSegments
 
         n1 = (tic + sys.psd_rf_wait + b.rf.delay - sys.rf_dead_time)/sys.GRAD_UPDATE_TIME + 1;
         n2 = (tic + sys.psd_rf_wait + b.rf.delay + b.rf.t(end) + raster/2 + sys.rf_ringdown_time)/sys.GRAD_UPDATE_TIME;
+        if abs(n1 - abs(n1)) > 1e-7 
+            throw(MException('rf:starttime', 'RF waveform must start on a sys.GRAD_UPDATE_TIME boundary'));
+        end
+        if abs(n2 - abs(n2)) > 1e-7 
+            throw(MException('rf:endtime', 'RF waveform must end on a sys.GRAD_UPDATE_TIME boundary'));
+        end
+        if n2 > S.duration/sys.GRAD_UPDATE_TIME 
+            throw(MException('rf:endofsegment', 'RF ringdown extends past end of segment'));
+        end
         S.SSP.signal(round(n1:n2)) = S.SSP.signal(round(n1:n2)) + HI;
     end
 
     if ~isempty(b.adc)
         n1 = (tic + sys.psd_grd_wait + b.adc.delay - sys.adc_dead_time)/sys.GRAD_UPDATE_TIME + 1;
         n2 = (tic + sys.psd_grd_wait + b.adc.delay + b.adc.dwell*b.adc.numSamples + sys.adc_ringdown_time)/sys.GRAD_UPDATE_TIME;
-        assert(abs(n2 - abs(n2)) < 1e-7, 'ADC window must end on a sys.GRAD_UPDATE_TIME boundary');
+        if abs(n1 - abs(n1)) > 1e-7 
+            throw(MException('adc:starttime', 'ADC window must start on a sys.GRAD_UPDATE_TIME boundary'));
+        end
+        if abs(n2 - abs(n2)) > 1e-7 
+            throw(MException('adc:endtime', 'ADC window must end on a sys.GRAD_UPDATE_TIME boundary'));
+        end
+        if n2 > S.duration/sys.GRAD_UPDATE_TIME 
+            throw(MException('adc:endofsegment', 'ADC ringdown extends past end of segment'));
+        end
         S.SSP.signal(round(n1:n2)) = S.SSP.signal(round(n1:n2)) + HI;
     end
 
@@ -90,8 +108,10 @@ for i = 1:nSegments
     tic = tic + b.blockDuration;
 end
 
-%S.rf.t = [S.rf.t; tic];
-%S.rf.signal = [S.rf.signal; 0];
+% Check for overlapping SSP messages
+if any(S.SSP.signal > 1.5*HI)
+    throw(MException('SSP:overlap', 'SSP messages overlap. Try increasing the separation between RF events, ADC events, and pure delay blocks.'));
+end
 
 % plot
 subplot(5,1,1);
@@ -99,7 +119,7 @@ plot([0; S.rf.t; S.duration], [0; abs(S.rf.signal); 0], 'o');
 ylabel('RF (a.u.)');
 subplot(5,1,2);
 n = S.duration/sys.GRAD_UPDATE_TIME;
-plot(sys.GRAD_UPDATE_TIME/2 + (1:n)*sys.GRAD_UPDATE_TIME, S.SSP.signal, 'o');
+plot(((1:n)-0.5)*sys.GRAD_UPDATE_TIME, S.SSP.signal, 'o');
 ylabel('SSP (a.u.)');
 sp = 3;
 for ax = {'gx','gy','gz'}
@@ -109,58 +129,3 @@ for ax = {'gx','gy','gz'}
     ylabel(ax);
     ylim([0 1.2]);
 end
-
-return
-    
-
-% Construct gradient
-for ax = {'gx','gy','gz'}
-    wav.val = 0;    % (normalized/a.u.) waveform values
-    wav.tt = 0;     % sample times
-    nt = 1;         % number of waveform samples
-    for i = 1:nSegments
-        if blockIDs(i) == 0   % pure delay block
-            wav.tt = [wav.tt wav.tt(end)+8e-6];   % just need to add a bit of time
-            wav.val = [wav.val 0];
-            continue;
-        end
-
-        b = parentBlocks(i).block;    % parent block
-        g = b.(ax{1});
-        if isempty(g)
-            wav.tt = [wav.tt wav.tt(end)+b.blockDuration];
-            wav.val = [wav.val 0];
-            continue;
-        end
-
-        if strcmp(g.type, 'trapezoid');
-            wav.tt = [wav.tt wav.tt(end)+b.blockDuration];
-            wav.val = [wav.val 0];
-            continue;
-        end
-
-        % none of the above, so gradient must be arbitary/extended trap
-        % TODO
-        %{
-        wav.val = [wav.val g.];
-        wav.tt = [wav.tt wav.tt(end)+b.blockDuration];
-            continue;
-            if abs(wav.val) > eps
-                ok = false;
-                msg = sprintf('Gradient waveform must end on zero before pure (soft) delay block (block ID = %d)');
-                return;
-            end
-            wav.val = [wav.val 0];
-            wav.tt = [wav.tt wav.tt(end)
-            
-            continue;
-        end
-        %}
-    end
-end
-
-
-% construct ADC window(s)
-
-
-
