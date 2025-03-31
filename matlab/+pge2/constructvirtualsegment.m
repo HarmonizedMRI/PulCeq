@@ -1,6 +1,9 @@
 function S = constructvirtualsegment(blockIDs, parentBlocks, sys, plotSegment)
 %
 % Inputs:
+%   blockIDS       ceq.segments(i).blockIDs
+%   parentBlocks   ceq.parentBlocks
+%   sys            See pge2.getsys()
 %  
 % Output:
 % S               struct containing segment sequencer waveforms:
@@ -13,15 +16,6 @@ function S = constructvirtualsegment(blockIDs, parentBlocks, sys, plotSegment)
 %                 The important thing here is that SSP instructions from different
 %                 RF/ADC/pure delay events cannot overlap.
 %   S.gx/gy/gz    Gradient waveform samples and times (amplitude normalized to 1)
-%
-% Example:
-%  >> ceq = seq2ceq('gre2d.seq');
-%  >> psd_rf_wait = 150e-6; psd_grd_wait = 100e-6; % sec
-%  >> b1_max = 0.25;   % Gauss
-%  >> g_max = 5;       % Gauss/cm
-%  >> slew_max = 20;   % Gauss/cm/ms
-%  >> sys = getsys(psd_rf_wait, psd_grd_wait, b1_max, g_max, slew_max, gamma);
-%  >> S = pge2.constructvirtualsegment(ceq.segments(1).blockIDs, ceq.parentBlocks, sys);
 
 if nargin < 4
     plotSegment = false;
