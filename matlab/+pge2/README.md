@@ -1,4 +1,4 @@
-Functions for simulating and checking a 'Ceq' sequence representation on GE hardware.
+Functions for checking a 'Ceq' sequence representation on GE hardware.
 
 The goal here is to realize the following workflow:
 ```matlab
@@ -19,6 +19,13 @@ pge2.validate(ceq, sys);
 % Write sequence to file
 writeceq(ceq, 'gre2d.pge');
 ```
+
+As usual, see 
+https://github.com/HarmonizedMRI/SequenceExamples-GE/tree/main/pge2
+for further details and the most up to date information.
+
+
+## Units
 
 Units used here is a mix of Pulseq and GE conventions, and are as follows:
 ```
