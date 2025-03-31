@@ -117,10 +117,12 @@ for j = 1:length(blockIDs)
         g = b.(ax{1});
         if ~isempty(g)
             if strcmp(g.type, 'trap');
-                S.(ax{1}).t = [S.(ax{1}).t; tic + g.delay + [0 g.riseTime g.riseTime+g.flatTime g.riseTime+g.flatTime+g.fallTime]'];
-                S.(ax{1}).signal = [S.(ax{1}).signal; 0; 1; 1; 0]; % normalized amplitude
+                tt = [0 g.riseTime g.riseTime+g.flatTime g.riseTime+g.flatTime+g.fallTime]';
+                wav = [0; 1; 1; 0]; % normalized amplitude
             else
                 % arbitrary gradient or extended trapezoid.  TODO
+                tt = g.tt;
+                wav = g.waveform/max(abs(g.waveform));    % normalized waveform
 
                 % If j==1, or previous block is a pure delay block, gradient must start near zero
                 max_delta_g_per_sample = sys.slew_max*sys.GRAD_UPDATE_TIME*1e3;
@@ -133,6 +135,16 @@ for j = 1:length(blockIDs)
                 %    throw(MException('grad:end', sprintf('%s: Gradients must be (near) zero at end of segment.', msg1)));
                 %end
             end
+
+            % append waveform
+            S.(ax{1}).t = [S.(ax{1}).t; tic + g.delay + tt];
+            S.(ax{1}).signal = [S.(ax{1}).signal; wav];
+
+            % calculate peak normalized slew rate
+            slew = diff(wav)./diff(tt);
+            S.(ax{1}).slew.normalized.peak(j) = max(abs(slew));
+        else
+            S.(ax{1}).slew.normalized.peak(j) = 0;
         end
     end
 
