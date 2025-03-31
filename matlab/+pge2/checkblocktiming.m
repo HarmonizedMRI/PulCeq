@@ -11,7 +11,7 @@ ok = false;
 
 % check block duration
 res = b.blockDuration/sys.GRAD_UPDATE_TIME;  % 'resolution' in GE speak is the number of raster/update intervals
-if abs(res - round(res)) > 1e-6
+if abs(res - round(res)) > 1e-9
     throw(MException('block:duration', sprintf('Block duration not on GRAD_UPDATE_TIME (%.0e s) boundary', sys.GRAD_UPDATE_TIME)));
 end
 
@@ -20,13 +20,13 @@ if ~isempty(b.rf)
     % check sample times
     dt = diff(b.rf.t);
     res = dt/sys.RF_UPDATE_TIME;
-    if any( abs(res - round(res)) > 1e-6 )
+    if any( abs(res - round(res)) > 1e-9 )
         throw(MException('rf:times', sprintf('RF sample spacings not on RF_UPDATE_TIME (%.0e s) boundary', sys.RF_UPDATE_TIME)));
     end
 
     % check delay 
     res = b.rf.delay/sys.RF_UPDATE_TIME;
-    if abs(res - round(res)) > 1e-6
+    if abs(res - round(res)) > 1e-9
         throw(MException('rf:delay', sprintf('RF delay (%.3e) not on RF_UPDATE_TIME (%.0e s) boundary', b.rf.delay, sys.RF_UPDATE_TIME)));
     end
 end
@@ -65,7 +65,7 @@ if isempty(g); return; end;
 
 % check delay 
 res = g.delay/sys.GRAD_UPDATE_TIME;
-if abs(res - round(res)) > 1e-6
+if abs(res - round(res)) > 1e-9
     throw(MException('grad:delay', sprintf('Gradient delay (%.3e) not on GRAD_UPDATE_TIME (%.0e s) boundary', g.delay, sys.GRAD_UPDATE_TIME)));
 end
 
@@ -76,7 +76,7 @@ else
     dt = diff(g.tt);
 end
 res = dt/sys.GRAD_UPDATE_TIME;
-if any( abs(res - round(res)) > 1e-6 )
+if any( abs(res - round(res)) > 1e-9 )
     if strcmp(g.type, 'trap')
         msg = sprintf('Trapezoid rise/flat/fall time not on GRAD_UPDATE_TIME (%.0e s) boundary', sys.GRAD_UPDATE_TIME);
     else

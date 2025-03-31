@@ -16,9 +16,9 @@ for p = 1:ceq.nParentBlocks         % we use 'p' to count parent blocks here and
     end
 end
 if ok
-    fprintf('Parent blocks passed timing check\n');
+    fprintf('Parent blocks PASSED timing check\n');
 else
-    fprintf('Parent blocks failed timing check\n');
+    fprintf('Parent blocks FAILED timing check\n');
 end
 
 % Check base (virtual) segments.
@@ -32,9 +32,9 @@ for i = 1:ceq.nSegments      % we use 'i' to count segments here and in the EPIC
     end
 end
 if ok
-    fprintf('Base segments passed timing check\n');
+    fprintf('Base segments PASSED timing check\n');
 else
-    fprintf('Base segments failed timing check\n');
+    fprintf('Base segments FAILED timing check\n');
 end
 
 % Check scan loop.  TODO
@@ -43,6 +43,7 @@ end
 %  - gradient amplitude on each axis does not exceed hardware limit
 %  - gradient slew rate on each axis does not exceed hardware limit
 %  - gradients are continuous across block boundaries
+
 %a = input('Check scan loop? It might take a while. (y/n) ', "S");
 %if ~strcmp(a, 'y') 
 %    return;
@@ -68,7 +69,9 @@ while n < ceq.nMax
         assert(gamp < sys.g_max + eps, ...
             sprintf('segment %d, block %d: z gradient amp (%.3f) exceeds limit', i, j, gamp));
 
-        % gradient slew
+        % gradient slew  TODO
+
+        % gradient continuity across block boundaries  TODO
 
         n = n + 1;
     end

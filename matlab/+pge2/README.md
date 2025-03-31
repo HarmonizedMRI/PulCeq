@@ -1,6 +1,7 @@
 Functions for checking a 'Ceq' sequence representation on GE hardware.
 
 The goal here is to realize the following workflow:
+
 ```matlab
 % Convert a Pulseq file to a Ceq sequence object (a nested struct)
 ceq = seq2ceq('gre2d.seq');
@@ -15,6 +16,8 @@ sys = getsys(psd_rf_wait, psd_grd_wait, b1_max, g_max, slew_max, gamma);
 
 % Check if 'ceq' is compatible with the parameters in 'sys'
 pge2.validate(ceq, sys);
+
+% Modify ceq until the above call returns no errors
 
 % Write sequence to file
 writeceq(ceq, 'gre2d.pge');
