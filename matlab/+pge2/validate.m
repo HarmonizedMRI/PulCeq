@@ -72,15 +72,11 @@ while n < ceq.nMax
                 sprintf('segment %d, block %d: %s gradient slew (%.3f G/cm/ms) exceeds limit', i, j, ax, slew_max));
         end
 
-        % gradient slew  TODO
-
         % gradient continuity across block boundaries  TODO
 
         textprogressbar(n/ceq.nMax*100);
         n = n + 1;
     end
-
-    % 
 end
 textprogressbar(' PASSED'); 
 
