@@ -5,22 +5,36 @@ function validate(ceq, sys)
 % Check parent block timing.
 % Parent blocks are 'virtual' (waveform amplitudes are arbitrary/normalized), so only check
 % timing here; waveforms will be checked below for each segment instance in the scan loop.
+ok = true;
 for p = 1:ceq.nParentBlocks         % we use 'p' to count parent blocks here and in the EPIC code
     b = ceq.parentBlocks(p).block;
     try
         pge2.checkblocktiming(b, sys);
     catch ME
+        ok = false;
         fprintf('Error: parent block %d: %s\n', p, ME.message);
     end
 end
+if ok
+    fprintf('Parent blocks passed timing check\n');
+else
+    fprintf('Parent blocks failed timing check\n');
+end
 
 % Check base (virtual) segments.
+ok = true;
 for i = 1:ceq.nSegments      % we use 'i' to count segments here and in the EPIC code
     try 
         Sv{i} = pge2.constructvirtualsegment(ceq.segments(i).blockIDs, ceq.parentBlocks, sys);
     catch ME
+        ok = false;
         fprintf('Error: Base (virtual) segment %d: %s\n', i, ME.message);
     end
+end
+if ok
+    fprintf('Base segments passed timing check\n');
+else
+    fprintf('Base segments failed timing check\n');
 end
 
 % Check scan loop.  TODO
