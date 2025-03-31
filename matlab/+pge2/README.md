@@ -50,7 +50,9 @@ main;   % Write a Pulseq file and convert to a Ceq object
 sys = pge2.getsys(150e-6, 100e-6, 0.25, 5, 20, 4.2576e3);
 S = pge2.constructvirtualsegment(ceq.segments(1).blockIDs, ceq.parentBlocks, sys, true);
 ```
+
 ![Segment plot](segment.png)
+
 This shows the waveforms with normalized amplitude,
 which is how the segment is represented in hardware during the sequence download step
 (prior to entering the scan loop).  
