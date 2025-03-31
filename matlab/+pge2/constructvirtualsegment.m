@@ -169,14 +169,15 @@ plot([0; S.rf.t; S.duration], [0; abs(S.rf.signal); 0], 'black-');
 ylabel('RF (a.u.)');  ylim([0 1.1]);
 subplot(5,1,2);
 n = round(S.duration/sys.GRAD_UPDATE_TIME);
-plot(((1:n)-0.5)*sys.GRAD_UPDATE_TIME, S.SSP.signal, 'bo');
+plot(((1:n)-0.5)*sys.GRAD_UPDATE_TIME, S.SSP.signal, 'b.');
 ylabel('SSP (a.u.)');  ylim([0 1.1]);
 sp = 3;
 cols = 'rgb';
 for ax = {'gx','gy','gz'}
     subplot(5,1,sp);
     plot([0; S.(ax{1}).t; S.duration], [0; S.(ax{1}).signal; 0], [cols(sp-2) '-']);
-    ylabel(ax);
-    ylim([0 1.2]);
+    ylabel([ax ' (a.u.)']);
+    ylim([-1.2 1.2]);
     sp = sp + 1;
 end
+xlabel('time (sec)');
