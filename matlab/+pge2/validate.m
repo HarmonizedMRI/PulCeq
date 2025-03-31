@@ -50,7 +50,7 @@ end
 %end
 
 n = 1;   % block (row) number
-textprogressbar('checking scan loop: ');
+textprogressbar('Checking scan loop: ');
 while n < ceq.nMax 
     i = ceq.loop(n, 1);   % segment id
 
