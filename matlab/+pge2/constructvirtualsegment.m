@@ -67,6 +67,9 @@ for j = 1:length(blockIDs)
         n2 = n1 + 1;
         S.SSP.signal(round(n1:n2)) = [HI; LO];
         tic = tic + 8e-6;
+        for ax = {'gx','gy','gz'}
+            S.(ax{1}).slew.normalized.peak(j) = 0;
+        end
         continue;
     end
 
