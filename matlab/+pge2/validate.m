@@ -37,7 +37,7 @@ else
     fprintf('Base segments FAILED timing check\n');
 end
 
-% Check scan loop.  TODO
+% Check scan loop
 % This is where waveform amplitudes are set, so for each segment instance we must check that:
 %  - RF amplitude does not exceed hardware limit
 %  - gradient amplitude on each axis does not exceed hardware limit
@@ -72,7 +72,7 @@ while n < ceq.nMax
                 sprintf('segment %d, block %d: %s gradient slew (%.3f G/cm/ms) exceeds limit', i, j, ax, slew_max));
         end
 
-        % gradient continuity across block boundaries  TODO
+        % check gradient continuity across block boundaries  TODO
 
         textprogressbar(n/ceq.nMax*100);
         n = n + 1;
