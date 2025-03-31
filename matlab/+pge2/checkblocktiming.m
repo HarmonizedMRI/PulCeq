@@ -25,9 +25,9 @@ if ~isempty(b.rf)
     end
 
     % check delay 
-    res = b.rf.delay/sys.GRAD_UPDATE_TIME;
+    res = b.rf.delay/sys.RF_UPDATE_TIME;
     if abs(res - round(res)) > 1e-6
-        throw(MException('rf:delay', sprintf('RF delay (%.3e) not on GRAD_UPDATE_TIME (%.0e s) boundary', b.rf.delay, sys.GRAD_UPDATE_TIME)));
+        throw(MException('rf:delay', sprintf('RF delay (%.3e) not on RF_UPDATE_TIME (%.0e s) boundary', b.rf.delay, sys.RF_UPDATE_TIME)));
     end
 end
 
@@ -48,9 +48,9 @@ if ~isempty(b.adc)
         throw(MException('adc:dwell', sprintf('ADC dwell time (%.3e) not an integer multiple of adc raster time (%.1e)', b.adc.dwell, sys.adc_raster_time)));
     end
 
-    res = b.adc.delay/sys.GRAD_UPDATE_TIME;
-    if abs(res - round(res)) > 1e-6
-        throw(MException('adc:delay', sprintf('ADC delay (%.3e) not on GRAD_UPDATE_TIME (%.0e s) boundary', b.adc.delay, sys.GRAD_UPDATE_TIME)));
+    res = b.adc.delay/1e-6;   % ADC delay must be multiple of 1us
+    if abs(res - round(res)) > 1e-9
+        throw(MException('adc:delay', sprintf('ADC delay (%.3e) not on 1us boundary', b.adc.delay)));
     end
 end
 
