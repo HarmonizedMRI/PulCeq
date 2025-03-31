@@ -57,10 +57,12 @@ This shows the waveforms with normalized amplitude,
 which is how the segment is represented in hardware during the sequence download step
 (prior to entering the scan loop).  
 Note the 'SSP' waveform, which indicates lock-out periods during which only one of the following events can take place:
+
 * RF event
 * ADC event
 * the first 4us time interval of a pure delay block
 * TTL ('trigger') out window
+
 The lock-out periods include the RF/ADC dead- and ringdown-times.
 Overlapping SSP commands are a common reason for failed downloads on the scanner, 
 which can usually be resolved by inserting extra gaps around RF and ADC events.
