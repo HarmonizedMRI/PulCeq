@@ -51,6 +51,7 @@ end
 
 n = 1;   % block (row) number
 textprogressbar('Checking scan loop: ');
+ok = true;
 while n < ceq.nMax 
     i = ceq.loop(n, 1);   % segment id
 
@@ -67,6 +68,7 @@ while n < ceq.nMax
         gamp = ceq.loop(n:(n+nbis-1), inds(d))/sys.gamma/100;
         J = find(gamp > sys.g_max);
         if ~isempty(J)
+            ok = false;
             for ll = 1:length(J)
                 j = J(ll);
                 fprintf('(block %d) segment %d, block %d: %s gradient amp (%.3f G/cm) exceeds limit\n', n+j-1, i, j, ax, gamp(j));
@@ -75,6 +77,7 @@ while n < ceq.nMax
         slew_max = abs(gamp' .* S{i}.(ax).slew.normalized.peak * 1e-3);    % G/cm/ms
         J = find(slew_max > sys.slew_max);
         if ~isempty(J)
+            ok = false;
             for ll = 1:length(J)
                 j = J(ll);
                 fprintf('(block %d) segment %d, block %d: %s gradient slew (%.3f G/cm/ms) exceeds limit\n', n+j-1, i, j, ax, slew_max(j));
@@ -87,6 +90,10 @@ while n < ceq.nMax
 
     textprogressbar(n/ceq.nMax*100);
 end
-textprogressbar(' PASSED'); 
+if ok
+    textprogressbar(' PASSED'); 
+else
+    textprogressbar(' FAILED'); 
+end
 
 
