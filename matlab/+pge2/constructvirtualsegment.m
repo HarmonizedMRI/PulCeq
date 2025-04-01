@@ -158,20 +158,72 @@ if ~plotSegment
 end
 
 % plot
+clear ax
+
 subplot(5,1,1);
+ax{1} = gca;
 plot([0; S.rf.t; S.duration], [0; abs(S.rf.signal); 0], 'black-');
 ylabel('RF (a.u.)');  ylim([0 1.1]);
+
 subplot(5,1,2);
+ax{2} = gca;
 n = round(S.duration/sys.GRAD_UPDATE_TIME);
 plot(((1:n)-0.5)*sys.GRAD_UPDATE_TIME, S.SSP.signal, 'b.');
 ylabel('SSP (a.u.)');  ylim([0 1.1]);
+
 sp = 3;
 cols = 'rgb';
-for ax = {'gx','gy','gz'}
+
+for d = {'gx','gy','gz'}
     subplot(5,1,sp);
-    plot([0; S.(ax{1}).t; S.duration], [0; S.(ax{1}).signal; 0], [cols(sp-2) '-']);
-    ylabel([ax ' (a.u.)']);
+    ax{sp} = gca;
+    plot([0; S.(d{1}).t; S.duration], [0; S.(d{1}).signal; 0], [cols(sp-2) '.-']);
+    ylabel([d ' (a.u.)']);
     ylim([-1.2 1.2]);
     sp = sp + 1;
 end
 xlabel('time (sec)');
+
+linkaxes([ax{1} ax{2} ax{3} ax{4} ax{5}], 'x');  % common zoom setting (along time axis) for all tiles
+
+return
+
+lw = 1;
+bgColor = 'k';
+
+figure;
+t = tiledlayout(5, 1);
+ax1 = nexttile;
+plot([0; S.gx.t; S.duration], [0; S.gx.signal; 0], '-y', 'LineWidth', lw);
+ylabel('gx (a.u.)');  ylim([-1.2 1.2]);
+set(gca, 'color', bgColor);  set(gca, 'XTick', []);
+
+ax2 = nexttile;
+plot([0; S.gy.t; S.duration], [0; S.gy.signal; 0], '-c', 'LineWidth', lw);
+ylabel('gx (a.u.)');  ylim([-1.2 1.2]);
+set(gca, 'color', bgColor);  set(gca, 'XTick', []);
+
+ax3 = nexttile;
+plot([0; S.gz.t; S.duration], [0; S.gz.signal; 0], '-m', 'LineWidth', lw);
+ylabel('gx (a.u.)');  ylim([-1.2 1.2]);
+set(gca, 'color', bgColor);  set(gca, 'XTick', []);
+
+ax4 = nexttile;
+plot([0; S.rf.t; S.duration], [0; abs(S.rf.signal); 0], '-r', 'LineWidth', lw);
+ylabel('RF (a.u.)');  ylim([0 1.2]);
+set(gca, 'color', bgColor);  set(gca, 'XTick', []);
+
+ax5 = nexttile;
+n = round(S.duration/sys.GRAD_UPDATE_TIME);
+plot(((1:n)-0.5)*sys.GRAD_UPDATE_TIME, S.SSP.signal, '.b');
+ylabel('SSP (a.u.)');  ylim([0 1.1]);
+%plot(T, th, '-g', 'LineWidth', lw);  ylabel('∠b1 (rad)'); axis([T(1) Tend -1.1*pi 1.1*pi]);
+set(gca, 'color', bgColor);
+xlabel('time (sec)');
+
+t.TileSpacing = 'none';
+t.Padding = 'none';
+
+linkaxes([ax1 ax2 ax3 ax4 ax5], 'x');  % common zoom setting (along time axis) for all tiles
+
+
