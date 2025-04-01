@@ -87,6 +87,9 @@ while n < ceq.nMax
 
     % check gradient continuity across block boundaries  TODO
     n = n + nbis;
+    if n > ceq.nMax
+        n = n - 1;
+    end
 
     textprogressbar(n/ceq.nMax*100);
 end
