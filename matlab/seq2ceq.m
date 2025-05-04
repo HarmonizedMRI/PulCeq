@@ -200,11 +200,13 @@ while n < ceq.nMax + 1
 
         p = ceq.segments(i).blockIDs(j);  % parent block index
 
-        ceq.loop(n,:) = getdynamics(b, i, p, physioTrigger);
 
         if p == 0  % pure delay block
+            ceq.loop(n,:) = getdynamics(b, i, p, physioTrigger, []);
             n = n + 1;
             continue;
+        else
+            ceq.loop(n,:) = getdynamics(b, i, p, physioTrigger, ceq.parentBlocks(p).block);
         end
 
         % Get rotation
