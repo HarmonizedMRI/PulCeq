@@ -63,6 +63,8 @@ end
 
 if ~isempty(block.adc)
     recphs = block.adc.phaseOffset;
+    % save ADC frequency for ADC events
+    rffreq = block.adc.freqOffset;
 end
 
 loop = [segmentID parentBlockID ...
