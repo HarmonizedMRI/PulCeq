@@ -90,7 +90,17 @@ sub_writegrad(fid, b.gx);
 sub_writegrad(fid, b.gy);
 sub_writegrad(fid, b.gz);
 sub_writeadc(fid, b.adc);
-trig.type = 0;
+if isfield(b, 'trig')
+    if strcmp(b.trig.type, 'output') & strcmp(b.trig.channel, 'ext1')
+        trig = b.trig;
+        trig.type = 1;   % TTL trigger out pulse (only one supported for now)
+        trig.channel = 1;  
+    else
+        trig.type = 0;
+    end
+else
+    trig.type = 0;
+end
 sub_writetrig(fid, trig);
 
 return
@@ -200,8 +210,12 @@ end
 return
 
 function sub_writetrig(fid, trig)
-    % assume no trigger for now. TODO
     fwrite(fid, trig.type, 'int16');          
+    if trig.type > eps
+        fwrite(fid, trig.channel, 'int32');          
+        fwrite(fid, trig.delay, 'float32');          
+        fwrite(fid, trig.duration, 'float32');          
+    end
 return
 
 function sub_writesegment(fid, s, parentBlocks)  % write definition of one segment
