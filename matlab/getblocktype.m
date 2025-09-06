@@ -8,7 +8,7 @@ function T = getblocktype(block)
 %       <has physio1 trigger> ...
 %       <is pure delay block>]
 
-minDelayBlockDuration = 20e-6 + 100*eps; 
+% minDelayBlockDuration = 4e-6 - 100*eps; 
 
 % Are waveforms and/or ADC events defined?
 T(1) = isempty(block.rf) & isempty(block.adc) & ...
@@ -35,7 +35,7 @@ if isfield(block, 'trig')
 end
 
 % Is this a pure delay block?
-T(4) = ~T(1) & block.blockDuration >= minDelayBlockDuration;
+T(4) = ~T(1); % & block.blockDuration >= minDelayBlockDuration;
 
 %assert( ~ (T(1) | block.blockDuration < minDelayBlockDuration), ...
 %       sprintf('Duration of block containing rf/gradient/adc events must exceed %es', minDelayBlockDuration) );
