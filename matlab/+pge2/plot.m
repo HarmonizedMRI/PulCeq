@@ -6,13 +6,12 @@ function plot(ceq, sys)
 %   ceq     struct       Ceq sequence object, see seq2ceq.m
 %   sys     struct       System hardware info, see pge2.getsys()
 
+% get waveforms
 W.rf.t = 0; W.rf.signal = 0;
 W.gx.t = 0; W.gx.signal = 0;
 W.gy.t = 0; W.gy.signal = 0;
 W.gz.t = 0; W.gz.signal = 0;
 W.SSP.signal = [];
-
-% get waveforms
 n = 1;    % row counter in ceq.loop
 tic = 0;  % running timer marking start of segment instances
 while n < ceq.nMax
@@ -25,21 +24,18 @@ while n < ceq.nMax
     end
 
     W.rf.t = [W.rf.t; tic + S.rf.t];
-    W.rf.signal = [W.rf.signal; S.rf.signal];
-    W.SSP.signal = [W.SSP.signal; S.SSP.signal];
     W.gx.t = [W.gx.t; tic + S.gx.t];
-    W.gx.signal = [W.gx.signal; S.gx.signal];
     W.gy.t = [W.gy.t; tic + S.gy.t];
-    W.gy.signal = [W.gy.signal; S.gy.signal];
     W.gz.t = [W.gz.t; tic + S.gz.t];
+
+    W.rf.signal = [W.rf.signal; S.rf.signal];
+    W.gx.signal = [W.gx.signal; S.gx.signal];
+    W.gy.signal = [W.gy.signal; S.gy.signal];
     W.gz.signal = [W.gz.signal; S.gz.signal];
 
-    tic = tic + S.duration;
+    W.SSP.signal = [W.SSP.signal; S.SSP.signal];
 
-    W.rf.t = [W.rf.t; tic]; W.rf.signal = [W.rf.signal; 0];
-    W.gx.t = [W.gx.t; tic]; W.gx.signal = [W.gx.signal; 0];
-    W.gy.t = [W.gy.t; tic]; W.gy.signal = [W.gy.signal; 0];
-    W.gz.t = [W.gz.t; tic]; W.gz.signal = [W.gz.signal; 0];
+    tic = tic + S.duration;
 
     n = n + ceq.segments(i).nBlocksInSegment;
 end
@@ -51,8 +47,6 @@ subplot(5,1,1);
 ax{1} = gca;
 plot([0; W.rf.t; duration], [0; abs(W.rf.signal); 0], 'black.');
 ylabel('RF (Gauss)'); % ylim([0 1.1]);
-%set(gca, 'color', bgColor);  
-%set(gca, 'XTick', []);
 
 subplot(5,1,2);
 ax{2} = gca;
