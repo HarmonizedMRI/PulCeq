@@ -1,4 +1,4 @@
-function S = getsegment(ceq, i, sys, L, plotSegment)  % blockIDs, parentBlocks, sys, plotSegment)
+function S = getsegmentinstance(ceq, i, sys, L, plotSegment)  % blockIDs, parentBlocks, sys, plotSegment)
 %
 % Inputs:
 %   ceq     struct                      Ceq sequence object
@@ -8,7 +8,8 @@ function S = getsegment(ceq, i, sys, L, plotSegment)  % blockIDs, parentBlocks, 
 %
 % Output:
 % S               struct containing segment sequencer waveforms:
-%   S.rf          RF waveform samples and times (amplitude normalized to 1)
+%   S.rf          RF waveform samples (Gauss) and times (sec)
+%   S.gx/gy/gz    Gradient waveform samples (Gauss/cm) and times (sec)
 %   S.SSP         A somewhat loose representation of the hardware instruction signals
 %                 on the SSP bus. SSP is represented here as a waveform on 4us raster,
 %                 with amplitude HI...
@@ -16,7 +17,6 @@ function S = getsegment(ceq, i, sys, L, plotSegment)  % blockIDs, parentBlocks, 
 %                  - at the start of soft delay blocks.
 %                 The important thing here is that SSP instructions from different
 %                 RF/ADC/soft delay events cannot overlap.
-%   S.gx/gy/gz    Gradient waveform samples and times (amplitude normalized to 1)
 
 if ischar(ceq)
     sub_test();
@@ -162,13 +162,13 @@ clear ax
 subplot(5,1,1);
 ax{1} = gca;
 plot([0; S.rf.t; S.duration], [0; abs(S.rf.signal); 0], 'black-');
-ylabel('RF (a.u.)');  ylim([0 1.1]);
+ylabel('RF (Gauss)'); % ylim([0 1.1]);
 
 subplot(5,1,2);
 ax{2} = gca;
 n = round(S.duration/sys.GRAD_UPDATE_TIME);
 plot(((1:n)-0.5)*sys.GRAD_UPDATE_TIME, S.SSP.signal, 'b.');
-ylabel('SSP (a.u.)');  ylim([0 1.1]);
+ylabel('SSP (a.u.)');  ylim([0 1.2]);
 
 sp = 3;
 cols = 'rgb';
@@ -177,8 +177,8 @@ for d = {'gx','gy','gz'}
     subplot(5,1,sp);
     ax{sp} = gca;
     plot([0; S.(d{1}).t; S.duration], [0; S.(d{1}).signal; 0], [cols(sp-2) '.-']);
-    ylabel([d ' (a.u.)']);
-    ylim([-1.2 1.2]);
+    ylabel([d ' (G/cm)']);
+    ylim(sys.g_max*1.05*[-1 1]);
     sp = sp + 1;
 end
 xlabel('time (sec)');
