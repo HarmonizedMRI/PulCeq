@@ -1,22 +1,22 @@
 function S = getsegmentinstance(ceq, i, sys, L, plotSegment)  % blockIDs, parentBlocks, sys, plotSegment)
 %
 % Inputs:
-%   ceq     struct                      Ceq sequence object
-%   i       [1] int                     segment ID     
-%   sys     struct                      See pge2.getsys()
-%   L       [nBlocksInSegment 23]       Dynamic scan loop settings (rows from ceq.loop array)
+%   ceq      struct                                    Ceq sequence object
+%   i        [1] int                                   Segment ID     
+%   sys      struct                                    See pge2.getsys()
+%   L        [nBlocksInSegment size(ceq.loop,2)]       Dynamic scan loop settings (rows from ceq.loop array)
 %
 % Output:
-% S               struct containing segment sequencer waveforms:
-%   S.rf          RF waveform samples (Gauss) and times (sec)
-%   S.gx/gy/gz    Gradient waveform samples (Gauss/cm) and times (sec)
-%   S.SSP         A somewhat loose representation of the hardware instruction signals
-%                 on the SSP bus. SSP is represented here as a waveform on 4us raster,
-%                 with amplitude HI...
-%                  - during RF and ADC events, including the dead and ringdown intervals, and
-%                  - at the start of soft delay blocks.
-%                 The important thing here is that SSP instructions from different
-%                 RF/ADC/soft delay events cannot overlap.
+%   S               struct containing segment sequencer waveforms:
+%     S.rf          RF waveform samples (Gauss) and times (sec)
+%     S.gx/gy/gz    Gradient waveform samples (Gauss/cm) and times (sec)
+%     S.SSP         A somewhat loose representation of the hardware instruction signals
+%                   on the SSP bus. SSP is represented here as a waveform on 4us raster,
+%                   with amplitude HI...
+%                    - during RF and ADC events, including the dead and ringdown intervals, and
+%                    - at the start of soft delay blocks.
+%                   The important thing here is that SSP instructions from different
+%                   RF/ADC/soft delay events cannot overlap.
 
 if ischar(ceq)
     sub_test();
@@ -33,11 +33,12 @@ parentBlocks = ceq.parentBlocks;
 assert(length(blockIDs) == size(L,1), 'size(L,1) must be equal to number of blocks in segment');
 
 % Get segment duration
-S.duration = 0;
+S.duration = sys.segment_dead_time;
 for j = 1:length(blockIDs)
     p = blockIDs(j);  % parent block index
     S.duration = S.duration + L(j, 13);
 end
+S.duration = S.duration + sys.segment_ringdown_time;
 
 % Initialize SSP waveform
 % SSP set to HI just means that some hardware instruction is being transmitted
@@ -46,6 +47,7 @@ HI = 1;
 LO = 0;
 n = round(S.duration/sys.GRAD_UPDATE_TIME);
 S.SSP.signal = LO*ones(n,1);
+S.SSP.signal(1:3) = HI;    % segment dead time
 
 % initialize waveforms
 S.rf.signal = [];
@@ -56,7 +58,7 @@ for ax = {'gx','gy','gz'}
 end
 
 % build segment in the same way the interpreter does it
-tic = 0;      % running time counter marking block boundary
+tic = sys.segment_dead_time;      % running time counter marking block boundary
 
 for j = 1:length(blockIDs)
     p = blockIDs(j);  % parent block index
@@ -65,10 +67,13 @@ for j = 1:length(blockIDs)
     msg1 = sprintf('block %d of %d (parent block %d; block start time %.e s)', j, length(blockIDs), p, tic);
 
     if p == 0  % soft delay block
+        % soft delay block requires a 4us SSP pulse
         n1 = tic/sys.GRAD_UPDATE_TIME + 1;
         n2 = n1 + L(j,13)/sys.GRAD_UPDATE_TIME;
         S.SSP.signal(round(n1:(n1+1))) = [HI; LO];
-        tic = tic + L(j,13);
+
+        % update time counter (block boundary)
+        tic = tic + L(j,13);   % sec
         continue;
     end
 
@@ -79,6 +84,7 @@ for j = 1:length(blockIDs)
         throw(MException('block:duration', sprintf('%s: Parent block duration not on sys.GRAD_UPDATE_TIME boundary', msg1))); 
     end
 
+    % RF
     if ~isempty(b.rf)
         % get raster time. Assume arbitrary waveform for now. TODO: support ext trap rf
         raster = diff(b.rf.t);
@@ -86,7 +92,7 @@ for j = 1:length(blockIDs)
 
         % time samples and waveform
         S.rf.t = [S.rf.t; tic + sys.psd_rf_wait + b.rf.delay + b.rf.t]; % + raster/2];
-        S.rf.signal = [S.rf.signal; b.rf.signal/max(abs(b.rf.signal))*L(j,3)];  % amplitude in Gauss
+        S.rf.signal = [S.rf.signal; b.rf.signal/max(abs(b.rf.signal))*L(j,3)/sys.gamma];  % amplitude in Gauss
 
         % SSP pulses
         n1 = (tic + sys.psd_rf_wait + b.rf.delay - sys.rf_dead_time)/sys.GRAD_UPDATE_TIME + 1;
@@ -103,6 +109,7 @@ for j = 1:length(blockIDs)
         S.SSP.signal(round(n1:n2)) = S.SSP.signal(round(n1:n2)) + HI;
     end
 
+    % ADC (SSP pulses)
     if ~isempty(b.adc)
         n1 = (tic + sys.psd_grd_wait + b.adc.delay - sys.adc_dead_time)/sys.GRAD_UPDATE_TIME + 1;
         n2 = (tic + sys.psd_grd_wait + b.adc.delay + b.adc.dwell*b.adc.numSamples + sys.adc_ringdown_time)/sys.GRAD_UPDATE_TIME;
@@ -118,6 +125,7 @@ for j = 1:length(blockIDs)
         S.SSP.signal(round(n1:n2)) = S.SSP.signal(round(n1:n2)) + HI;
     end
 
+    % Gradients
     ax = {'gx','gy','gz'};
     grad_amp_indeces = [6 8 10];
     for iax = 1:3
@@ -136,11 +144,12 @@ for j = 1:length(blockIDs)
                 tt = g.tt;
                 wav = g.waveform/max(abs(g.waveform));  % normalized amplitude
             end
-            wav = L(j,grad_amp_indeces(iax)) * wav;  % Gauss/cm
 
-            % append waveform
-            S.(ax{1}).t = [S.(ax{1}).t; tic + g.delay + tt];
-            S.(ax{1}).signal = [S.(ax{1}).signal; wav];
+            wav = L(j,grad_amp_indeces(iax)) / sys.gamma / 100 * wav;  % Gauss/cm
+
+            % append to running waveform
+            S.(ax{iax}).t = [S.(ax{iax}).t; tic + g.delay + tt];
+            S.(ax{iax}).signal = [S.(ax{iax}).signal; wav];
         end
     end
 
@@ -161,8 +170,10 @@ clear ax
 
 subplot(5,1,1);
 ax{1} = gca;
-plot([0; S.rf.t; S.duration], [0; abs(S.rf.signal); 0], 'black-');
+plot([0; S.rf.t; S.duration], [0; abs(S.rf.signal); 0], 'black.');
 ylabel('RF (Gauss)'); % ylim([0 1.1]);
+%set(gca, 'color', bgColor);  
+%set(gca, 'XTick', []);
 
 subplot(5,1,2);
 ax{2} = gca;
