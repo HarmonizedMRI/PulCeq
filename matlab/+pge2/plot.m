@@ -79,7 +79,7 @@ subplot(5,1,2);
 ax{2} = gca;
 n = round(duration/sys.GRAD_UPDATE_TIME);
 plot(tStart + ((1:length(W.SSP.signal))-0.5)*sys.GRAD_UPDATE_TIME, W.SSP.signal, 'b.');
-ylabel('SSP (a.u.)');  ylim([0 1.2]);
+ylabel('SSP (a.u.)');  ylim([0 1.2*max(W.SSP.signal)]);
 
 sp = 3;
 cols = 'rgb';
