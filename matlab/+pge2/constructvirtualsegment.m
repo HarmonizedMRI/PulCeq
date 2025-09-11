@@ -57,9 +57,8 @@ for j = 1:length(blockIDs)
     msg1 = sprintf('block %d (parent block %d; block start time %.e s)', j, p, tic);
 
     if p == 0  % pure delay block
-        n1 = tic/sys.GRAD_UPDATE_TIME + 1;
-        n2 = n1 + 1;
-        S.SSP.signal(round(n1:n2)) = [HI; LO];
+        n1 = round(tic/sys.GRAD_UPDATE_TIME) + 1;
+        S.SSP.signal(n1) = S.SSP.signal(n1) + HI;
         tic = tic + 8e-6;
         for ax = {'gx','gy','gz'}
             S.(ax{1}).slew.normalized.peak(j) = 0;
@@ -147,7 +146,7 @@ for j = 1:length(blockIDs)
 
     tic = tic + b.blockDuration;
 
-    % Check for overlapping SSP messages
+    % Check for overlapping SSP signals
     if any(S.SSP.signal > 1.5*HI)
         throw(MException('SSP:overlap', sprintf('%s: SSP messages overlap. Try increasing the separation between RF events, ADC events, and pure delay blocks.', msg1)));
     end

@@ -78,9 +78,9 @@ for j = 1:length(blockIDs)
 
     if p == 0  % soft delay block
         % soft delay block requires a 4us SSP pulse
-        n1 = tic/sys.GRAD_UPDATE_TIME + 1;
+        n1 = round(tic/sys.GRAD_UPDATE_TIME) + 1;
+        S.SSP.signal(n1) = S.SSP.signal(n1) + HI;
         n2 = n1 + L(j,13)/sys.GRAD_UPDATE_TIME;
-        S.SSP.signal(round(n1:(n1+1))) = [HI; LO];
 
         % update time counter (block boundary)
         tic = tic + L(j,13);   % sec
