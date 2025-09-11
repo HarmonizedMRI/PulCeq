@@ -80,7 +80,6 @@ for j = 1:length(blockIDs)
         % soft delay block requires a 4us SSP pulse
         n1 = round(tic/sys.GRAD_UPDATE_TIME) + 1;
         S.SSP.signal(n1) = S.SSP.signal(n1) + HI;
-        n2 = n1 + L(j,13)/sys.GRAD_UPDATE_TIME;
 
         % update time counter (block boundary)
         tic = tic + L(j,13);   % sec
@@ -167,7 +166,8 @@ for j = 1:length(blockIDs)
 
     % Check for overlapping SSP messages
     if any(S.SSP.signal > 1.5*HI)
-        throw(MException('SSP:overlap', sprintf('%s: SSP messages overlap. Try increasing the separation between RF events, ADC events, and soft delay blocks.', msg1)));
+        warning(sprintf('%s: SSP messages overlap. Try increasing the separation between RF events, ADC events, and soft delay blocks.', msg1));
+%        throw(MException('SSP:overlap', sprintf('%s: SSP messages overlap. Try increasing the separation between RF events, ADC events, and soft delay blocks.', msg1)));
     end
 end
 
