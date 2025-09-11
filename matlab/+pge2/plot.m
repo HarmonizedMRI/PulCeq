@@ -13,6 +13,10 @@ arg = vararg_pair(arg, varargin);   % in ../
 % get waveforms
 W.SSP.signal = [];
 tStart = 0;  % start of plot
+W.rf.t = 0; W.rf.signal = 0;
+W.gx.t = 0; W.gx.signal = 0;
+W.gy.t = 0; W.gy.signal = 0;
+W.gz.t = 0; W.gz.signal = 0;
 
 n = 1;    % row counter in ceq.loop
 tic = 0;  % running timer marking start of segment instances
