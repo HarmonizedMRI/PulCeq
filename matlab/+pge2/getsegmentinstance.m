@@ -1,47 +1,65 @@
-function S = constructvirtualsegment(blockIDs, parentBlocks, sys, plotSegment)
+function S = getsegmentinstance(ceq, i, sys, L, varargin)
+% function S = getsegmentinstance(ceq, i, sys, L)
 %
 % Inputs:
-%   blockIDS       ceq.segments(i).blockIDs
-%   parentBlocks   ceq.parentBlocks
-%   sys            See pge2.getsys()
-%  
+%   ceq      struct                                    Ceq sequence object
+%   i        [1] int                                   Segment ID     
+%   sys      struct                                    See pge2.getsys()
+%   L        [nBlocksInSegment size(ceq.loop,2)]       Dynamic scan loop settings (rows from ceq.loop array)
+%
+% Input options:
+%   'plot'           true/false
+%   'durationOnly'   true/false     If true, S only contains duration field
+%
 % Output:
-% S               struct containing segment sequencer waveforms:
-%   S.rf          RF waveform samples and times (amplitude normalized to 1)
-%   S.SSP         A somewhat loose representation of the hardware instruction signals
-%                 on the SSP bus. SSP is represented here as a waveform on 4us raster,
-%                 with amplitude HI...
-%                  - during RF and ADC events, including the dead and ringdown intervals, and
-%                  - at the start of pure delay blocks.
-%                 The important thing here is that SSP instructions from different
-%                 RF/ADC/pure delay events cannot overlap.
-%   S.gx/gy/gz    Gradient waveform samples and times (amplitude normalized to 1)
+%   S               struct containing segment sequencer waveforms:
+%     S.rf          RF waveform samples (Gauss) and times (sec)
+%     S.gx/gy/gz    Gradient waveform samples (Gauss/cm) and times (sec)
+%     S.SSP         A somewhat loose representation of the hardware instruction signals
+%                   on the SSP bus. SSP is represented here as a waveform on 4us raster,
+%                   with amplitude HI...
+%                    - during RF and ADC events, including the dead and ringdown intervals, and
+%                    - at the start of soft delay blocks.
+%                   The important thing here is that SSP instructions from different
+%                   RF/ADC/soft delay events cannot overlap.
+%     S.duration    sec
 
-if nargin < 4
-    plotSegment = false;
-end
+arg.plot = false;
+arg.durationOnly = false;
+
+arg = vararg_pair(arg, varargin);   % in ../
+
+%if ischar(ceq)
+%    sub_test();
+%    return;
+%end
+
+blockIDs = ceq.segments(i).blockIDs;
+parentBlocks = ceq.parentBlocks;
+
+assert(length(blockIDs) == size(L,1), 'size(L,1) must be equal to number of blocks in segment');
 
 % Get segment duration
-S.duration = 0;
+S.duration = sys.segment_dead_time;
 for j = 1:length(blockIDs)
     p = blockIDs(j);  % parent block index
-    if p == 0  % pure delay block
-        S.duration = S.duration + 8e-6;
-    else
-        S.duration = S.duration + parentBlocks(p).block.blockDuration;
-        r(j) = rem(parentBlocks(p).block.blockDuration, sys.GRAD_UPDATE_TIME);
-    end
+    S.duration = S.duration + L(j, 13);
+end
+S.duration = S.duration + sys.segment_ringdown_time;
+if arg.durationOnly
+    return;
 end
 
 % Initialize SSP waveform
 % SSP set to HI just means that some hardware instruction is being transmitted
-% in connection with an RF event, ADC event, or pure delay block.
+% in connection with an RF event, ADC event, or soft delay block.
 HI = 1;              
 LO = 0;
 n = round(S.duration/sys.GRAD_UPDATE_TIME);
 S.SSP.signal = LO*ones(n,1);
+S.SSP.signal(1:3) = HI;    % segment dead time
 
-% Construct segment waveforms
+% initialize waveforms
 S.rf.signal = [];
 S.rf.t = [];       
 for ax = {'gx','gy','gz'}
@@ -49,20 +67,22 @@ for ax = {'gx','gy','gz'}
     S.(ax{1}).t = [];
 end
 
-tic = 0;          % running time counter marking block boundary
+% build segment in the same way the interpreter does it
+tic = sys.segment_dead_time;      % running time counter marking block boundary
 
 for j = 1:length(blockIDs)
     p = blockIDs(j);  % parent block index
+    assert(p == L(j, 2), 'parent block index in L does not match block specified in segment definition');
 
-    msg1 = sprintf('block %d (parent block %d; block start time %.e s)', j, p, tic);
+    msg1 = sprintf('block %d of %d (parent block %d; block start time %.e s)', j, length(blockIDs), p, tic);
 
-    if p == 0  % pure delay block
+    if p == 0  % soft delay block
+        % soft delay block requires a 4us SSP pulse
         n1 = round(tic/sys.GRAD_UPDATE_TIME) + 1;
         S.SSP.signal(n1) = S.SSP.signal(n1) + HI;
-        tic = tic + 8e-6;
-        for ax = {'gx','gy','gz'}
-            S.(ax{1}).slew.normalized.peak(j) = 0;
-        end
+
+        % update time counter (block boundary)
+        tic = tic + L(j,13);   % sec
         continue;
     end
 
@@ -73,13 +93,17 @@ for j = 1:length(blockIDs)
         throw(MException('block:duration', sprintf('%s: Parent block duration not on sys.GRAD_UPDATE_TIME boundary', msg1))); 
     end
 
+    % RF
     if ~isempty(b.rf)
         % get raster time. Assume arbitrary waveform for now. TODO: support ext trap rf
         raster = diff(b.rf.t);
         raster = round(raster(1)/sys.RF_UPDATE_TIME)*sys.RF_UPDATE_TIME;
-        S.rf.t = [S.rf.t; tic + sys.psd_rf_wait + b.rf.delay + b.rf.t + raster/2];
-        S.rf.signal = [S.rf.signal; b.rf.signal/max(abs(b.rf.signal))];
 
+        % time samples and waveform
+        S.rf.t = [S.rf.t; tic + sys.psd_rf_wait + b.rf.delay + b.rf.t]; % + raster/2];
+        S.rf.signal = [S.rf.signal; b.rf.signal/max(abs(b.rf.signal))*L(j,3)/sys.gamma];  % amplitude in Gauss
+
+        % SSP pulses
         n1 = (tic + sys.psd_rf_wait + b.rf.delay - sys.rf_dead_time)/sys.GRAD_UPDATE_TIME + 1;
         n2 = (tic + sys.psd_rf_wait + b.rf.delay + b.rf.t(end) + raster/2 + sys.rf_ringdown_time)/sys.GRAD_UPDATE_TIME;
         if abs(n1 - abs(n1)) > 1e-7 
@@ -94,6 +118,7 @@ for j = 1:length(blockIDs)
         S.SSP.signal(round(n1:n2)) = S.SSP.signal(round(n1:n2)) + HI;
     end
 
+    % ADC (SSP pulses)
     if ~isempty(b.adc)
         n1 = (tic + sys.psd_grd_wait + b.adc.delay - sys.adc_dead_time)/sys.GRAD_UPDATE_TIME + 1;
         n2 = (tic + sys.psd_grd_wait + b.adc.delay + b.adc.dwell*b.adc.numSamples + sys.adc_ringdown_time)/sys.GRAD_UPDATE_TIME;
@@ -109,50 +134,44 @@ for j = 1:length(blockIDs)
         S.SSP.signal(round(n1:n2)) = S.SSP.signal(round(n1:n2)) + HI;
     end
 
-    for ax = {'gx','gy','gz'}
-        g = b.(ax{1});
+    % Gradients
+    ax = {'gx','gy','gz'};
+    grad_amp_indeces = [6 8 10];
+    for iax = 1:3
+        g = b.(ax{iax});
         if ~isempty(g)
             if strcmp(g.type, 'trap');
-                tt = [0 g.riseTime g.riseTime+g.flatTime g.riseTime+g.flatTime+g.fallTime]';
-                wav = [0; 1; 1; 0]; % normalized amplitude
+                if g.flatTime > eps
+                    tt = [0 g.riseTime g.riseTime+g.flatTime g.riseTime+g.flatTime+g.fallTime]';
+                    wav = [0; 1; 1; 0]; % normalized amplitude
+                else
+                    tt = [0 g.riseTime g.riseTime+g.fallTime]';
+                    wav = [0; 1; 0]; % normalized amplitude
+                end
             else
                 % arbitrary gradient or extended trapezoid
                 tt = g.tt;
-                wav = g.waveform/max(abs(g.waveform));    % normalized waveform
-
-                % If j==1, or previous block is a pure delay block, gradient must start near zero
-                %max_delta_g_per_sample = sys.slew_max*sys.GRAD_UPDATE_TIME*1e3;
-                %if abs(S.(ax{1}).signal(1)) > max_delta_g_per_sample
-                %    throw(MException('grad:start', sprintf('%s: Gradients must be (near) zero at start of segment.', msg1)));
-                %end
-
-                % If j==length(blockIDs) or next block is a pure delay block, gradient must end near zero
-                %if abs(S.(ax{1}).signal(end)) > max_delta_g_per_sample
-                %    throw(MException('grad:end', sprintf('%s: Gradients must be (near) zero at end of segment.', msg1)));
-                %end
+                wav = g.waveform/max(abs(g.waveform));  % normalized amplitude
             end
 
-            % append waveform
-            S.(ax{1}).t = [S.(ax{1}).t; tic + g.delay + tt];
-            S.(ax{1}).signal = [S.(ax{1}).signal; wav];
+            wav = L(j,grad_amp_indeces(iax)) / sys.gamma / 100 * wav;  % Gauss/cm
 
-            % calculate peak normalized slew rate
-            slew = diff(wav)./diff(tt);
-            S.(ax{1}).slew.normalized.peak(j) = max(abs(slew));
-        else
-            S.(ax{1}).slew.normalized.peak(j) = 0;
+            % append to running waveform
+            S.(ax{iax}).t = [S.(ax{iax}).t; tic + g.delay + tt];
+            S.(ax{iax}).signal = [S.(ax{iax}).signal; wav];
         end
     end
 
     tic = tic + b.blockDuration;
 
-    % Check for overlapping SSP signals
+    % Check for overlapping SSP messages
     if any(S.SSP.signal > 1.5*HI)
-        throw(MException('SSP:overlap', sprintf('%s: SSP messages overlap. Try increasing the separation between RF events, ADC events, and pure delay blocks.', msg1)));
+        warning(sprintf('%s: SSP messages overlap. Try increasing the separation between RF events, ADC events, and soft delay blocks.', msg1));
+%        throw(MException('SSP:overlap', sprintf('%s: SSP messages overlap. Try increasing the separation between RF events, ADC events, and soft delay blocks.', msg1)));
     end
 end
 
-if ~plotSegment
+if ~arg.plot
     return;
 end
 
@@ -161,14 +180,16 @@ clear ax
 
 subplot(5,1,1);
 ax{1} = gca;
-plot([0; S.rf.t; S.duration], [0; abs(S.rf.signal); 0], 'black-');
-ylabel('RF (a.u.)');  ylim([0 1.1]);
+plot([0; S.rf.t; S.duration], [0; abs(S.rf.signal); 0], 'black.');
+ylabel('RF (Gauss)'); % ylim([0 1.1]);
+%set(gca, 'color', bgColor);  
+%set(gca, 'XTick', []);
 
 subplot(5,1,2);
 ax{2} = gca;
 n = round(S.duration/sys.GRAD_UPDATE_TIME);
 plot(((1:n)-0.5)*sys.GRAD_UPDATE_TIME, S.SSP.signal, 'b.');
-ylabel('SSP (a.u.)');  ylim([0 1.1]);
+ylabel('SSP (a.u.)');  ylim([0 1.2]);
 
 sp = 3;
 cols = 'rgb';
@@ -177,8 +198,8 @@ for d = {'gx','gy','gz'}
     subplot(5,1,sp);
     ax{sp} = gca;
     plot([0; S.(d{1}).t; S.duration], [0; S.(d{1}).signal; 0], [cols(sp-2) '.-']);
-    ylabel([d ' (a.u.)']);
-    ylim([-1.2 1.2]);
+    ylabel([d ' (G/cm)']);
+    ylim(sys.g_max*1.05*[-1 1]);
     sp = sp + 1;
 end
 xlabel('time (sec)');
@@ -225,4 +246,5 @@ t.Padding = 'none';
 
 linkaxes([ax1 ax2 ax3 ax4 ax5], 'x');  % common zoom setting (along time axis) for all tiles
 
+return
 

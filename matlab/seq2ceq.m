@@ -20,7 +20,7 @@ function ceq = seq2ceq(seqarg, varargin)
 
 GAM = 4257.6;   % Hz/Gauss
 
-minDelayBlockDuration = 20e-6 + 100*eps; 
+minDelayBlockDuration = 4e-6 - 100*eps; 
 
 %% parse inputs
 
@@ -101,7 +101,6 @@ end
 %% Also fill in the sequence of parent blocks for each segment.
 %% Pure delay blocks are assigned parent block ID = 0
 
-ceq.parentBlocks(1).row = -1;
 ceq.nParentBlocks = 0;
 
 for i = 1:ceq.nSegments
@@ -113,21 +112,10 @@ for i = 1:ceq.nSegments
         b = seq.getBlock(n);
         T = getblocktype(b);
 
-        % Skip blocks with "zero" duration, defined as 20us or less
-        if b.blockDuration < minDelayBlockDuration
-            continue;
-        end
-
-        % The first non-zero block is a parent block by definition.
-        % This can be a pure delay block, or a block with rf/gradient/adc events.
-        if ceq.parentBlocks(1).row == -1
-            ceq.nParentBlocks = ceq.nParentBlocks + 1;
-            ceq.parentBlocks(ceq.nParentBlocks).row = n;
-            ceq.parentBlocks(ceq.nParentBlocks).block = b;
-            ceq.parentBlocks(ceq.nParentBlocks).block.ID = ceq.nParentBlocks;
-            ceq.segments(i).blockIDs(j) = ceq.nParentBlocks;
-            continue;
-        end
+        % Skip blocks with "zero" duration, defined as < 4us 
+        %if b.blockDuration < minDelayBlockDuration
+        %    continue;
+        %end
 
         % If pure delay block, assign parent block 0 and continue to next row
         if T(4)
@@ -164,7 +152,6 @@ for p = 1:ceq.nParentBlocks
     ceq.parentBlocks(p).ID = p;
 end
 
-
 %% Get dynamic scan information, including cardiac trigger
 %% and gradient rotation.
 %% NB! The last block with non-identity rotation in a segment 
@@ -197,8 +184,11 @@ while n < ceq.nMax + 1
         % get cardiac trigger
         T = getblocktype(b);
         physioTrigger = T(3);
-
+        try
         p = ceq.segments(i).blockIDs(j);  % parent block index
+        catch
+        keyboard
+        end
 
 
         if p == 0  % pure delay block
