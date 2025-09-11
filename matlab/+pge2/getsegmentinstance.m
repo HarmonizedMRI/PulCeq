@@ -1,10 +1,15 @@
-function S = getsegmentinstance(ceq, i, sys, L, plotSegment)  % blockIDs, parentBlocks, sys, plotSegment)
+function S = getsegmentinstance(ceq, i, sys, L, varargin)
+% function S = getsegmentinstance(ceq, i, sys, L)
 %
 % Inputs:
 %   ceq      struct                                    Ceq sequence object
 %   i        [1] int                                   Segment ID     
 %   sys      struct                                    See pge2.getsys()
 %   L        [nBlocksInSegment size(ceq.loop,2)]       Dynamic scan loop settings (rows from ceq.loop array)
+%
+% Input options:
+%   'plot'           true/false
+%   'durationOnly'   true/false     If true, S only contains duration field
 %
 % Output:
 %   S               struct containing segment sequencer waveforms:
@@ -17,15 +22,17 @@ function S = getsegmentinstance(ceq, i, sys, L, plotSegment)  % blockIDs, parent
 %                    - at the start of soft delay blocks.
 %                   The important thing here is that SSP instructions from different
 %                   RF/ADC/soft delay events cannot overlap.
+%     S.duration    sec
 
-if ischar(ceq)
-    sub_test();
-    return;
-end
+arg.plot = false;
+arg.durationOnly = false;
 
-if nargin < 5
-    plotSegment = false;
-end
+arg = vararg_pair(arg, varargin);   % in ../
+
+%if ischar(ceq)
+%    sub_test();
+%    return;
+%end
 
 blockIDs = ceq.segments(i).blockIDs;
 parentBlocks = ceq.parentBlocks;
@@ -39,6 +46,9 @@ for j = 1:length(blockIDs)
     S.duration = S.duration + L(j, 13);
 end
 S.duration = S.duration + sys.segment_ringdown_time;
+if arg.durationOnly
+    return;
+end
 
 % Initialize SSP waveform
 % SSP set to HI just means that some hardware instruction is being transmitted
@@ -161,7 +171,7 @@ for j = 1:length(blockIDs)
     end
 end
 
-if ~plotSegment
+if ~arg.plot
     return;
 end
 
@@ -238,9 +248,3 @@ linkaxes([ax1 ax2 ax3 ax4 ax5], 'x');  % common zoom setting (along time axis) f
 
 return
 
-
-function sub_test
-
-'hi'
-
-return
