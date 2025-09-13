@@ -1,4 +1,4 @@
-function plot(ceq, sys, varargin)
+function W = plot(ceq, sys, varargin)
 %
 % Plot Ceq sequence object
 %
@@ -68,6 +68,14 @@ while n < ceq.nMax & tic - eps < min(ceq.duration, arg.timeRange(2))
 end
 
 duration = tic;
+
+% Remove duplicate gradient samples (extended trapezoids can start/end on block boundary)
+[W.gx.t, ia] = unique(W.gx.t);
+W.gx.signal = W.gx.signal(ia);
+[W.gy.t, ia] = unique(W.gy.t);
+W.gy.signal = W.gy.signal(ia);
+[W.gz.t, ia] = unique(W.gz.t);
+W.gz.signal = W.gz.signal(ia);
 
 % plot
 subplot(5,1,1);
