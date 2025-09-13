@@ -22,30 +22,27 @@ function S = getsegmentinstance(ceq, i, sys, L, varargin)
 %                    - at the start of soft delay blocks.
 %                   The important thing here is that SSP instructions from different
 %                   RF/ADC/soft delay events cannot overlap.
-%     S.duration    sec
+%     
+%     S.duration    sec. Includes sys.dead_time and sys.segment_ringdown_time
 
 arg.plot = false;
 arg.durationOnly = false;
 
 arg = vararg_pair(arg, varargin);   % in ../
 
-%if ischar(ceq)
-%    sub_test();
-%    return;
-%end
-
 blockIDs = ceq.segments(i).blockIDs;
 parentBlocks = ceq.parentBlocks;
 
 assert(length(blockIDs) == size(L,1), 'size(L,1) must be equal to number of blocks in segment');
 
-% Get segment duration
-S.duration = sys.segment_dead_time;
+% Get segment duration and block boundaries
+tic = sys.segment_dead_time;      % running time counter marking block boundary
 for j = 1:length(blockIDs)
-    p = blockIDs(j);  % parent block index
-    S.duration = S.duration + L(j, 13);
+    S.tic(j) = tic;
+    tic = tic + L(j, 13);
 end
-S.duration = S.duration + sys.segment_ringdown_time;
+S.tic(end+1) = tic;
+S.duration = tic + sys.segment_ringdown_time;
 if arg.durationOnly
     return;
 end
@@ -213,46 +210,4 @@ end
 xlabel('time (sec)');
 
 linkaxes([ax{1} ax{2} ax{3} ax{4} ax{5}], 'x');  % common zoom setting (along time axis) for all tiles
-
-return
-
-lw = 1;
-bgColor = 'k';
-
-figure;
-t = tiledlayout(5, 1);
-ax1 = nexttile;
-plot([0; S.gx.t; S.duration], [0; S.gx.signal; 0], '-y', 'LineWidth', lw);
-ylabel('gx (a.u.)');  ylim([-1.2 1.2]);
-set(gca, 'color', bgColor);  set(gca, 'XTick', []);
-
-ax2 = nexttile;
-plot([0; S.gy.t; S.duration], [0; S.gy.signal; 0], '-c', 'LineWidth', lw);
-ylabel('gx (a.u.)');  ylim([-1.2 1.2]);
-set(gca, 'color', bgColor);  set(gca, 'XTick', []);
-
-ax3 = nexttile;
-plot([0; S.gz.t; S.duration], [0; S.gz.signal; 0], '-m', 'LineWidth', lw);
-ylabel('gx (a.u.)');  ylim([-1.2 1.2]);
-set(gca, 'color', bgColor);  set(gca, 'XTick', []);
-
-ax4 = nexttile;
-plot([0; S.rf.t; S.duration], [0; abs(S.rf.signal); 0], '-r', 'LineWidth', lw);
-ylabel('RF (a.u.)');  ylim([0 1.2]);
-set(gca, 'color', bgColor);  set(gca, 'XTick', []);
-
-ax5 = nexttile;
-n = round(S.duration/sys.GRAD_UPDATE_TIME);
-plot(((1:n)-0.5)*sys.GRAD_UPDATE_TIME, S.SSP.signal, '.b');
-ylabel('SSP (a.u.)');  ylim([0 1.1]);
-%plot(T, th, '-g', 'LineWidth', lw);  ylabel('∠b1 (rad)'); axis([T(1) Tend -1.1*pi 1.1*pi]);
-set(gca, 'color', bgColor);
-xlabel('time (sec)');
-
-t.TileSpacing = 'none';
-t.Padding = 'none';
-
-linkaxes([ax1 ax2 ax3 ax4 ax5], 'x');  % common zoom setting (along time axis) for all tiles
-
-return
 

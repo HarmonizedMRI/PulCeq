@@ -12,6 +12,7 @@ arg = vararg_pair(arg, varargin);   % in ../
 
 % get waveforms
 W.SSP.signal = [];
+W.tic = [];  % block boundary times
 tStart = 0;  % start of plot
 W.rf.t = 0; W.rf.signal = 0;
 W.gx.t = 0; W.gx.signal = 0;
@@ -19,7 +20,7 @@ W.gy.t = 0; W.gy.signal = 0;
 W.gz.t = 0; W.gz.signal = 0;
 
 n = 1;    % row counter in ceq.loop
-tic = 0;  % running timer marking start of segment instances
+tic = 0;  % running timer marking start of segment instance (sec)
 while n < ceq.nMax & tic - eps < min(ceq.duration, arg.timeRange(2))
     % get segment index and dynamic (scan loop) information
     i = ceq.loop(n,1);  % segment index
@@ -51,6 +52,8 @@ while n < ceq.nMax & tic - eps < min(ceq.duration, arg.timeRange(2))
         fprintf('Error (n = %d, i = %d): %s\n', n, i, ME.message);
     end
 
+    W.tic = [W.tic(:); tic + S.tic(:)];
+
     W.rf.t = [W.rf.t; tic + S.rf.t];
     W.gx.t = [W.gx.t; tic + S.gx.t];
     W.gy.t = [W.gy.t; tic + S.gy.t];
@@ -64,6 +67,7 @@ while n < ceq.nMax & tic - eps < min(ceq.duration, arg.timeRange(2))
     W.SSP.signal = [W.SSP.signal; S.SSP.signal];
 
     tic = tic + S.duration;
+
     n = n + ceq.segments(i).nBlocksInSegment;
 end
 
@@ -80,27 +84,35 @@ W.gz.signal = W.gz.signal(ia);
 % plot
 subplot(5,1,1);
 ax{1} = gca;
-plot([W.rf.t; duration], [abs(W.rf.signal); 0], 'black.');
+%plot([W.rf.t; duration], [abs(W.rf.signal); 0], 'black.');
+plot(W.rf.t, abs(W.rf.signal), 'black.');
 ylabel('RF (Gauss)'); % ylim([0 1.1]);
+sub_plotblockboundary(W.tic, max(abs(W.rf.signal)));
 
 subplot(5,1,2);
 ax{2} = gca;
 n = round(duration/sys.GRAD_UPDATE_TIME);
 plot(tStart + ((1:length(W.SSP.signal))-0.5)*sys.GRAD_UPDATE_TIME, W.SSP.signal, 'b.');
 ylabel('SSP (a.u.)');  ylim([0 1.2*max(W.SSP.signal)]);
+sub_plotblockboundary(W.tic, max(abs(W.SSP.signal)));
 
 sp = 3;
 cols = 'rgb';
-
-for d = {'gx','gy','gz'}
+for g = {'gx','gy','gz'}
     subplot(5,1,sp);
     ax{sp} = gca;
-    plot([W.(d{1}).t; duration], [W.(d{1}).signal; 0], [cols(sp-2) '.-']);
-    ylabel([d ' (G/cm)']);
+    plot(W.(g{1}).t, W.(g{1}).signal, [cols(sp-2) '.-']);
+    ylabel([g ' (G/cm)']);
     ylim(sys.g_max*1.05*[-1 1]);
+    sub_plotblockboundary(W.tic, max(abs(W.(g{1}).signal)));
     sp = sp + 1;
 end
 xlabel('time (sec)');
 
 linkaxes([ax{1} ax{2} ax{3} ax{4} ax{5}], 'x');  % common zoom setting (along time axis) for all tiles
 
+function sub_plotblockboundary(T, vs)
+hold on;
+for m = 1:length(T)
+    plot([T(m) T(m)], [-vs vs], ':', 'linewidth', 0.2, 'color', 'k');
+end
