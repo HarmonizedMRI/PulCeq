@@ -171,6 +171,14 @@ for j = 1:length(blockIDs)
     end
 end
 
+% Remove duplicate gradient samples (extended trapezoids can start/end on block boundary)
+[S.gx.t, ia] = unique(S.gx.t);
+S.gx.signal = S.gx.signal(ia);
+[S.gy.t, ia] = unique(S.gy.t);
+S.gy.signal = S.gy.signal(ia);
+[S.gz.t, ia] = unique(S.gz.t);
+S.gz.signal = S.gz.signal(ia);
+
 if ~arg.plot
     return;
 end
