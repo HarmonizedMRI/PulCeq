@@ -93,9 +93,11 @@ ax{1} = gca;
 %plot([W.rf.t; duration], [abs(W.rf.signal); 0], 'black.');
 plot(W.rf.t, abs(W.rf.signal), 'black.');
 ylabel('RF (Gauss)'); % ylim([0 1.1]);
-xtickformat('%.6f');
 if arg.showBlocks
+    xtickformat('%.6f');
     sub_plotblockboundary(W.tic, max(abs(W.rf.signal)));
+    xticks(W.tic);
+    xtickangle(45);
 end
 
 subplot(5,1,2);
@@ -104,6 +106,7 @@ n = round(duration/sys.GRAD_UPDATE_TIME);
 plot(tStart + ((1:length(W.SSP.signal))-0.5)*sys.GRAD_UPDATE_TIME, W.SSP.signal, 'b.');
 ylabel('SSP (a.u.)');  ylim([0 1.2*max(W.SSP.signal)]);
 if arg.showBlocks
+    xtickformat('%.6f');
     sub_plotblockboundary(W.tic, max(abs(W.SSP.signal)));
     xticks(W.tic);
     xtickangle(45);
@@ -117,9 +120,9 @@ for g = {'gx','gy','gz'}
     p = plot(W.(g{1}).t, W.(g{1}).signal, [cols(sp-2) '.-']);
     %setDataTipFormat(p, '%.6f');   % does not work :(
     ylabel([g ' (G/cm)']);
-    xtickformat('%.6f');
     ylim(sys.g_max*1.05*[-1 1]);
     if arg.showBlocks
+        xtickformat('%.6f');
         sub_plotblockboundary(W.tic, max(abs(W.(g{1}).signal)));
         xticks(W.tic);
         xtickangle(45);
