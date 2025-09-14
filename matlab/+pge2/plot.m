@@ -87,11 +87,13 @@ W.gy.signal = W.gy.signal(ia);
 W.gz.signal = W.gz.signal(ia);
 
 % plot
+
 subplot(5,1,1);
 ax{1} = gca;
 %plot([W.rf.t; duration], [abs(W.rf.signal); 0], 'black.');
 plot(W.rf.t, abs(W.rf.signal), 'black.');
 ylabel('RF (Gauss)'); % ylim([0 1.1]);
+xtickformat('%.6f');
 if arg.showBlocks
     sub_plotblockboundary(W.tic, max(abs(W.rf.signal)));
 end
@@ -103,6 +105,8 @@ plot(tStart + ((1:length(W.SSP.signal))-0.5)*sys.GRAD_UPDATE_TIME, W.SSP.signal,
 ylabel('SSP (a.u.)');  ylim([0 1.2*max(W.SSP.signal)]);
 if arg.showBlocks
     sub_plotblockboundary(W.tic, max(abs(W.SSP.signal)));
+    xticks(W.tic);
+    xtickangle(45);
 end
 
 sp = 3;
@@ -110,11 +114,15 @@ cols = 'rgb';
 for g = {'gx','gy','gz'}
     subplot(5,1,sp);
     ax{sp} = gca;
-    plot(W.(g{1}).t, W.(g{1}).signal, [cols(sp-2) '.-']);
+    p = plot(W.(g{1}).t, W.(g{1}).signal, [cols(sp-2) '.-']);
+    %setDataTipFormat(p, '%.6f');   % does not work :(
     ylabel([g ' (G/cm)']);
+    xtickformat('%.6f');
     ylim(sys.g_max*1.05*[-1 1]);
     if arg.showBlocks
         sub_plotblockboundary(W.tic, max(abs(W.(g{1}).signal)));
+        xticks(W.tic);
+        xtickangle(45);
     end
     sp = sp + 1;
 end
@@ -122,8 +130,52 @@ xlabel('time (sec)');
 
 linkaxes([ax{1} ax{2} ax{3} ax{4} ax{5}], 'x');  % common zoom setting (along time axis) for all tiles
 
+return
+
+
 function sub_plotblockboundary(T, vs)
-hold on;
-for m = 1:length(T)
-    plot([T(m) T(m)], [-vs vs], ':', 'linewidth', 0.2, 'color', 'k');
-end
+
+    hold on;
+    for m = 1:length(T)
+        plot([T(m) T(m)], [-vs vs], ':', 'linewidth', 0.2, 'color', 'k');
+    end
+
+    return
+
+
+function setDataTipFormat(h, fmt)
+    % setDataTipFormat(h, fmt)
+    % h   = graphics object handle(s), e.g. line, scatter, bar
+    % fmt = sprintf format string, e.g. '%.6f', '%.4g', etc.
+
+    for k = 1:numel(h)
+        obj = h(k);
+
+        % --- Modern method (R2019b+ with DataTipTemplate) ---
+        if isprop(obj, 'DataTipTemplate')
+            try
+                rows = obj.DataTipTemplate.DataTipRows;
+                for r = 1:numel(rows)
+                    rows(r).ValueFormat = fmt;
+                end
+            catch
+                warning('Could not set DataTipTemplate for object %d', k);
+            end
+
+        % --- Fallback for older MATLAB (no DataTipTemplate) ---
+        else
+            dcm = datacursormode(ancestor(obj,'figure'));
+            set(dcm, 'UpdateFcn', @(~,event) localUpdate(event, fmt));
+        end
+    end
+
+    return
+
+function txt = localUpdate(event, fmt)
+    pos = get(event, 'Position');
+    txt = cell(1,numel(pos));
+    for i = 1:numel(pos)
+        txt{i} = sprintf(['Value %d: ' fmt], i, pos(i));
+    end
+    return
+
