@@ -5,8 +5,13 @@ function W = plot(ceq, sys, varargin)
 % Inputs:
 %   ceq     struct       Ceq sequence object, see seq2ceq.m
 %   sys     struct       System hardware info, see pge2.getsys()
+%
+% Input options:
+%  timeRange   [1 2]         Requested start and end times (sec). Actual plot will end on a segment boundary.
+%  showBLocks  true/false    Draw vertical lines at block boundaries (slow!)
 
 arg.timeRange = [0 ceq.duration];
+arg.showBlocks = false; 
 
 arg = vararg_pair(arg, varargin);   % in ../
 
@@ -87,14 +92,18 @@ ax{1} = gca;
 %plot([W.rf.t; duration], [abs(W.rf.signal); 0], 'black.');
 plot(W.rf.t, abs(W.rf.signal), 'black.');
 ylabel('RF (Gauss)'); % ylim([0 1.1]);
-sub_plotblockboundary(W.tic, max(abs(W.rf.signal)));
+if arg.showBlocks
+    sub_plotblockboundary(W.tic, max(abs(W.rf.signal)));
+end
 
 subplot(5,1,2);
 ax{2} = gca;
 n = round(duration/sys.GRAD_UPDATE_TIME);
 plot(tStart + ((1:length(W.SSP.signal))-0.5)*sys.GRAD_UPDATE_TIME, W.SSP.signal, 'b.');
 ylabel('SSP (a.u.)');  ylim([0 1.2*max(W.SSP.signal)]);
-sub_plotblockboundary(W.tic, max(abs(W.SSP.signal)));
+if arg.showBlocks
+    sub_plotblockboundary(W.tic, max(abs(W.SSP.signal)));
+end
 
 sp = 3;
 cols = 'rgb';
@@ -104,7 +113,9 @@ for g = {'gx','gy','gz'}
     plot(W.(g{1}).t, W.(g{1}).signal, [cols(sp-2) '.-']);
     ylabel([g ' (G/cm)']);
     ylim(sys.g_max*1.05*[-1 1]);
-    sub_plotblockboundary(W.tic, max(abs(W.(g{1}).signal)));
+    if arg.showBlocks
+        sub_plotblockboundary(W.tic, max(abs(W.(g{1}).signal)));
+    end
     sp = sp + 1;
 end
 xlabel('time (sec)');
