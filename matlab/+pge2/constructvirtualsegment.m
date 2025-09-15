@@ -22,7 +22,7 @@ if nargin < 4
 end
 
 % Get segment duration
-S.duration = 0;
+S.duration = sys.segment_dead_time;
 for j = 1:length(blockIDs)
     p = blockIDs(j);  % parent block index
     if p == 0  % pure delay block
@@ -56,10 +56,11 @@ for j = 1:length(blockIDs)
 
     msg1 = sprintf('block %d (parent block %d; block start time %.e s)', j, p, tic);
 
-    if p == 0  % pure delay block
+    % variable delay block
+    if p == -1 
         n1 = round(tic/sys.GRAD_UPDATE_TIME) + 1;
         S.SSP.signal(n1) = S.SSP.signal(n1) + HI;
-        tic = tic + 8e-6;
+        tic = tic + 8e-6;  % just give it an arbitrary duration
         for ax = {'gx','gy','gz'}
             S.(ax{1}).slew.normalized.peak(j) = 0;
         end
@@ -67,6 +68,12 @@ for j = 1:length(blockIDs)
     end
 
     b = parentBlocks(p).block;    % parent block
+
+    % static delay block
+    if p == 0
+        tic = tic + b.blockDuration;
+        continue;
+    end
 
     n = round(b.blockDuration/sys.GRAD_UPDATE_TIME);
     if abs(n - b.blockDuration/sys.GRAD_UPDATE_TIME) > 1e-7
