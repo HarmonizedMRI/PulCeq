@@ -68,6 +68,7 @@ for n = 1:ceq.nMax
         ceq.nReadouts = ceq.nReadouts + 1;
     end
 
+    % get TRID label if present
     if isfield(b, 'label') 
         for ii = 1:length(b.label)
             if strcmp(b.label(ii).label, 'TRID')
@@ -99,7 +100,8 @@ end
 
 %% Get parent blocks, by parsing first instance of each segment.
 %% Also fill in the sequence of parent blocks for each segment.
-%% Pure delay blocks are assigned parent block ID = 0
+%% Static pure delay blocks are assigned parent block ID = 0
+%% Variable pure delay blocks are assigned parent block ID = -1
 
 ceq.nParentBlocks = 0;
 
@@ -117,9 +119,15 @@ for i = 1:ceq.nSegments
         %    continue;
         %end
 
-        % If pure delay block, assign parent block 0 and continue to next row
-        if T(4)
+        % If static pure delay block, assign parent block 0 and continue to next row
+        if T(4) == 1
             ceq.segments(i).blockIDs(j) = 0;
+            continue;
+        end
+
+        % If variable pure delay block, assign parent block -1 and continue to next row
+        if T(4) == 2
+            ceq.segments(i).blockIDs(j) = -1;
             continue;
         end
 
@@ -185,13 +193,12 @@ while n < ceq.nMax + 1
         T = getblocktype(b);
         physioTrigger = T(3);
         try
-        p = ceq.segments(i).blockIDs(j);  % parent block index
+            p = ceq.segments(i).blockIDs(j);  % parent block index
         catch
-        keyboard
+            keyboard
         end
 
-
-        if p == 0  % pure delay block
+        if p < 1  % pure delay block
             ceq.loop(n,:) = getdynamics(b, i, p, physioTrigger, []);
             n = n + 1;
             continue;
