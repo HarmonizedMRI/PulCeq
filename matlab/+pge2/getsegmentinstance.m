@@ -49,7 +49,7 @@ end
 
 % Initialize SSP waveform
 % SSP set to HI just means that some hardware instruction is being transmitted
-% in connection with an RF event, ADC event, or soft delay block.
+% in connection with an RF event, ADC event, or variable delay block.
 HI = 1;              
 LO = 0;
 n = round(S.duration/sys.GRAD_UPDATE_TIME);
@@ -73,13 +73,21 @@ for j = 1:length(blockIDs)
 
     msg1 = sprintf('block %d of %d (parent block %d; block start time %.e s)', j, length(blockIDs), p, tic);
 
-    if p == 0  % soft delay block
-        % soft delay block requires a 4us SSP pulse
+    % variable delay block
+    if p == -1  
+        % variable delay block requires a 4us SSP pulse
         n1 = round(tic/sys.GRAD_UPDATE_TIME) + 1;
         S.SSP.signal(n1) = S.SSP.signal(n1) + HI;
 
         % update time counter (block boundary)
         tic = tic + L(j,13);   % sec
+        continue;
+    end
+
+    % static delay block
+    if p == 0
+        % update time counter (block boundary)
+        tic = tic + L(j,13);   % sec. Should be same as b.blockDuration
         continue;
     end
 
