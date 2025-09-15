@@ -90,6 +90,7 @@ while n < ceq.nMax
 
     n = n + ceq.segments(i).nBlocksInSegment;
 end
+textprogressbar(n/ceq.nMax*100);
 textprogressbar(' PASSED'); 
 
 
