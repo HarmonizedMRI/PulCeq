@@ -15,6 +15,10 @@ arg.showBlocks = false;
 
 arg = vararg_pair(arg, varargin);   % in ../
 
+if arg.timeRange(1) > ceq.duration
+    error('Request time exceeds sequence duration');
+end
+
 % get waveforms
 W.SSP.signal = [];
 W.tic = [];  % block boundary times
