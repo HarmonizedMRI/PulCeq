@@ -36,14 +36,7 @@ if isfield(block, 'trig')
 end
 
 % Pure delay
-if isfield(block, 'softDelay')
-    if T(1) ~= 1
-        error('Soft delay block cannot contain other events');
-    end
-    T(4) = 2;
-else
-    T(4) = T(1);
-end
+T(4) = T(1);
 
 %assert( ~ (T(1) | block.blockDuration < minDelayBlockDuration), ...
 %       sprintf('Duration of block containing rf/gradient/adc events must exceed %es', minDelayBlockDuration) );
