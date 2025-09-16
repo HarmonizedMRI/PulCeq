@@ -18,7 +18,6 @@ function ceq = seq2ceq(seqarg, varargin)
 % i             segment array index, starting from 1
 % j             block number within a segment, starting from 1
 
-GAM = 4257.6;   % Hz/Gauss
 
 %% parse inputs
 
@@ -121,8 +120,8 @@ while n < ceq.nMax + 1
             if b.blockDuration ~= blockDuration(i,j)  % duration is different from a previous instance
                 if T(4)
                     isVariableDelay(i,j) = true;
-                    n = n + ceq.segments(i).nBlocksInSegment - j + 1;
-                    continue;
+                    n = n + 1;
+                    continue;  % go to next j iteration
                 else
                     error('Non-delay blocks must have the same duration in all segment instances');
                 end
@@ -131,6 +130,7 @@ while n < ceq.nMax + 1
         n = n + 1;
     end
 end
+
 
 %% Get parent blocks, by parsing first instance of each segment.
 %% Also fill in the sequence of parent blocks for each segment.
@@ -152,7 +152,8 @@ for i = 1:ceq.nSegments
             continue;
         end
 
-        % Check if block is similar to an existing parent block
+        % Not a pure delay block.
+        % Now check if block is similar to an existing parent block
         issame = false;
         for p = 1:ceq.nParentBlocks
             np = ceq.parentBlocks(p).row; 
