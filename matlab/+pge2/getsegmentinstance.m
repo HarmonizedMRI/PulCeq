@@ -184,6 +184,29 @@ S.gy.signal = S.gy.signal(ia);
 [S.gz.t, ia] = unique(S.gz.t);
 S.gz.signal = S.gz.signal(ia);
 
+% Rotate gradients
+% The whole segment gets rotated.
+% The rotation matrix is equal to the last non-identity
+% rotation specified in L
+
+I = eye(3);
+Iv = I(:);
+for j = length(blockIDs):-1:1
+    Rv = L(j, 15:23);   % R in row-major order
+    if ~all(round(1e6*Rv) == 1e6*Iv)
+        break;
+    end
+end
+
+Rt = reshape(Rv,3,3);  % R transpose
+R = Rt';
+
+%Gx = zeros(1, length(S.gx.signal));
+%Gy = zeros(1, length(S.gy.signal));
+%Gz = zeros(1, length(S.gz.signal));
+%for t = 1:length(S.gx.signal)
+    
+
 if ~arg.plot
     return;
 end
