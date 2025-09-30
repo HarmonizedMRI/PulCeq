@@ -205,7 +205,7 @@ while n < ceq.nMax + 1
     physioTrigger = false;
     i = find(uniqueTridLabels == trids(n));  % segment array index
 
-    R = []; 
+    R = eye(3);  % default rotation for this segment
 
     for j = 1:ceq.segments(i).nBlocksInSegment
         b = seq.getBlock(n);
@@ -225,17 +225,9 @@ while n < ceq.nMax + 1
         end
 
         % Get rotation
-        [Rtmp, scale] = getrotation(b, ceq.parentBlocks(p).block);
-        %assert(~isempty(Rtmp), ...
-        %    sprintf('row/segment/block = %d/%d/%d: waveform is inconsistent with parent block', n, i, j));
-
-        if ~isempty(Rtmp)
-            if norm(Rtmp - eye(3), "fro") > 1e-6
-                % found a rotation, so use it (unless overwritten by a later block in this segment)
-                R = Rtmp;
-
-                % and set gradient amplitudes equal to those in the parent block (possibly scaled)
-                ceq.loop(n, [6 8 10]) = scale * ceq.loop(ceq.parentBlocks(p).row, [6 8 10]);
+        if isfield(b, 'rotation')
+            if strcmp(b.rotation.type, 'rot3D')
+                R = mr.aux.quat.toRotMat(b.rotation.rotQuaternion);
             end
         end
 
@@ -244,9 +236,6 @@ while n < ceq.nMax + 1
 
     % Set rotation for last block in segment instance; 
     % the interpreter uses this to set the rotation for the whole segment
-    if isempty(R)
-        R = eye(3);
-    end
     R = R';
     ceq.loop(n-1, 15:23) = R(:)';   % write R in row-major order
 
