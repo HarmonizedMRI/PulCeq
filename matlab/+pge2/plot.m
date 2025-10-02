@@ -9,9 +9,13 @@ function W = plot(ceq, sys, varargin)
 % Input options:
 %  timeRange   [1 2]         Requested start and end times (sec). Actual plot will end on a segment boundary.
 %  showBLocks  true/false    Draw vertical lines at block boundaries (slow!)
+%  logical     true/false    If true, display gradients in logical coordinate frame, i.e., 
+%                            before rotating. Corner/sample points are indicated by circles.
+%                            If false, gradients are interpolated to 4us and shown as continuous line.
 
 arg.timeRange = [0 ceq.duration];
 arg.showBlocks = false; 
+arg.logical = false;
 
 arg = vararg_pair(arg, varargin);   % in ../
 
@@ -20,7 +24,7 @@ if arg.timeRange(1) > ceq.duration
 end
 
 % get waveforms
-W.SSP.signal = [];
+%W.SSP.signal = [];
 W.tic = [];  % block boundary times
 tStart = 0;  % start of plot
 W.rf.t = 0; W.rf.signal = 0;
@@ -39,7 +43,7 @@ while n < ceq.nMax & tic - eps < min(ceq.duration, arg.timeRange(2))
     try
         S = pge2.getsegmentinstance(ceq, i, sys, L, 'durationOnly', true);
     catch ME
-        fprintf('Error (n = %d, i = %d): %s\n', n, i, ME.message);
+        error(sprintf('(n = %d, i = %d): %s\n', n, i, ME.message));
     end
 
     if arg.timeRange(1) > tic + eps
@@ -56,9 +60,9 @@ while n < ceq.nMax & tic - eps < min(ceq.duration, arg.timeRange(2))
 
     % Get segment instance and add waveforms to running total
     try
-        S = pge2.getsegmentinstance(ceq, i, sys, L);
+        S = pge2.getsegmentinstance(ceq, i, sys, L, 'logical', arg.logical);
     catch ME
-        fprintf('Error (n = %d, i = %d): %s\n', n, i, ME.message);
+        error(sprintf('(n = %d, i = %d): %s\n', n, i, ME.message));
     end
 
     W.tic = [W.tic(:); tic + S.tic(:)];
@@ -73,7 +77,7 @@ while n < ceq.nMax & tic - eps < min(ceq.duration, arg.timeRange(2))
     W.gy.signal = [W.gy.signal; S.gy.signal];
     W.gz.signal = [W.gz.signal; S.gz.signal];
 
-    W.SSP.signal = [W.SSP.signal; S.SSP.signal];
+    %W.SSP.signal = [W.SSP.signal; S.SSP.signal];
 
     tic = tic + S.duration;
 
@@ -106,12 +110,15 @@ end
 
 subplot(5,1,2);
 ax{2} = gca;
-n = round(duration/sys.GRAD_UPDATE_TIME);
-plot(tStart + ((1:length(W.SSP.signal))-0.5)*sys.GRAD_UPDATE_TIME, W.SSP.signal, 'b.');
-ylabel('SSP (a.u.)');  ylim([0 1.2*max(W.SSP.signal)]);
+plot(W.rf.t, angle(W.rf.signal), 'blue.');
+ylabel('RF phase (radians)'); % ylim([0 1.1]);
+%n = round(duration/sys.GRAD_UPDATE_TIME);
+%plot(tStart + ((1:length(W.SSP.signal))-0.5)*sys.GRAD_UPDATE_TIME, W.SSP.signal, 'b.');
+%ylabel('SSP (a.u.)');  ylim([0 1.2*max(W.SSP.signal)]);
 if arg.showBlocks
     xtickformat('%.6f');
-    sub_plotblockboundary(W.tic, max(abs(W.SSP.signal)));
+    %sub_plotblockboundary(W.tic, max(abs(W.SSP.signal)));
+    sub_plotblockboundary(W.tic, pi);
     xticks(W.tic);
     xtickangle(45);
 end

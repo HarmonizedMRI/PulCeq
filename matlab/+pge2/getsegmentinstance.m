@@ -10,6 +10,9 @@ function S = getsegmentinstance(ceq, i, sys, L, varargin)
 % Input options:
 %   'plot'           true/false
 %   'durationOnly'   true/false     If true, S only contains duration field
+%   'logical'        true/false     If true, display gradients in logical coordinate frame, i.e., 
+%                                   before rotating. Corner/sample points are indicated by circles.
+%                                   If false, gradients are interpolated to 4us and shown as continuous line.
 %
 % Output:
 %   S               struct containing segment sequencer waveforms:
@@ -27,6 +30,7 @@ function S = getsegmentinstance(ceq, i, sys, L, varargin)
 
 arg.plot = false;
 arg.durationOnly = false;
+arg.logical = false; 
 
 arg = vararg_pair(arg, varargin);   % in ../
 
@@ -64,7 +68,7 @@ for ax = {'gx','gy','gz'}
     S.(ax{1}).t = [];
 end
 
-% build segment in the same way the interpreter does it
+% build segment the same way the interpreter does it
 tic = sys.segment_dead_time;      % running time counter marking block boundary
 
 for j = 1:length(blockIDs)
@@ -184,28 +188,30 @@ S.gy.signal = S.gy.signal(ia);
 [S.gz.t, ia] = unique(S.gz.t);
 S.gz.signal = S.gz.signal(ia);
 
-% Rotate gradients
-% The whole segment gets rotated.
-% The rotation matrix is equal to the last non-identity
-% rotation specified in L
+if ~arg.logical
+    % Interpolate to 4us and rotate gradients.
+    % NB!! The whole segment gets rotated! 
 
-I = eye(3);
-Iv = I(:);
-for j = length(blockIDs):-1:1
-    Rv = L(j, 15:23);   % R in row-major order
-    if ~all(round(1e6*Rv) == 1e6*Iv)
-        break;
+    % Get rotation matrix R.
+    % The rotation matrix is equal to the last non-identity
+    % rotation specified in L (if any).
+    I = eye(3);
+    Iv = I(:);
+    for j = length(blockIDs):-1:1
+        Rv = L(j, 15:23);   % R in row-major order
+        if ~all(round(1e6*Rv) == 1e6*Iv)
+            break;
+        end
     end
-end
 
-Rt = reshape(Rv,3,3);  % R transpose
-R = Rt';
+    Rt = reshape(Rv,3,3);  % R transpose
+    R = Rt';
 
-%Gx = zeros(1, length(S.gx.signal));
-%Gy = zeros(1, length(S.gy.signal));
-%Gz = zeros(1, length(S.gz.signal));
-%for t = 1:length(S.gx.signal)
-    
+    % Interpolate gradients to 4us (sys.GRAD_UPDATE_TIME)
+    [S.gx.t, S.gx.signal] = sub_interp_grad(S.gx.t, S.gx.signal, S.duration, sys);
+    [S.gy.t, S.gy.signal] = sub_interp_grad(S.gy.t, S.gy.signal, S.duration, sys);
+    [S.gz.t, S.gz.signal] = sub_interp_grad(S.gz.t, S.gz.signal, S.duration, sys);
+end    
 
 if ~arg.plot
     return;
@@ -223,9 +229,11 @@ ylabel('RF (Gauss)'); % ylim([0 1.1]);
 
 subplot(5,1,2);
 ax{2} = gca;
-n = round(S.duration/sys.GRAD_UPDATE_TIME);
-plot(((1:n)-0.5)*sys.GRAD_UPDATE_TIME, S.SSP.signal, 'b.');
-ylabel('SSP (a.u.)');  ylim([0 1.2]);
+plot([0; S.rf.t; S.duration], [0; angle(S.rf.signal); 0], 'blue.');
+ylabel('RF angle (radians)'); % ylim([0 1.1]);
+%n = round(S.duration/sys.GRAD_UPDATE_TIME);
+%plot(((1:n)-0.5)*sys.GRAD_UPDATE_TIME, S.SSP.signal, 'b.');
+%ylabel('SSP (a.u.)');  ylim([0 1.2]);
 
 sp = 3;
 cols = 'rgb';
@@ -242,3 +250,32 @@ xlabel('time (sec)');
 
 linkaxes([ax{1} ax{2} ax{3} ax{4} ax{5}], 'x');  % common zoom setting (along time axis) for all tiles
 
+function [tt, g] = sub_interp_grad(tt, g, dur, sys)
+    % Interpolate gradients to 4us raster time
+    % Inputs:
+    %  tt   time samples, arbitrary points (sec)
+    %  g    gradient sampled at tt (a.u.)
+    %  dur  segment duration (sec)
+    %  sys  pge2 system struct, see getsys.m
+
+    dt = sys.GRAD_UPDATE_TIME;  % gradient raster time
+    t_start = sys.segment_dead_time;
+    t_end = dur - sys.segment_dead_time - sys.segment_ringdown_time;
+    T = t_start + dt/2:dt:t_end;
+
+    if isempty(tt)
+        g = zeros(size(T));
+    else
+        tt = [t_start; tt; t_end];
+        g = [0; g; 0];
+
+        [tt, ia] = unique(tt);
+        g = g(ia);
+
+        g = interp1(tt, g, T, 'linear', 'extrap');
+    end
+
+    tt = T(:);
+    g = g(:);
+
+return
