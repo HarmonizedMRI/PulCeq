@@ -189,7 +189,8 @@ S.gy.signal = S.gy.signal(ia);
 S.gz.signal = S.gz.signal(ia);
 
 if ~arg.logical
-    % Interpolate to 4us and rotate gradients.
+    % Interpolate to 4us and rotate gradients,
+    % so we can apply the rotation matrix R directly.
     % NB!! The whole segment gets rotated! 
 
     % Get rotation matrix R.
@@ -207,10 +208,16 @@ if ~arg.logical
     Rt = reshape(Rv,3,3);  % R transpose
     R = Rt';
 
-    % Interpolate gradients to 4us (sys.GRAD_UPDATE_TIME)
+    % Interpolate gradients to sys.GRAD_UPDATE_TIME (= 4us)
     [S.gx.t, S.gx.signal] = sub_interp_grad(S.gx.t, S.gx.signal, S.duration, sys);
     [S.gy.t, S.gy.signal] = sub_interp_grad(S.gy.t, S.gy.signal, S.duration, sys);
     [S.gz.t, S.gz.signal] = sub_interp_grad(S.gz.t, S.gz.signal, S.duration, sys);
+
+    % Apply rotation
+    G = R * [S.gx.signal'; S.gy.signal'; S.gz.signal'];
+    S.gx.signal = G(1,:)';
+    S.gy.signal = G(2,:)';
+    S.gz.signal = G(3,:)';
 end    
 
 if ~arg.plot
@@ -250,13 +257,16 @@ xlabel('time (sec)');
 
 linkaxes([ax{1} ax{2} ax{3} ax{4} ax{5}], 'x');  % common zoom setting (along time axis) for all tiles
 
+return
+
+
 function [tt, g] = sub_interp_grad(tt, g, dur, sys)
-    % Interpolate gradients to 4us raster time
+    % Interpolate gradients to uniform raster time (4 us)
     % Inputs:
-    %  tt   time samples, arbitrary points (sec)
-    %  g    gradient sampled at tt (a.u.)
-    %  dur  segment duration (sec)
-    %  sys  pge2 system struct, see getsys.m
+    %  tt     time samples before interpolation, arbitrary points (sec)
+    %  g      gradient sampled at tt (a.u.)
+    %  dur    total segment duration, including segment dead/ringdown times (sec)
+    %  sys    pge2 system struct, see getsys.m
 
     dt = sys.GRAD_UPDATE_TIME;  % gradient raster time
     t_start = sys.segment_dead_time;
@@ -266,9 +276,11 @@ function [tt, g] = sub_interp_grad(tt, g, dur, sys)
     if isempty(tt)
         g = zeros(size(T));
     else
+        % add 0 samples at start and end of segment so that 'extrap' below works correctly
         tt = [t_start; tt; t_end];
         g = [0; g; 0];
 
+        % remove duplicate samples (e.g., on block boundaries)
         [tt, ia] = unique(tt);
         g = g(ia);
 
@@ -278,4 +290,4 @@ function [tt, g] = sub_interp_grad(tt, g, dur, sys)
     tt = T(:);
     g = g(:);
 
-return
+    return
