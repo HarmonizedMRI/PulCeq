@@ -8,7 +8,7 @@ function W = plot(ceq, sys, varargin)
 %
 % Input options:
 %  timeRange   [1 2]         Requested start and end times (sec). Actual plot will end on a segment boundary.
-%  showBLocks  true/false    Draw vertical lines at block boundaries (slow!)
+%  showBlocks  true/false    Draw vertical lines at block boundaries (slow!)
 %  logical     true/false    If true, display gradients in logical coordinate frame, i.e., 
 %                            before rotating. Corner/sample points are indicated by circles.
 %                            If false, gradients are interpolated to 4us and shown as continuous line.
