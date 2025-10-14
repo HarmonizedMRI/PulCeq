@@ -18,7 +18,7 @@ arg.adc_ringdown_time = 0e-6;  % time required to turn off ADC board
 arg.rf_dead_time = 72e-6;       % time required to turn on RF amplifier
 arg.rf_ringdown_time = 56e-6;   % time required to turn off RF amplifier
 arg.segment_dead_time = 12e-6; % dead time at start of segment
-arg.segment_ringdown_time = 104e-6;   % ssi time, plus 4us SSP pulse
+arg.segment_ringdown_time = 105e-6;   % ssi time, plus 4us SSP pulse, plus 1us (probably EOS bit)
 
 arg = vararg_pair(arg, varargin);   % in ../
 
