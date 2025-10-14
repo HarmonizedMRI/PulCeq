@@ -8,13 +8,13 @@ function W = plot(ceq, sys, varargin)
 %
 % Input options:
 %  timeRange   [1 2]         Requested start and end times (sec). Actual plot will end on a segment boundary.
-%  showBlocks  true/false    Draw vertical lines at block boundaries (slow!)
+%  showBlocks  true/false    Draw vertical lines at block boundaries (default: true)
 %  logical     true/false    If true, display gradients in logical coordinate frame, i.e., 
 %                            before rotating. Corner/sample points are indicated by circles.
-%                            If false, gradients are interpolated to 4us and shown as continuous line.
+%                            If false, gradients are rotated and interpolated to 4us and shown as continuous line.
 
 arg.timeRange = [0 ceq.duration];
-arg.showBlocks = false; 
+arg.showBlocks = true; 
 arg.logical = false;
 
 arg = vararg_pair(arg, varargin);   % in ../
@@ -23,7 +23,14 @@ if arg.timeRange(1) > ceq.duration
     error('Request time exceeds sequence duration');
 end
 
-% get waveforms
+% get peak waveform amplitudes (for setting display range)
+yLim.rf = max(ceq.loop(:,3))/sys.gamma;
+yLim.phs = pi;
+yLim.gx = max(abs(ceq.loop(:,6)))/sys.gamma/100;   % Gauss/cm
+yLim.gy = max(abs(ceq.loop(:,8)))/sys.gamma/100;   % Gauss/cm
+yLim.gz = max(abs(ceq.loop(:,10)))/sys.gamma/100;   % Gauss/cm
+
+% Loop through sequence segments and display 
 %W.SSP.signal = [];
 W.tic = [];  % block boundary times
 tStart = 0;  % start of plot
@@ -34,7 +41,9 @@ W.gz.t = 0; W.gz.signal = 0;
 
 n = 1;    % row counter in ceq.loop
 tic = 0;  % running timer marking start of segment instance (sec)
+
 while n < ceq.nMax & tic - eps < min(ceq.duration, arg.timeRange(2))
+
     % get segment index and dynamic (scan loop) information
     i = ceq.loop(n,1);  % segment index
     L = ceq.loop(n:(n-1+ceq.segments(i).nBlocksInSegment), :);
@@ -58,13 +67,16 @@ while n < ceq.nMax & tic - eps < min(ceq.duration, arg.timeRange(2))
         continue;
     end
 
-    % Get segment instance and add waveforms to running total
+    % Get segment instance and add to plot
     try
         S = pge2.getsegmentinstance(ceq, i, sys, L, 'logical', arg.logical);
     catch ME
         error(sprintf('(n = %d, i = %d): %s\n', n, i, ME.message));
     end
 
+    sub_addSegmentInstanceToPlot(tic, S, arg.showBlocks, sys, yLim);
+
+    % Add waveforms to running total (for return value -- not used for plotting)
     W.tic = [W.tic(:); tic + S.tic(:)];
 
     W.rf.t = [W.rf.t; tic + S.rf.t];
@@ -79,80 +91,49 @@ while n < ceq.nMax & tic - eps < min(ceq.duration, arg.timeRange(2))
 
     %W.SSP.signal = [W.SSP.signal; S.SSP.signal];
 
+    % Update time counter and go to next segment
     tic = tic + S.duration;
-
     n = n + ceq.segments(i).nBlocksInSegment;
 end
 
-duration = tic;
-
-% Remove duplicate gradient samples (extended trapezoids can start/end on block boundary)
-[W.gx.t, ia] = unique(W.gx.t);
-W.gx.signal = W.gx.signal(ia);
-[W.gy.t, ia] = unique(W.gy.t);
-W.gy.signal = W.gy.signal(ia);
-[W.gz.t, ia] = unique(W.gz.t);
-W.gz.signal = W.gz.signal(ia);
-
-% plot
-
-subplot(5,1,1);
-ax{1} = gca;
-%plot([W.rf.t; duration], [abs(W.rf.signal); 0], 'black.');
-plot(W.rf.t, abs(W.rf.signal), 'black.');
-ylabel('RF (Gauss)'); % ylim([0 1.1]);
-if arg.showBlocks
-    xtickformat('%.6f');
-    sub_plotblockboundary(W.tic, max(abs(W.rf.signal)));
-    xticks(W.tic);
-    xtickangle(45);
-end
-
-subplot(5,1,2);
-ax{2} = gca;
-plot(W.rf.t, angle(W.rf.signal), 'blue.');
-ylabel('RF phase (radians)'); % ylim([0 1.1]);
-%n = round(duration/sys.GRAD_UPDATE_TIME);
-%plot(tStart + ((1:length(W.SSP.signal))-0.5)*sys.GRAD_UPDATE_TIME, W.SSP.signal, 'b.');
-%ylabel('SSP (a.u.)');  ylim([0 1.2*max(W.SSP.signal)]);
-if arg.showBlocks
-    xtickformat('%.6f');
-    %sub_plotblockboundary(W.tic, max(abs(W.SSP.signal)));
-    sub_plotblockboundary(W.tic, pi);
-    xticks(W.tic);
-    xtickangle(45);
-end
-
-sp = 3;
-cols = 'rgb';
-for g = {'gx','gy','gz'}
-    subplot(5,1,sp);
+% linx axes
+for sp = 1:5
+    subplot(5, 1, sp); 
+%    set(gca, 'color', 'k');
     ax{sp} = gca;
-    p = plot(W.(g{1}).t, W.(g{1}).signal, [cols(sp-2) '.-']);
-    %setDataTipFormat(p, '%.6f');   % does not work :(
-    ylabel([g ' (G/cm)']);
-    ylim(sys.g_max*1.05*[-1 1]);
-    if arg.showBlocks
-        xtickformat('%.6f');
-        sub_plotblockboundary(W.tic, max(abs(W.(g{1}).signal)));
-        xticks(W.tic);
-        xtickangle(45);
-    end
-    sp = sp + 1;
 end
-xlabel('time (sec)');
-
 linkaxes([ax{1} ax{2} ax{3} ax{4} ax{5}], 'x');  % common zoom setting (along time axis) for all tiles
+
+% set misc figure properties
+subplot(5,1,1);
+if arg.logical
+    msg = sprintf('Logical coordinates -- rotations not shown.\n');
+else
+    msg = sprintf('Physical coordinates -- waveforms rotated and interpolated to 4us.\n');
+end
+msg = [msg 'Vertical dotted lines show block/segment boundaries.'];
+title(msg);
 
 return
 
 
 function sub_plotblockboundary(T, vs)
+    % T  [nt]  block boundary locations (time within segment)
+    % vs [1]   +/- limit
+
+    hold on;
+
+    T = unique(T);
+
+    % xtickformat('%.6f');
 
     hold on;
     for m = 1:length(T)
         plot([T(m) T(m)], [-vs vs], ':', 'linewidth', 0.2, 'color', 'k');
     end
+
+    % xticks(T);
+    % xtickangle(45);
 
     return
 
@@ -185,11 +166,51 @@ function setDataTipFormat(h, fmt)
 
     return
 
+
 function txt = localUpdate(event, fmt)
     pos = get(event, 'Position');
     txt = cell(1,numel(pos));
     for i = 1:numel(pos)
         txt{i} = sprintf(['Value %d: ' fmt], i, pos(i));
     end
+
     return
 
+
+function sub_addSegmentInstanceToPlot(tic, S, showBlocks, sys, yLim)
+    % tic  [1]      time of start of segment
+    % S    struct   segment instance
+
+    subplot(5,1,1); hold on;
+    plot(tic + S.rf.t, abs(S.rf.signal), 'black.-');
+    ylabel('RF (Gauss)');
+    ylim(1.1 * yLim.rf * [-1 1]);
+    if showBlocks
+       sub_plotblockboundary(tic + S.tic, yLim.rf);
+    end
+
+    subplot(5,1,2); hold on;
+    plot(tic + S.rf.t, angle(S.rf.signal), 'blue.-');
+    ylabel('RF phase (radians)'); 
+    ylim(1.1 * yLim.phs * [-1 1]);
+    if showBlocks
+       sub_plotblockboundary(tic + S.tic, yLim.phs);
+    end
+
+    sp = 3;
+    cols = 'rgb';
+    for g = {'gx','gy','gz'}
+        subplot(5,1,sp); hold on;
+        p = plot(tic + S.(g{1}).t, S.(g{1}).signal, [cols(sp-2) '.-']);
+        %setDataTipFormat(p, '%.6f');   % does not work :(
+        ylabel([g ' (G/cm)']);
+        ylim(1.05 * max([yLim.gx yLim.gy yLim.gz]) * [-1 1]);
+        if showBlocks
+            sub_plotblockboundary(tic + S.tic, yLim.(g{1}));
+        end
+        sp = sp + 1;
+    end
+
+    xlabel('time (sec)');
+
+    return
