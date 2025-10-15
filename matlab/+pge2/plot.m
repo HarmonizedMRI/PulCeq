@@ -190,7 +190,7 @@ function sub_addSegmentInstanceToPlot(tic, S, showBlocks, sys, yLim)
     end
 
     subplot(5,1,2); hold on;
-    plot(tic + S.rf.t, angle(S.rf.signal), 'blue.-');
+    plot(tic + S.rf.t, angle(S.rf.signal), 'black.-');
     ylabel('RF phase (radians)'); 
     ylim(1.1 * yLim.phs * [-1 1]);
     if showBlocks
