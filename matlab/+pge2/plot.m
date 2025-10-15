@@ -108,6 +108,7 @@ linkaxes([ax{1} ax{2} ax{3} ax{4} ax{5}], 'x');  % common zoom setting (along ti
 subplot(5,1,1);
 if arg.logical
     msg = sprintf('Logical coordinates -- gradient rotations not shown.\n');
+    msg = sprintf('%sWaveform samples/corner points are shown as defined in the original Pulseq file.\n', msg);
 else
     msg = sprintf('Physical coordinates -- waveforms rotated and interpolated to 4us.\n');
 end
