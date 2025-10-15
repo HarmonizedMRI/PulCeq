@@ -107,11 +107,11 @@ linkaxes([ax{1} ax{2} ax{3} ax{4} ax{5}], 'x');  % common zoom setting (along ti
 % set misc figure properties
 subplot(5,1,1);
 if arg.logical
-    msg = sprintf('Logical coordinates -- rotations not shown.\n');
+    msg = sprintf('Logical coordinates -- gradient rotations not shown.\n');
 else
     msg = sprintf('Physical coordinates -- waveforms rotated and interpolated to 4us.\n');
 end
-msg = [msg 'Vertical dotted lines show block/segment boundaries.'];
+msg = [msg 'Vertical lines show block/segment boundaries.'];
 title(msg);
 
 %yline(ax{2}, pi, 'black-');
@@ -124,16 +124,24 @@ yticklabels(ax{2}, {'-π', '0', 'π'});
 return
 
 
-function sub_plotblockboundary(T, vs)
-    % T  [nt]  block boundary locations (time within segment)
-    % vs [1]   +/- limit
+function sub_plotboundary(T, vs, tp)
+    % T    [nt]    block boundary locations (time within sequence)
+    % vs   [1]     +/- limit
+    % tp   string  'block' or 'segment' 
+
+    if nargin < 3
+        tp = 'block';
+    end
 
     T = unique(T);
 
     hold on;
     for m = 1:length(T)
-        xline(T(m), ':', 'linewidth', 0.2, 'color', 'k');
-        % plot([T(m) T(m)], [-vs vs], ':', 'linewidth', 0.2, 'color', 'k');
+        if strcmp(tp, 'block')
+            xline(T(m), ':', 'linewidth', 0.2, 'color', 'k');
+        else
+            xline(T(m), '--', 'linewidth', 1.2, 'color', 'r');
+        end
     end
 
     % xtickformat('%.6f');
@@ -141,7 +149,6 @@ function sub_plotblockboundary(T, vs)
     % xtickangle(45);
 
     return
-
 
 function setDataTipFormat(h, fmt)
     % setDataTipFormat(h, fmt)
@@ -192,7 +199,9 @@ function sub_addSegmentInstanceToPlot(tic, S, showBlocks, sys, yLim)
     ylabel({'|b1|', 'Gauss'}, 'Rotation', 0); 
     ylim(1.1 * yLim.rf * [-1 1]);
     if showBlocks
-       sub_plotblockboundary(tic + S.tic, yLim.rf);
+       sub_plotboundary(tic + S.tic, yLim.rf);
+       %sub_plotboundary([tic + S.tic(1), tic + S.tic(end)], yLim.rf, 'segment');
+       sub_plotboundary([tic + S.tic(1)], yLim.rf, 'segment');
     end
 
     subplot(5,1,2); hold on;
@@ -200,7 +209,7 @@ function sub_addSegmentInstanceToPlot(tic, S, showBlocks, sys, yLim)
     ylabel({'\angleb1', 'rad'}, 'Rotation', 0); 
     ylim(1.1 * yLim.phs * [-1 1]);
     if showBlocks
-       sub_plotblockboundary(tic + S.tic, yLim.phs);
+       sub_plotboundary(tic + S.tic, yLim.phs);
     end
 
     sp = 3;
@@ -213,7 +222,7 @@ function sub_addSegmentInstanceToPlot(tic, S, showBlocks, sys, yLim)
         yl = 1.05 * max([yLim.gx yLim.gy yLim.gz]);
         ylim(yl * [-1 1]);
         if showBlocks
-            sub_plotblockboundary(tic + S.tic, yl);
+            sub_plotboundary(tic + S.tic, yl);
         end
         sp = sp + 1;
     end
