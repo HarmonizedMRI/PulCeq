@@ -114,6 +114,13 @@ end
 msg = [msg 'Vertical dotted lines show block/segment boundaries.'];
 title(msg);
 
+%yline(ax{2}, pi, 'black-');
+%yline(ax{2}, -pi, 'black-');
+%yt = [-pi yticks(ax{2}) pi];
+yticks(ax{2}, [-pi 0 pi]);
+%yl = yticklabels(ax{2});
+yticklabels(ax{2}, {'-π', '0', 'π'});
+
 return
 
 
@@ -121,17 +128,15 @@ function sub_plotblockboundary(T, vs)
     % T  [nt]  block boundary locations (time within segment)
     % vs [1]   +/- limit
 
-    hold on;
-
     T = unique(T);
-
-    % xtickformat('%.6f');
 
     hold on;
     for m = 1:length(T)
-        plot([T(m) T(m)], [-vs vs], ':', 'linewidth', 0.2, 'color', 'k');
+        xline(T(m), ':', 'linewidth', 0.2, 'color', 'k');
+        % plot([T(m) T(m)], [-vs vs], ':', 'linewidth', 0.2, 'color', 'k');
     end
 
+    % xtickformat('%.6f');
     % xticks(T);
     % xtickangle(45);
 
