@@ -99,8 +99,8 @@ end
 % linx axes
 for sp = 1:5
     subplot(5, 1, sp); 
-%    set(gca, 'color', 'k');
     ax{sp} = gca;
+    grid on;
 end
 linkaxes([ax{1} ax{2} ax{3} ax{4} ax{5}], 'x');  % common zoom setting (along time axis) for all tiles
 
@@ -184,6 +184,7 @@ function sub_addSegmentInstanceToPlot(tic, S, showBlocks, sys, yLim)
     subplot(5,1,1); hold on;
     plot(tic + S.rf.t, abs(S.rf.signal), 'black.-');
     ylabel('RF (Gauss)');
+    ylabel({'|b1|', 'Gauss'}, 'Rotation', 0); 
     ylim(1.1 * yLim.rf * [-1 1]);
     if showBlocks
        sub_plotblockboundary(tic + S.tic, yLim.rf);
@@ -191,7 +192,7 @@ function sub_addSegmentInstanceToPlot(tic, S, showBlocks, sys, yLim)
 
     subplot(5,1,2); hold on;
     plot(tic + S.rf.t, angle(S.rf.signal), 'black.-');
-    ylabel('RF phase (radians)'); 
+    ylabel({'\angleb1', 'rad'}, 'Rotation', 0); 
     ylim(1.1 * yLim.phs * [-1 1]);
     if showBlocks
        sub_plotblockboundary(tic + S.tic, yLim.phs);
@@ -203,10 +204,11 @@ function sub_addSegmentInstanceToPlot(tic, S, showBlocks, sys, yLim)
         subplot(5,1,sp); hold on;
         p = plot(tic + S.(g{1}).t, S.(g{1}).signal, [cols(sp-2) '.-']);
         %setDataTipFormat(p, '%.6f');   % does not work :(
-        ylabel([g ' (G/cm)']);
-        ylim(1.05 * max([yLim.gx yLim.gy yLim.gz]) * [-1 1]);
+        ylabel({g{1}, 'G/cm'}, 'Rotation', 0);
+        yl = 1.05 * max([yLim.gx yLim.gy yLim.gz]);
+        ylim(yl * [-1 1]);
         if showBlocks
-            sub_plotblockboundary(tic + S.tic, yLim.(g{1}));
+            sub_plotblockboundary(tic + S.tic, yl);
         end
         sp = sp + 1;
     end
