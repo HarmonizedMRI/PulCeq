@@ -39,8 +39,10 @@ while n < ceq.nMax
     end
 
     % Block boundaries must be on sys.GRAD_UPDATE_TIME boundary
-    assert(sum(mod(S.tic, sys.GRAD_UPDATE_TIME)) < 100*eps, ...
-        sprintf('segment %d, instance at row %d: block boundaries not on sys.GRAD_UPDATE_TIME boundary', i, n));
+    res = S.tic/sys.GRAD_UPDATE_TIME;
+    if any(abs(S.tic/sys.GRAD_UPDATE_TIME - round(S.tic/sys.GRAD_UPDATE_TIME)) > 1e-6)
+        error(sprintf('segment %d, instance at row %d: block boundaries not on sys.GRAD_UPDATE_TIME boundary', i, n));
+    end
 
     % check peak b1 amplitude
     if ~isempty(S.rf.signal)
