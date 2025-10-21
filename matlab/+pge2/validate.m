@@ -4,6 +4,8 @@ function validate(ceq, sys)
 % GE scanner specifications in 'sys'.
 %
 
+tol = 1e-7;   % timing tolerance. Matches 'eps' in the pge2 EPIC code
+
 % Check parent block timing.
 % Parent blocks are 'virtual' (waveform amplitudes are arbitrary/normalized), so only check
 % timing here; waveforms will be checked below for each segment instance in the scan loop.
@@ -40,7 +42,7 @@ while n < ceq.nMax
 
     % Block boundaries must be on sys.GRAD_UPDATE_TIME boundary
     res = S.tic/sys.GRAD_UPDATE_TIME;
-    if any(abs(S.tic/sys.GRAD_UPDATE_TIME - round(S.tic/sys.GRAD_UPDATE_TIME)) > 1e-6)
+    if any(abs(S.tic/sys.GRAD_UPDATE_TIME - round(S.tic/sys.GRAD_UPDATE_TIME)) > tol)
         error(sprintf('segment %d, instance at row %d: block boundaries not on sys.GRAD_UPDATE_TIME boundary', i, n));
     end
 
