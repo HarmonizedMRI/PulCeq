@@ -35,7 +35,8 @@ while n < ceq.nMax
     i = ceq.loop(n,1);  % segment index
     L = ceq.loop(n:(n-1+ceq.segments(i).nBlocksInSegment), :);  % dynamic info
     try
-        S = pge2.getsegmentinstance(ceq, i, sys, L, 'logical', false);
+        % ok to validate in logical coordinates since rotation doesn't impact executability
+        S = pge2.getsegmentinstance(ceq, i, sys, L, 'logical', true);
     catch ME
         error(sprintf('(n = %d, i = %d): %s\n', n, i, ME.message));
     end
