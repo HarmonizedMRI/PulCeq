@@ -18,9 +18,6 @@ function ceq = seq2ceq(seqarg, varargin)
 % i             segment array index, starting from 1
 % j             block number within a segment, starting from 1
 
-GAM = 4257.6;   % Hz/Gauss
-
-minDelayBlockDuration = 4e-6 - 100*eps; 
 
 %% parse inputs
 
@@ -68,6 +65,7 @@ for n = 1:ceq.nMax
         ceq.nReadouts = ceq.nReadouts + 1;
     end
 
+    % get TRID label if present
     if isfield(b, 'label') 
         for ii = 1:length(b.label)
             if strcmp(b.label(ii).label, 'TRID')
@@ -81,7 +79,6 @@ for n = 1:ceq.nMax
     end
 end
 textprogressbar(''); 
-
 
 %% Get list of (virtual) segments.
 %% These are distinct from segment 'instances'.
@@ -97,11 +94,48 @@ for i = 1:ceq.nSegments
 end
 
 
+%% Detect variable delay blocks
+ceq.nParentBlocks = 0;
+maxnBlocksInSegment = 0;
+for i = 1:ceq.nSegments
+    if ceq.segments(i).nBlocksInSegment > maxnBlocksInSegment
+        maxnBlocksInSegment = ceq.segments(i).nBlocksInSegment;
+    end
+end
+isVariableDelay = false(ceq.nSegments, maxnBlocksInSegment);
+blockDuration = -ones(ceq.nSegments, maxnBlocksInSegment); % block instance durations
+n = tridLabels.index(1);  % start of first segment instance
+
+while n < ceq.nMax + 1
+    i = find(uniqueTridLabels == trids(n));  % segment array index
+
+    for j = 1:ceq.segments(i).nBlocksInSegment
+
+        b = seq.getBlock(n);
+        T = getblocktype(b);
+
+        if blockDuration(i,j) == -1
+            blockDuration(i,j) = b.blockDuration;  % first instance of block (i,j)
+        else
+            if b.blockDuration ~= blockDuration(i,j)  % duration is different from a previous instance
+                if T(4)
+                    isVariableDelay(i,j) = true;
+                    n = n + 1;
+                    continue;  % go to next j iteration
+                else
+                    error('Non-delay blocks must have the same duration in all segment instances');
+                end
+            end
+        end
+        n = n + 1;
+    end
+end
+
+
 %% Get parent blocks, by parsing first instance of each segment.
 %% Also fill in the sequence of parent blocks for each segment.
-%% Pure delay blocks are assigned parent block ID = 0
-
-ceq.nParentBlocks = 0;
+%% Static pure delay blocks are assigned parent block ID = 0
+%% Variable pure delay blocks are assigned parent block ID = -1
 
 for i = 1:ceq.nSegments
 
@@ -112,18 +146,14 @@ for i = 1:ceq.nSegments
         b = seq.getBlock(n);
         T = getblocktype(b);
 
-        % Skip blocks with "zero" duration, defined as < 4us 
-        %if b.blockDuration < minDelayBlockDuration
-        %    continue;
-        %end
-
-        % If pure delay block, assign parent block 0 and continue to next row
-        if T(4)
-            ceq.segments(i).blockIDs(j) = 0;
+        % Pure delay block (constant or variable)
+        if T(4) == 1
+            ceq.segments(i).blockIDs(j) = 0 - isVariableDelay(i,j);
             continue;
         end
 
-        % Check if block is similar to an existing parent block
+        % Not a pure delay block.
+        % Now check if block is similar to an existing parent block
         issame = false;
         for p = 1:ceq.nParentBlocks
             np = ceq.parentBlocks(p).row; 
@@ -158,7 +188,6 @@ end
 %% determines the rotation for the whole segment.
 ceq.loop = zeros(ceq.nMax, 23);
 physioTrigger = false;
-activeSegmentID = [];
 n = tridLabels.index(1);  % start of first segment instance
 textprogressbar('seq2ceq: Getting dynamic scan information: ');
 while n < ceq.nMax + 1
@@ -176,7 +205,7 @@ while n < ceq.nMax + 1
     physioTrigger = false;
     i = find(uniqueTridLabels == trids(n));  % segment array index
 
-    R = []; 
+    R = eye(3);  % default rotation for this segment
 
     for j = 1:ceq.segments(i).nBlocksInSegment
         b = seq.getBlock(n);
@@ -184,14 +213,10 @@ while n < ceq.nMax + 1
         % get cardiac trigger
         T = getblocktype(b);
         physioTrigger = T(3);
-        try
         p = ceq.segments(i).blockIDs(j);  % parent block index
-        catch
-        keyboard
-        end
 
-
-        if p == 0  % pure delay block
+        if p < 1  
+            % pure delay block (constant or variable)
             ceq.loop(n,:) = getdynamics(b, i, p, physioTrigger, []);
             n = n + 1;
             continue;
@@ -200,17 +225,9 @@ while n < ceq.nMax + 1
         end
 
         % Get rotation
-        [Rtmp, scale] = getrotation(b, ceq.parentBlocks(p).block);
-        %assert(~isempty(Rtmp), ...
-        %    sprintf('row/segment/block = %d/%d/%d: waveform is inconsistent with parent block', n, i, j));
-
-        if ~isempty(Rtmp)
-            if norm(Rtmp - eye(3), "fro") > 1e-6
-                % found a rotation, so use it (unless overwritten by a later block in this segment)
-                R = Rtmp;
-
-                % and set gradient amplitudes equal to those in the parent block (possibly scaled)
-                ceq.loop(n, [6 8 10]) = scale * ceq.loop(ceq.parentBlocks(p).row, [6 8 10]);
+        if isfield(b, 'rotation')
+            if strcmp(b.rotation.type, 'rot3D')
+                R = mr.aux.quat.toRotMat(b.rotation.rotQuaternion);
             end
         end
 
@@ -219,9 +236,6 @@ while n < ceq.nMax + 1
 
     % Set rotation for last block in segment instance; 
     % the interpreter uses this to set the rotation for the whole segment
-    if isempty(R)
-        R = eye(3);
-    end
     R = R';
     ceq.loop(n-1, 15:23) = R(:)';   % write R in row-major order
 

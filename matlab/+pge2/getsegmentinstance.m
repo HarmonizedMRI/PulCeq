@@ -10,6 +10,9 @@ function S = getsegmentinstance(ceq, i, sys, L, varargin)
 % Input options:
 %   'plot'           true/false
 %   'durationOnly'   true/false     If true, S only contains duration field
+%   'logical'        true/false     If true, display gradients in logical coordinate frame, i.e., 
+%                                   before rotating. Corner/sample points are indicated by circles.
+%                                   If false, gradients are interpolated to 4us and shown as continuous line.
 %
 % Output:
 %   S               struct containing segment sequencer waveforms:
@@ -22,37 +25,35 @@ function S = getsegmentinstance(ceq, i, sys, L, varargin)
 %                    - at the start of soft delay blocks.
 %                   The important thing here is that SSP instructions from different
 %                   RF/ADC/soft delay events cannot overlap.
-%     S.duration    sec
+%     
+%     S.duration    sec. Includes sys.dead_time and sys.segment_ringdown_time
 
 arg.plot = false;
 arg.durationOnly = false;
+arg.logical = false; 
 
 arg = vararg_pair(arg, varargin);   % in ../
-
-%if ischar(ceq)
-%    sub_test();
-%    return;
-%end
 
 blockIDs = ceq.segments(i).blockIDs;
 parentBlocks = ceq.parentBlocks;
 
 assert(length(blockIDs) == size(L,1), 'size(L,1) must be equal to number of blocks in segment');
 
-% Get segment duration
-S.duration = sys.segment_dead_time;
+% Get segment duration and block boundaries
+tic = sys.segment_dead_time;      % running time counter marking block boundary
 for j = 1:length(blockIDs)
-    p = blockIDs(j);  % parent block index
-    S.duration = S.duration + L(j, 13);
+    S.tic(j) = tic;
+    tic = tic + L(j, 13);
 end
-S.duration = S.duration + sys.segment_ringdown_time;
+S.tic(end+1) = tic;
+S.duration = tic + sys.segment_ringdown_time;
 if arg.durationOnly
     return;
 end
 
 % Initialize SSP waveform
 % SSP set to HI just means that some hardware instruction is being transmitted
-% in connection with an RF event, ADC event, or soft delay block.
+% in connection with an RF event, ADC event, or variable delay block.
 HI = 1;              
 LO = 0;
 n = round(S.duration/sys.GRAD_UPDATE_TIME);
@@ -67,7 +68,7 @@ for ax = {'gx','gy','gz'}
     S.(ax{1}).t = [];
 end
 
-% build segment in the same way the interpreter does it
+% build segment the same way the interpreter does it
 tic = sys.segment_dead_time;      % running time counter marking block boundary
 
 for j = 1:length(blockIDs)
@@ -76,13 +77,21 @@ for j = 1:length(blockIDs)
 
     msg1 = sprintf('block %d of %d (parent block %d; block start time %.e s)', j, length(blockIDs), p, tic);
 
-    if p == 0  % soft delay block
-        % soft delay block requires a 4us SSP pulse
+    % variable delay block
+    if p == -1  
+        % variable delay block requires a 4us SSP pulse
         n1 = round(tic/sys.GRAD_UPDATE_TIME) + 1;
         S.SSP.signal(n1) = S.SSP.signal(n1) + HI;
 
         % update time counter (block boundary)
         tic = tic + L(j,13);   % sec
+        continue;
+    end
+
+    % static delay block
+    if p == 0
+        % update time counter (block boundary)
+        tic = tic + L(j,13);   % sec. Should be same as b.blockDuration
         continue;
     end
 
@@ -171,6 +180,46 @@ for j = 1:length(blockIDs)
     end
 end
 
+% Remove duplicate gradient samples (extended trapezoids can start/end on block boundary)
+[S.gx.t, ia] = unique(S.gx.t);
+S.gx.signal = S.gx.signal(ia);
+[S.gy.t, ia] = unique(S.gy.t);
+S.gy.signal = S.gy.signal(ia);
+[S.gz.t, ia] = unique(S.gz.t);
+S.gz.signal = S.gz.signal(ia);
+
+if ~arg.logical
+    % Interpolate to 4us and rotate gradients,
+    % so we can apply the rotation matrix R directly.
+    % NB!! The whole segment gets rotated! 
+
+    % Get rotation matrix R.
+    % The rotation matrix is equal to the last non-identity
+    % rotation specified in L (if any).
+    I = eye(3);
+    Iv = I(:);
+    for j = length(blockIDs):-1:1
+        Rv = L(j, 15:23);   % R in row-major order
+        if ~all(round(1e6*Rv) == 1e6*Iv)
+            break;
+        end
+    end
+
+    Rt = reshape(Rv,3,3);  % R transpose
+    R = Rt';
+
+    % Interpolate gradients to sys.GRAD_UPDATE_TIME (= 4us)
+    [S.gx.t, S.gx.signal] = sub_interp_grad(S.gx.t, S.gx.signal, S.duration, sys);
+    [S.gy.t, S.gy.signal] = sub_interp_grad(S.gy.t, S.gy.signal, S.duration, sys);
+    [S.gz.t, S.gz.signal] = sub_interp_grad(S.gz.t, S.gz.signal, S.duration, sys);
+
+    % Apply rotation
+    G = R * [S.gx.signal'; S.gy.signal'; S.gz.signal'];
+    S.gx.signal = G(1,:)';
+    S.gy.signal = G(2,:)';
+    S.gz.signal = G(3,:)';
+end    
+
 if ~arg.plot
     return;
 end
@@ -187,9 +236,11 @@ ylabel('RF (Gauss)'); % ylim([0 1.1]);
 
 subplot(5,1,2);
 ax{2} = gca;
-n = round(S.duration/sys.GRAD_UPDATE_TIME);
-plot(((1:n)-0.5)*sys.GRAD_UPDATE_TIME, S.SSP.signal, 'b.');
-ylabel('SSP (a.u.)');  ylim([0 1.2]);
+plot([0; S.rf.t; S.duration], [0; angle(S.rf.signal); 0], 'blue.');
+ylabel('RF angle (radians)'); % ylim([0 1.1]);
+%n = round(S.duration/sys.GRAD_UPDATE_TIME);
+%plot(((1:n)-0.5)*sys.GRAD_UPDATE_TIME, S.SSP.signal, 'b.');
+%ylabel('SSP (a.u.)');  ylim([0 1.2]);
 
 sp = 3;
 cols = 'rgb';
@@ -208,43 +259,35 @@ linkaxes([ax{1} ax{2} ax{3} ax{4} ax{5}], 'x');  % common zoom setting (along ti
 
 return
 
-lw = 1;
-bgColor = 'k';
 
-figure;
-t = tiledlayout(5, 1);
-ax1 = nexttile;
-plot([0; S.gx.t; S.duration], [0; S.gx.signal; 0], '-y', 'LineWidth', lw);
-ylabel('gx (a.u.)');  ylim([-1.2 1.2]);
-set(gca, 'color', bgColor);  set(gca, 'XTick', []);
+function [tt, g] = sub_interp_grad(tt, g, dur, sys)
+    % Interpolate gradients to uniform raster time (4 us)
+    % Inputs:
+    %  tt     time samples before interpolation, arbitrary points (sec)
+    %  g      gradient sampled at tt (a.u.)
+    %  dur    total segment duration, including segment dead/ringdown times (sec)
+    %  sys    pge2 system struct, see getsys.m
 
-ax2 = nexttile;
-plot([0; S.gy.t; S.duration], [0; S.gy.signal; 0], '-c', 'LineWidth', lw);
-ylabel('gx (a.u.)');  ylim([-1.2 1.2]);
-set(gca, 'color', bgColor);  set(gca, 'XTick', []);
+    dt = sys.GRAD_UPDATE_TIME;  % gradient raster time
+    t_start = sys.segment_dead_time;
+    t_end = dur - sys.segment_dead_time - sys.segment_ringdown_time;
+    T = t_start + dt/2:dt:t_end;
 
-ax3 = nexttile;
-plot([0; S.gz.t; S.duration], [0; S.gz.signal; 0], '-m', 'LineWidth', lw);
-ylabel('gx (a.u.)');  ylim([-1.2 1.2]);
-set(gca, 'color', bgColor);  set(gca, 'XTick', []);
+    if isempty(tt)
+        g = zeros(size(T));
+    else
+        % add 0 samples at start and end of segment so that 'extrap' below works correctly
+        tt = [t_start; tt; t_end];
+        g = [0; g; 0];
 
-ax4 = nexttile;
-plot([0; S.rf.t; S.duration], [0; abs(S.rf.signal); 0], '-r', 'LineWidth', lw);
-ylabel('RF (a.u.)');  ylim([0 1.2]);
-set(gca, 'color', bgColor);  set(gca, 'XTick', []);
+        % remove duplicate samples (e.g., on block boundaries)
+        [tt, ia] = unique(tt);
+        g = g(ia);
 
-ax5 = nexttile;
-n = round(S.duration/sys.GRAD_UPDATE_TIME);
-plot(((1:n)-0.5)*sys.GRAD_UPDATE_TIME, S.SSP.signal, '.b');
-ylabel('SSP (a.u.)');  ylim([0 1.1]);
-%plot(T, th, '-g', 'LineWidth', lw);  ylabel('∠b1 (rad)'); axis([T(1) Tend -1.1*pi 1.1*pi]);
-set(gca, 'color', bgColor);
-xlabel('time (sec)');
+        g = interp1(tt, g, T, 'linear', 'extrap');
+    end
 
-t.TileSpacing = 'none';
-t.Padding = 'none';
+    tt = T(:);
+    g = g(:);
 
-linkaxes([ax1 ax2 ax3 ax4 ax5], 'x');  % common zoom setting (along time axis) for all tiles
-
-return
-
+    return

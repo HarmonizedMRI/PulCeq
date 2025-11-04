@@ -1,102 +1,76 @@
 function validate(ceq, sys)
 %
-% Check compatibility of a PulCeq (Ceq) sequence object with the 'Pulseq on GE v2' interpreter.
+% Check compatibility of a PulCeq (Ceq) sequence object with the 
+% GE scanner specifications in 'sys'.
+%
+
+tol = 1e-7;   % timing tolerance. Matches 'eps' in the pge2 EPIC code
 
 % Check parent block timing.
 % Parent blocks are 'virtual' (waveform amplitudes are arbitrary/normalized), so only check
 % timing here; waveforms will be checked below for each segment instance in the scan loop.
 ok = true;
+fprintf('Checking parent blocks timing: ');
 for p = 1:ceq.nParentBlocks         % we use 'p' to count parent blocks here and in the EPIC code
     b = ceq.parentBlocks(p).block;
     try
         pge2.checkblocktiming(b, sys);
     catch ME
         ok = false;
-        fprintf('Error: parent block %d: %s\n', p, ME.message);
+        fprintf('Error in parent block %d: %s\n', p, ME.message);
     end
 end
 if ok
-    fprintf('Parent blocks PASSED timing check\n');
+    fprintf('PASSED\n');
 else
-    fprintf('Parent blocks FAILED timing check\n');
+    fprintf('FAILED\n');
+    return;
 end
 
-% Check base (virtual) segments.
-ok = true;
-for i = 1:ceq.nSegments      % we use 'i' to count segments here and in the EPIC code
-    try 
-        S{i} = pge2.constructvirtualsegment(ceq.segments(i).blockIDs, ceq.parentBlocks, sys);
-    catch ME
-        ok = false;
-        fprintf('Error: Base (virtual) segment %d: %s\n', i, ME.message);
-    end
-end
-if ok
-    fprintf('Base segments PASSED timing check\n');
-else
-    fprintf('Base segments FAILED timing check\n');
-end
-
-% Check scan loop
-% This is where waveform amplitudes are set, so for each segment instance we must check that:
-%  - RF amplitude does not exceed hardware limit
-%  - gradient amplitude on each axis does not exceed hardware limit
-%  - gradient slew rate on each axis does not exceed hardware limit
-%  - gradients are continuous across block boundaries
-
-%a = input('Check scan loop? It might take a while. (y/n) ', "S");
-%if ~strcmp(a, 'y') 
-%    return;
-%end
-
-n = 1;   % block (row) number
+% loop through segment instances
+n = 1;    % row counter in ceq.loop
 textprogressbar('Checking scan loop: ');
-ok = true;
 while n < ceq.nMax 
-    i = ceq.loop(n, 1);   % segment id
-
-    nbis = ceq.segments(i).nBlocksInSegment;
-
-    assert(all(ceq.loop(n:(n+nbis-1),3)/sys.gamma < sys.b1_max + eps), ...
-        sprintf('segment %d: RF amp exceeds limit', i));
-
-    % check gradient amplitude and slew
-    inds = [6 8 10];  % column indices in loop array containing gradient amplitude
-    axes = {'gx', 'gy', 'gz'};
-    for d = 1:length(axes)
-        ax = axes{d};
-        gamp = ceq.loop(n:(n+nbis-1), inds(d))/sys.gamma/100;
-        J = find(gamp > sys.g_max);
-        if ~isempty(J)
-            ok = false;
-            for ll = 1:length(J)
-                j = J(ll);
-                fprintf('(block %d) segment %d, block %d: %s gradient amp (%.3f G/cm) exceeds limit\n', n+j-1, i, j, ax, gamp(j));
-            end
-        end
-        slew_max = abs(gamp' .* S{i}.(ax).slew.normalized.peak * 1e-3);    % G/cm/ms
-        J = find(slew_max > sys.slew_max);
-        if ~isempty(J)
-            ok = false;
-            for ll = 1:length(J)
-                j = J(ll);
-                fprintf('(block %d) segment %d, block %d: %s gradient slew (%.3f G/cm/ms) exceeds limit\n', n+j-1, i, j, ax, slew_max(j));
-            end
-        end
+    % get segment instance
+    i = ceq.loop(n,1);  % segment index
+    L = ceq.loop(n:(n-1+ceq.segments(i).nBlocksInSegment), :);  % dynamic info
+    try
+        S = pge2.getsegmentinstance(ceq, i, sys, L, 'logical', false);
+    catch ME
+        error(sprintf('(n = %d, i = %d): %s\n', n, i, ME.message));
     end
 
-    % check gradient continuity across block boundaries  TODO
-    n = n + nbis;
-    if n > ceq.nMax
-        n = n - 1;
+    % Block boundaries must be on sys.GRAD_UPDATE_TIME boundary
+    res = S.tic/sys.GRAD_UPDATE_TIME;
+    if any(abs(S.tic/sys.GRAD_UPDATE_TIME - round(S.tic/sys.GRAD_UPDATE_TIME)) > tol)
+        error(sprintf('segment %d, instance at row %d: block boundaries not on sys.GRAD_UPDATE_TIME boundary', i, n));
+    end
+
+    % check peak b1 amplitude
+    if ~isempty(S.rf.signal)
+        b1max = max(abs(S.rf.signal))/sys.gamma;
+        assert(b1max < sys.b1_max + eps, ...
+            sprintf('segment %d, instance at row %d: RF amp (%.3 G) exceeds limit (%.3f)', i, n, b1max, sys.b1_max));
+    end
+
+    % check peak gradient amplitude and slew rate
+    for ax = {'gx','gy','gz'}
+        if ~isempty(S.(ax{1}).signal)
+            gmax = max(abs(S.(ax{1}).signal));
+            assert(gmax < sys.g_max + eps, ...
+                sprintf('segment %d, instance at row %d: %s amp (%.2f G/cm) exceeds limit (%.1f)', i, n, ax{1}, gmax, sys.g_max));
+            slew = diff(S.(ax{1}).signal)./diff(S.(ax{1}).t)/1000;  % G/cm/ms
+            smax = max(abs(slew));
+            assert(smax < sys.slew_max + eps, ...
+                sprintf('segment %d, instance at row %d: %s slew rate (%.2f G/cm/ms) exceeds limit (%.1f)', i, n, ax{1}, smax, sys.slew_max));
+        end
     end
 
     textprogressbar(n/ceq.nMax*100);
+
+    n = n + ceq.segments(i).nBlocksInSegment;
 end
-if ok
-    textprogressbar(' PASSED'); 
-else
-    textprogressbar(' FAILED'); 
-end
+textprogressbar(n/ceq.nMax*100);
+textprogressbar(' PASSED'); 
 
 
