@@ -195,7 +195,7 @@ function sub_addSegmentInstanceToPlot(tic, S, showBlocks, sys, yLim)
     % S    struct   segment instance
 
     subplot(5,1,1); hold on;
-    plot(tic + S.rf.t, abs(S.rf.signal), 'black.-');
+    plot(tic + S.rf.t, abs(S.rf.signal), 'black.');
     ylabel('RF (Gauss)');
     ylabel({'|b1|', 'Gauss'}, 'Rotation', 0); 
     ylim(1.1 * yLim.rf * [-1 1]);
@@ -206,7 +206,7 @@ function sub_addSegmentInstanceToPlot(tic, S, showBlocks, sys, yLim)
     end
 
     subplot(5,1,2); hold on;
-    plot(tic + S.rf.t, angle(S.rf.signal), 'black.-');
+    plot(tic + S.rf.t, angle(S.rf.signal), 'black.');
     ylabel({'\angleb1', 'rad'}, 'Rotation', 0); 
     ylim(1.1 * yLim.phs * [-1 1]);
     if showBlocks

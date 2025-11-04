@@ -269,8 +269,9 @@ function [tt, g] = sub_interp_grad(tt, g, dur, sys)
     %  sys    pge2 system struct, see getsys.m
 
     dt = sys.GRAD_UPDATE_TIME;  % gradient raster time
+
     t_start = sys.segment_dead_time;
-    t_end = dur - sys.segment_dead_time - sys.segment_ringdown_time;
+    t_end = dur - sys.segment_ringdown_time;
     T = t_start + dt/2:dt:t_end;
 
     if isempty(tt)
