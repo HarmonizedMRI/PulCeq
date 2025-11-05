@@ -1,10 +1,20 @@
-function validate(ceq, sys)
+function pars = validate(ceq, sysGE)
 %
 % Check compatibility of a PulCeq (Ceq) sequence object with the 
-% GE scanner specifications in 'sys'.
+% GE scanner specifications in 'sysGE'.
 %
 
 tol = 1e-7;   % timing tolerance. Matches 'eps' in the pge2 EPIC code
+
+% initialize return value
+pars.b1max = 0;      % max RF amplitude
+pars.gmax = 0;       % max single-axis gradient amplitude [G/cm]
+pars.smax = 0;       % max single-axis slew rate in sequence, G/cm/ms
+pars.pnsmax.row = 1;   % index of first block in segment instance with max PNS
+pars.pnsmax.val = 0;   % maximum gradient-combind PNS
+pars.pnsmax.xval = 0;
+pars.pnsmax.yval = 0;
+pars.pnsmax.zval = 0;
 
 % Check parent block timing.
 % Parent blocks are 'virtual' (waveform amplitudes are arbitrary/normalized), so only check
@@ -14,7 +24,7 @@ fprintf('Checking parent blocks timing: ');
 for p = 1:ceq.nParentBlocks         % we use 'p' to count parent blocks here and in the EPIC code
     b = ceq.parentBlocks(p).block;
     try
-        pge2.checkblocktiming(b, sys);
+        pge2.checkblocktiming(b, sysGE);
     catch ME
         ok = false;
         fprintf('Error in parent block %d: %s\n', p, ME.message);
@@ -36,35 +46,53 @@ while n < ceq.nMax
     L = ceq.loop(n:(n-1+ceq.segments(i).nBlocksInSegment), :);  % dynamic info
     try
         % ok to validate in logical coordinates since rotation doesn't impact executability
-        S = pge2.getsegmentinstance(ceq, i, sys, L, 'logical', true);
+        S = pge2.getsegmentinstance(ceq, i, sysGE, L, 'rotate', false, 'interpolate', true);
     catch ME
         error(sprintf('(n = %d, i = %d): %s\n', n, i, ME.message));
     end
 
-    % Block boundaries must be on sys.GRAD_UPDATE_TIME boundary
-    res = S.tic/sys.GRAD_UPDATE_TIME;
-    if any(abs(S.tic/sys.GRAD_UPDATE_TIME - round(S.tic/sys.GRAD_UPDATE_TIME)) > tol)
-        error(sprintf('segment %d, instance at row %d: block boundaries not on sys.GRAD_UPDATE_TIME boundary', i, n));
+    % Block boundaries must be on sysGE.GRAD_UPDATE_TIME boundary
+    res = S.tic/sysGE.GRAD_UPDATE_TIME;
+    if any(abs(S.tic/sysGE.GRAD_UPDATE_TIME - round(S.tic/sysGE.GRAD_UPDATE_TIME)) > tol)
+        error(sprintf('segment %d, instance at row %d: block boundaries not on sysGE.GRAD_UPDATE_TIME boundary', i, n));
     end
 
     % check peak b1 amplitude
     if ~isempty(S.rf.signal)
-        b1max = max(abs(S.rf.signal))/sys.gamma;
-        assert(b1max < sys.b1_max + eps, ...
-            sprintf('segment %d, instance at row %d: RF amp (%.3 G) exceeds limit (%.3f)', i, n, b1max, sys.b1_max));
+        b1max = max(abs(S.rf.signal));  % Gauss
+        pars.b1max = max(b1max, pars.b1max);
+        assert(b1max < sysGE.b1_max + eps, ...
+            sprintf('segment %d, instance at row %d: RF amp (%.3 G) exceeds limit (%.3f)', i, n, b1max, sysGE.b1_max));
     end
 
     % check peak gradient amplitude and slew rate
     for ax = {'gx','gy','gz'}
         if ~isempty(S.(ax{1}).signal)
-            gmax = max(abs(S.(ax{1}).signal));
-            assert(gmax < sys.g_max + eps, ...
-                sprintf('segment %d, instance at row %d: %s amp (%.2f G/cm) exceeds limit (%.1f)', i, n, ax{1}, gmax, sys.g_max));
+            gmax = max(abs(S.(ax{1}).signal)); % G/cm
+            pars.gmax = max(gmax, pars.gmax);
+            assert(gmax < sysGE.g_max + eps, ...
+                sprintf('segment %d, instance at row %d: %s amp (%.2f G/cm) exceeds limit (%.1f)', i, n, ax{1}, gmax, sysGE.g_max));
             slew = diff(S.(ax{1}).signal)./diff(S.(ax{1}).t)/1000;  % G/cm/ms
             smax = max(abs(slew));
-            assert(smax < sys.slew_max + eps, ...
-                sprintf('segment %d, instance at row %d: %s slew rate (%.2f G/cm/ms) exceeds limit (%.1f)', i, n, ax{1}, smax, sys.slew_max));
+            pars.smax = max(smax, pars.smax);
+            assert(smax < sysGE.slew_max + eps, ...
+                sprintf('segment %d, instance at row %d: %s slew rate (%.2f G/cm/ms) exceeds limit (%.1f)', i, n, ax{1}, smax, sysGE.slew_max));
         end
+    end
+
+    % check PNS for the MR750 scanner
+    c = 360e-6;           
+    rheobase = 23.4;
+    alpha = 0.333;
+    Smin = rheobase/alpha;
+    G = [S.gx.signal'; S.gy.signal'; S.gz.signal']/sysGE.gamma*100;  % T/m
+    [pt, p] = pge2.pns(Smin, c, G, sysGE.GRAD_UPDATE_TIME, false); 
+    if max(pt) > pars.pnsmax.val
+        pars.pnsmax.val = max(pars.pnsmax.val, max(pt));
+        pars.pnsmax.row = n;  
+        pars.pnsmax.xval = max(pars.pnsmax.xval, max(abs(p(1,:))));
+        pars.pnsmax.yval = max(pars.pnsmax.yval, max(abs(p(2,:))));
+        pars.pnsmax.zval = max(pars.pnsmax.zval, max(abs(p(3,:))));
     end
 
     textprogressbar(n/ceq.nMax*100);
@@ -73,5 +101,4 @@ while n < ceq.nMax
 end
 textprogressbar(n/ceq.nMax*100);
 textprogressbar(' PASSED'); 
-
 
