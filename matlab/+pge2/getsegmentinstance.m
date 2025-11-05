@@ -10,29 +10,26 @@ function S = getsegmentinstance(ceq, i, sys, L, varargin)
 % Input options:
 %   'plot'           true/false
 %   'durationOnly'   true/false     If true, S only contains duration field
-%   'logical'        true/false     If true, display gradients in logical coordinate frame, i.e., 
-%                                   before rotating. Corner/sample points are indicated by circles.
-%                                   If false, gradients are interpolated to 4us and shown as continuous line.
+%   'rotate'         true/false     If false, display gradients in logical coordinate frame, i.e., 
+%                                   before rotating. If true, interpolated gradients are shown.
+%   'interpolate'    true/false     Interpolate to 4us, or display corner points (for extended traps)
 %
 % Output:
-%   S               struct containing segment sequencer waveforms:
+%   S               struct containing segment waveforms:
 %     S.rf          RF waveform samples (Gauss) and times (sec)
 %     S.gx/gy/gz    Gradient waveform samples (Gauss/cm) and times (sec)
-%     S.SSP         A somewhat loose representation of the hardware instruction signals
-%                   on the SSP bus. SSP is represented here as a waveform on 4us raster,
-%                   with amplitude HI...
-%                    - during RF and ADC events, including the dead and ringdown intervals, and
-%                    - at the start of soft delay blocks.
-%                   The important thing here is that SSP instructions from different
-%                   RF/ADC/soft delay events cannot overlap.
-%     
 %     S.duration    sec. Includes sys.dead_time and sys.segment_ringdown_time
 
 arg.plot = false;
 arg.durationOnly = false;
-arg.logical = false; 
+arg.rotate = false; 
+arg.interpolate = false; 
 
 arg = vararg_pair(arg, varargin);   % in ../
+
+if arg.rotate
+    arg.interpolate = true;
+end
 
 blockIDs = ceq.segments(i).blockIDs;
 parentBlocks = ceq.parentBlocks;
@@ -188,36 +185,39 @@ S.gy.signal = S.gy.signal(ia);
 [S.gz.t, ia] = unique(S.gz.t);
 S.gz.signal = S.gz.signal(ia);
 
-if ~arg.logical
+if arg.interpolate
     % Interpolate to 4us and rotate gradients,
     % so we can apply the rotation matrix R directly.
     % NB!! The whole segment gets rotated! 
-
-    % Get rotation matrix R.
-    % The rotation matrix is equal to the last non-identity
-    % rotation specified in L (if any).
-    I = eye(3);
-    Iv = I(:);
-    for j = length(blockIDs):-1:1
-        Rv = L(j, 15:23);   % R in row-major order
-        if ~all(round(1e6*Rv) == 1e6*Iv)
-            break;
-        end
-    end
-
-    Rt = reshape(Rv,3,3);  % R transpose
-    R = Rt';
 
     % Interpolate gradients to sys.GRAD_UPDATE_TIME (= 4us)
     [S.gx.t, S.gx.signal] = sub_interp_grad(S.gx.t, S.gx.signal, S.duration, sys);
     [S.gy.t, S.gy.signal] = sub_interp_grad(S.gy.t, S.gy.signal, S.duration, sys);
     [S.gz.t, S.gz.signal] = sub_interp_grad(S.gz.t, S.gz.signal, S.duration, sys);
 
-    % Apply rotation
-    G = R * [S.gx.signal'; S.gy.signal'; S.gz.signal'];
-    S.gx.signal = G(1,:)';
-    S.gy.signal = G(2,:)';
-    S.gz.signal = G(3,:)';
+    if arg.rotate
+
+        % Get rotation matrix R.
+        % The rotation matrix is equal to the last non-identity
+        % rotation specified in L (if any).
+        I = eye(3);
+        Iv = I(:);
+        for j = length(blockIDs):-1:1
+            Rv = L(j, 15:23);   % R in row-major order
+            if ~all(round(1e6*Rv) == 1e6*Iv)
+                break;
+            end
+        end
+
+        Rt = reshape(Rv,3,3);  % R transpose
+        R = Rt';
+
+        % Apply rotation
+        G = R * [S.gx.signal'; S.gy.signal'; S.gz.signal'];
+        S.gx.signal = G(1,:)';
+        S.gy.signal = G(2,:)';
+        S.gz.signal = G(3,:)';
+    end
 end    
 
 if ~arg.plot
