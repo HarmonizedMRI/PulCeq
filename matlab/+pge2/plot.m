@@ -7,17 +7,23 @@ function W = plot(ceq, sys, varargin)
 %   sys     struct       System hardware info, see pge2.getsys()
 %
 % Input options:
-%  timeRange   [1 2]         Requested start and end times (sec). Actual plot will end on a segment boundary.
-%  showBlocks  true/false    Draw vertical lines at block boundaries (default: true)
-%  logical     true/false    If true, display gradients in logical coordinate frame, i.e., 
-%                            before rotating. Corner/sample points are indicated by circles.
-%                            If false, gradients are rotated and interpolated to 4us and shown as continuous line.
+%  timeRange       [1 2]           Requested start and end times (sec). Actual plot will end on a segment boundary.
+%  showBlocks      true/false      Draw vertical lines at block boundaries (default: true)
+%  rotate          true/false      If false, display gradients in logical coordinate frame, i.e., 
+%                                  before rotating. If true, interpolated gradients are shown.
+%  interpolate     true/false      Interpolate to 4us, or display corner points (for extended traps)
 
 arg.timeRange = [0 ceq.duration];
 arg.showBlocks = true; 
-arg.logical = false;
+arg.rotate = false;
+arg.interpolate = false;
 
 arg = vararg_pair(arg, varargin);   % in ../
+
+if arg.rotate
+    arg.interpolate = true;
+    warning('Gradient waveforms interpolated to 4us');
+end
 
 if arg.timeRange(1) > ceq.duration
     error('Request time exceeds sequence duration');
@@ -69,7 +75,7 @@ while n < ceq.nMax & tic - eps < min(ceq.duration, arg.timeRange(2))
 
     % Get segment instance and add to plot
     try
-        S = pge2.getsegmentinstance(ceq, i, sys, L, 'logical', arg.logical);
+        S = pge2.getsegmentinstance(ceq, i, sys, L, 'rotate', arg.rotate);
     catch ME
         error(sprintf('(n = %d, i = %d): %s\n', n, i, ME.message));
     end
@@ -106,11 +112,15 @@ linkaxes([ax{1} ax{2} ax{3} ax{4} ax{5}], 'x');  % common zoom setting (along ti
 
 % set misc figure properties
 subplot(5,1,1);
-if arg.logical
-    msg = sprintf('Logical coordinates -- gradient rotations not shown.\n');
-    msg = sprintf('%sWaveform samples/corner points are shown as defined in the original Pulseq file.\n', msg);
+if arg.rotate
+    msg = sprintf('Physical coordinates -- gradient rotations are shown.\n');
 else
-    msg = sprintf('Physical coordinates -- waveforms rotated and interpolated to 4us.\n');
+    msg = sprintf('Logical coordinates -- gradient rotations not shown.\n');
+end
+if arg.interpolate
+    msg = sprintf('%sGradient waveforms interpolated to 4us.\n', msg);
+else
+    msg = sprintf('%sWaveform samples/corner points are shown as defined in the original Pulseq file.\n', msg);
 end
 msg = [msg 'Vertical lines show block/segment boundaries.'];
 title(msg);
