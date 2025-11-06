@@ -7,8 +7,8 @@ function [pt, p] = pns(Smin, c, g, dt, plt)
 %   >> pns('test');
 %
 % Inputs
-%   Smin   [1]     stimulation threshold for constant slew of infinite duration
-%                  Smin = r/alpha, r = rheobase, alpha = effective coil length
+%   Smin   [1]     stimulation threshold (rheobase) for constant slew of infinite duration
+%                  Note: In GE lingo, Smin = r/alpha, r = rheobase, alpha = effective coil length
 %   c      [1]     chronaxie (sec). Nerve impulse response time constant
 %   g      [3 n]   x/y/z gradient waveform (T/m), for uniform (raster) sampling
 %   dt     [1]     gradient raster (sample) time (sec)
