@@ -80,13 +80,10 @@ while n < ceq.nMax
         end
     end
 
-    % check PNS for the MR750 scanner
-    c = 360e-6;           
-    rheobase = 23.4;
-    alpha = 0.333;
-    Smin = rheobase/alpha;
-    G = [S.gx.signal'; S.gy.signal'; S.gz.signal']/sysGE.gamma*100;  % T/m
-    [pt, p] = pge2.pns(Smin, c, G, sysGE.GRAD_UPDATE_TIME, false); 
+    % record peak PNS
+    Smin = sysGE.rheobase/sysGE.alpha;
+    G = [S.gx.signal'; S.gy.signal'; S.gz.signal']/100;  % T/m
+    [pt, p] = pge2.pns(Smin, sysGE.chronaxie, G, sysGE.GRAD_UPDATE_TIME, false); 
     if max(pt) > pars.pnsmax.val
         pars.pnsmax.val = max(pars.pnsmax.val, max(pt));
         pars.pnsmax.row = n;  
@@ -99,6 +96,14 @@ while n < ceq.nMax
 
     n = n + ceq.segments(i).nBlocksInSegment;
 end
-textprogressbar(n/ceq.nMax*100);
+textprogressbar((n-1)/ceq.nMax*100);
 textprogressbar(' PASSED'); 
 
+if pars.pnsmax.val > 100
+    warning('PNS exceeds first controlled mode (100%%)!!!');
+    return;
+end
+if pars.pnsmax.val > 80
+    warning('PNS exceeds normal mode (80%%)!');
+    return;
+end
