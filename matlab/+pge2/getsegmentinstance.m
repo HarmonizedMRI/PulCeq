@@ -48,15 +48,6 @@ if arg.durationOnly
     return;
 end
 
-% Initialize SSP waveform
-% SSP set to HI just means that some hardware instruction is being transmitted
-% in connection with an RF event, ADC event, or variable delay block.
-HI = 1;              
-LO = 0;
-n = round(S.duration/sys.GRAD_UPDATE_TIME);
-S.SSP.signal = LO*ones(n,1);
-S.SSP.signal(1:3) = HI;    % segment dead time
-
 % initialize waveforms
 S.rf.signal = [];
 S.rf.t = [];       
@@ -76,10 +67,6 @@ for j = 1:length(blockIDs)
 
     % variable delay block
     if p == -1  
-        % variable delay block requires a 4us SSP pulse
-        n1 = round(tic/sys.GRAD_UPDATE_TIME) + 1;
-        S.SSP.signal(n1) = S.SSP.signal(n1) + HI;
-
         % update time counter (block boundary)
         tic = tic + L(j,13);   % sec
         continue;
@@ -108,36 +95,6 @@ for j = 1:length(blockIDs)
         % time samples and waveform
         S.rf.t = [S.rf.t; tic + sys.psd_rf_wait + b.rf.delay + b.rf.t]; % + raster/2];
         S.rf.signal = [S.rf.signal; b.rf.signal/max(abs(b.rf.signal))*L(j,3)/sys.gamma];  % amplitude in Gauss
-
-        % SSP pulses
-        n1 = (tic + sys.psd_rf_wait + b.rf.delay - sys.rf_dead_time)/sys.GRAD_UPDATE_TIME + 1;
-        n2 = (tic + sys.psd_rf_wait + b.rf.delay + b.rf.t(end) + raster/2 + sys.rf_ringdown_time)/sys.GRAD_UPDATE_TIME;
-        if abs(n1 - abs(n1)) > 1e-7 
-            throw(MException('rf:starttime', sprintf('%s: RF waveform must start on a sys.GRAD_UPDATE_TIME boundary', msg1)));
-        end
-        if abs(n2 - abs(n2)) > 1e-7 
-            throw(MException('rf:endtime', sprintf('%s: RF waveform must end on a sys.GRAD_UPDATE_TIME boundary', msg1)));
-        end
-        if n2 > S.duration/sys.GRAD_UPDATE_TIME 
-            throw(MException('rf:endofsegment', sprintf('%s: RF ringdown extends past end of segment', msg1)));
-        end
-        S.SSP.signal(round(n1:n2)) = S.SSP.signal(round(n1:n2)) + HI;
-    end
-
-    % ADC (SSP pulses)
-    if ~isempty(b.adc)
-        n1 = (tic + sys.psd_grd_wait + b.adc.delay - sys.adc_dead_time)/sys.GRAD_UPDATE_TIME + 1;
-        n2 = (tic + sys.psd_grd_wait + b.adc.delay + b.adc.dwell*b.adc.numSamples + sys.adc_ringdown_time)/sys.GRAD_UPDATE_TIME;
-        if abs(n1 - abs(n1)) > 1e-7 
-            throw(MException('adc:starttime', sprintf('%s: ADC window must start on a sys.GRAD_UPDATE_TIME boundary', msg1)));
-        end
-        if abs(n2 - abs(n2)) > 1e-7 
-            throw(MException('adc:endtime', sprintf('%s: ADC window must end on a sys.GRAD_UPDATE_TIME boundary', msg1)));
-        end
-        if n2 > S.duration/sys.GRAD_UPDATE_TIME 
-            throw(MException('adc:endofsegment', sprintf('%s: ADC ringdown extends past end of segment', msg1)));
-        end
-        S.SSP.signal(round(n1:n2)) = S.SSP.signal(round(n1:n2)) + HI;
     end
 
     % Gradients
@@ -169,12 +126,6 @@ for j = 1:length(blockIDs)
     end
 
     tic = tic + b.blockDuration;
-
-    % Check for overlapping SSP messages
-    if any(S.SSP.signal > 1.5*HI)
-        warning(sprintf('%s: SSP messages overlap. Try increasing the separation between RF events, ADC events, and soft delay blocks.', msg1));
-%        throw(MException('SSP:overlap', sprintf('%s: SSP messages overlap. Try increasing the separation between RF events, ADC events, and soft delay blocks.', msg1)));
-    end
 end
 
 % Remove duplicate gradient samples (extended trapezoids can start/end on block boundary)
@@ -231,16 +182,11 @@ subplot(5,1,1);
 ax{1} = gca;
 plot([0; S.rf.t; S.duration], [0; abs(S.rf.signal); 0], 'black.');
 ylabel('RF (Gauss)'); % ylim([0 1.1]);
-%set(gca, 'color', bgColor);  
-%set(gca, 'XTick', []);
 
 subplot(5,1,2);
 ax{2} = gca;
 plot([0; S.rf.t; S.duration], [0; angle(S.rf.signal); 0], 'blue.');
 ylabel('RF angle (radians)'); % ylim([0 1.1]);
-%n = round(S.duration/sys.GRAD_UPDATE_TIME);
-%plot(((1:n)-0.5)*sys.GRAD_UPDATE_TIME, S.SSP.signal, 'b.');
-%ylabel('SSP (a.u.)');  ylim([0 1.2]);
 
 sp = 3;
 cols = 'rgb';
