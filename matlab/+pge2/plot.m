@@ -8,10 +8,10 @@ function W = plot(ceq, sys, varargin)
 %
 % Input options:
 %  timeRange       [1 2]           Requested start and end times (sec). Actual plot will end on a segment boundary.
-%  showBlocks      true/false      Draw vertical lines at block boundaries (default: true)
-%  rotate          true/false      If false, display gradients in logical coordinate frame, i.e., 
+%  showBlocks      TRUE/false      Draw vertical lines at block boundaries (default: true)
+%  rotate          true/FALSE      If false, display gradients in logical coordinate frame, i.e., 
 %                                  before rotating. If true, interpolated gradients are shown.
-%  interpolate     true/false      Interpolate to 4us, or display corner points (for extended traps)
+%  interpolate     true/FALSE      Interpolate to 4us, or display corner points (for extended traps)
 
 arg.timeRange = [0 ceq.duration];
 arg.showBlocks = true; 
@@ -21,8 +21,10 @@ arg.interpolate = false;
 arg = vararg_pair(arg, varargin);   % in ../
 
 if arg.rotate
+    if ~arg.interpolate
+        warning('Gradient waveforms interpolated to 4us');
+    end
     arg.interpolate = true;
-    warning('Gradient waveforms interpolated to 4us');
 end
 
 if arg.timeRange(1) > ceq.duration
@@ -37,7 +39,6 @@ yLim.gy = max(abs(ceq.loop(:,8)))/sys.gamma/100;   % Gauss/cm
 yLim.gz = max(abs(ceq.loop(:,10)))/sys.gamma/100;   % Gauss/cm
 
 % Loop through sequence segments and display 
-%W.SSP.signal = [];
 W.tic = [];  % block boundary times
 tStart = 0;  % start of plot
 W.rf.t = 0; W.rf.signal = 0;
@@ -95,8 +96,6 @@ while n < ceq.nMax & tic - eps < min(ceq.duration, arg.timeRange(2))
     W.gy.signal = [W.gy.signal; S.gy.signal];
     W.gz.signal = [W.gz.signal; S.gz.signal];
 
-    %W.SSP.signal = [W.SSP.signal; S.SSP.signal];
-
     % Update time counter and go to next segment
     tic = tic + S.duration;
     n = n + ceq.segments(i).nBlocksInSegment;
@@ -125,11 +124,7 @@ end
 msg = [msg 'Vertical lines show block/segment boundaries.'];
 title(msg);
 
-%yline(ax{2}, pi, 'black-');
-%yline(ax{2}, -pi, 'black-');
-%yt = [-pi yticks(ax{2}) pi];
 yticks(ax{2}, [-pi 0 pi]);
-%yl = yticklabels(ax{2});
 yticklabels(ax{2}, {'-π', '0', 'π'});
 
 return
@@ -160,45 +155,6 @@ function sub_plotboundary(T, vs, tp)
     % xtickangle(45);
 
     return
-
-function setDataTipFormat(h, fmt)
-    % setDataTipFormat(h, fmt)
-    % h   = graphics object handle(s), e.g. line, scatter, bar
-    % fmt = sprintf format string, e.g. '%.6f', '%.4g', etc.
-
-    for k = 1:numel(h)
-        obj = h(k);
-
-        % --- Modern method (R2019b+ with DataTipTemplate) ---
-        if isprop(obj, 'DataTipTemplate')
-            try
-                rows = obj.DataTipTemplate.DataTipRows;
-                for r = 1:numel(rows)
-                    rows(r).ValueFormat = fmt;
-                end
-            catch
-                warning('Could not set DataTipTemplate for object %d', k);
-            end
-
-        % --- Fallback for older MATLAB (no DataTipTemplate) ---
-        else
-            dcm = datacursormode(ancestor(obj,'figure'));
-            set(dcm, 'UpdateFcn', @(~,event) localUpdate(event, fmt));
-        end
-    end
-
-    return
-
-
-function txt = localUpdate(event, fmt)
-    pos = get(event, 'Position');
-    txt = cell(1,numel(pos));
-    for i = 1:numel(pos)
-        txt{i} = sprintf(['Value %d: ' fmt], i, pos(i));
-    end
-
-    return
-
 
 function sub_addSegmentInstanceToPlot(tic, S, showBlocks, sys, yLim)
     % tic  [1]      time of start of segment
