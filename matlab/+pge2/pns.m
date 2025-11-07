@@ -1,5 +1,5 @@
-function [pt, p] = pns(Smin, c, g, dt, plt)
-% function [pt, p] = pns(Smin, c, g, dt, [plt=false])
+function [pt, p, ct] = pns(Smin, c, g, dt, plt)
+% function [pt, p, ct] = pns(Smin, c, g, dt, [plt=false])
 %
 % Calculate PNS following IEC 60601-2-33:2022.
 %
@@ -19,8 +19,11 @@ function [pt, p] = pns(Smin, c, g, dt, plt)
 % Output
 %   pt      [1 n]  channel-combined PNS waveform (% of stimulation threshold)
 %   p       [3 n]  PNS waveform on each gradient channel
+%   ct      [1]    compute time (s)
 %
 % To test
+
+tic
 
 if ischar(Smin)
     if strcmp(Smin, 'test')
@@ -56,6 +59,8 @@ end
 % return total (gradient-combined) PNS waveform
 pt = sqrt(sum(p.^2,1));    
 
+ct = toc;
+
 % plot
 if plt
     tt = dt*1e3*(1:n);  % ms
@@ -89,24 +94,22 @@ function p_this = sub_test
 
     % gradient waveform to test
     dur = 1e-3;   % sec
-    n = round(dur/dt);
-    g = zeros(3, n);
-    t = dt*[1:n] - dt;
-    g(1,:) = 0.02 * sin(2 * pi * 100 * t);
-    g(2,:) = 0.015 * sin(2 * pi * 100 * t);
-    g(3,:) = 0.018 * sin(2 * pi * 100 * t);
-    %ramp = linspace(0, 1, 100);
-    %g = [ramp ones(1,200), fliplr(ramp)];
-    %g = g(1:end-1);
-    %g = repmat([g -g], [1 round(n/length(g)/2)]);
-    %g = [g; 0.85*g; 0.75*g];
-    %g = 4 * g * 1e-2;    % T/m
+    %n = round(dur/dt);
+    %g = zeros(3, n);
+    %t = dt*[1:n] - dt;
+    %g(1,:) = 0.03 * sin(2 * pi * 100 * t);
+    %g(2,:) = 0.015 * sin(2 * pi * 100 * t);
+    %g(3,:) = 0.018 * sin(2 * pi * 100 * t);
+    ramp = linspace(0, 1, 100);
+    g = [ramp ones(1,200), fliplr(ramp)];
+    g = g(1:end-1);
+    g = repmat([g -g], [1 5]);
+    g = [g; 0.85*g; 0.75*g];
+    g = 4 * g * 1e-2;    % T/m
 
     % calculate pns
-    tic; p_this = pns(Smin, c, g, dt, true); ct = toc;
+    [p_this, ~, ct] = pge2.pns(Smin, c, g, dt, true);
     fprintf('Compute time: %.4f s\n', ct);
-
-    p_this(1:20)
 
     % ground truth
     %figure;
