@@ -11,7 +11,7 @@ function checkAccuracy(ceq, sysGE, seq, xmlPath, plt)
 n = 1;     % block (row) counter 
 cnt = 0;   % segment instance counter
 
-while n < ceq.nMax & cnt < 4
+while n < ceq.nMax & cnt < 5
     cnt = cnt + 1;
 
     % determine block range
@@ -32,11 +32,8 @@ while n < ceq.nMax & cnt < 4
 
     % pge2 interpreter waveforms (from WTools)
     d = pge2.read_segment_xml(sprintf('%sscan.xml.%04d', xmlPath, cnt));
-    tt.pge2 = d(1).time(1:end-3)/1e6 - sysGE.segment_dead_time;     
-    gx.pge2 = d(1).value(1:end-3);
-
-    %gx = interp1(d(1).time(1:end-3)/1e6 - sysGE.segment_dead_time, d(1).value(1:end-3), ...
-    %    w{1}(1,:), 'linear', 'extrap');
+    tt.pge2 = d(1).time(2:end-3)/1e6 - sysGE.segment_dead_time;     
+    gx.pge2 = d(1).value(2:end-3);
 
     % plot x gradient
     figure; hold on;
@@ -47,15 +44,17 @@ while n < ceq.nMax & cnt < 4
     %legend('pge2', 'ceq', 'seq');
     legend('pge2', 'seq');
 
-    % Check norm of difference between waveforms (approximate)
+    % Check difference between waveforms.
+    % This is pretty accurate for arbitrary waveforms, less so for trapezoids.
+    % Warn if >5% -- 
     %tt.pge2 = .time([1 2:2:end-1])/1e6;
     %gx.pge2 = d(1).value([1 3:2:end]);
-    if 0
-    gx.seq = interp1(tt.seq, gx.seq, tt.pge2, 'nearest', 'extrap');
+    if 1
+    gx.seq = interp1(tt.seq, gx.seq, tt.pge2, 'linear', 'extrap');
     [cnt norm(gx.seq-gx.pge2)/norm(gx.seq)]
-    figure; hold on;
-    plot(tt.pge2, gx.seq, 'bo-');
-    plot(tt.pge2, gx.pge2, 'rx-');
+    %figure; hold on;
+    %plot(tt.pge2, gx.seq, 'bo-');
+    %plot(tt.pge2, gx.pge2, 'rx-');
     end
 
     n = n2 + 1;
