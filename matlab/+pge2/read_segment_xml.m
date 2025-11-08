@@ -14,10 +14,10 @@ function seq = read_pulse_sequence_xml(filename)
 %       - value (vector)
 %
 %   Example:
-%       seq = read_pulse_sequence_xml('segment1.xml');
+%       seq = read_pulse_sequence_xml('scan.xml.0001');
 
     if nargin < 1
-        [file, path] = uigetfile('*.xml', 'Select an XML file');
+        [file, path] = uigetfile('*.xml.*', 'Select an XML file');
         if isequal(file, 0)
             error('No file selected.');
         end
