@@ -7,18 +7,25 @@ function checkwaveforms(ceq, sysGE, seq, xmlPath, varargin)
 % Inputs:
 %   ceq       struct       Ceq sequence object, see seq2ceq.m
 %   sysGE     struct       System hardware info, see pge2.getsys()
+% 
+% Input options:
+%   'row'           [1] or 'all'   Check and plot segment starting at this number in .seq file
+%   'plot'          true/false     Plot each segment (continue to next on pressing 'Enter')
+%   'threshRFper'   [1]            RF error tolerance (percent rms error). Default: 10.
 
-arg.row = [];      % row in .seq file. If not specified, check the whole scan.
-arg.plot = false;   % plot every segment instance, continue on keyboard press
+arg.row = 1;      
+arg.plot = false;   
+arg.threshRFper = 10;  % Seems high but the main failure modes we're after are things like conj/sign change
 
 arg = vararg_pair(arg, varargin);   % in ../
 
-if ~isempty(arg.row)
-    arg.plot = true;
-    doNextSegment = false;
+if ischar(arg.row)
+    if strcmp(arg.row, 'all')
+        arg.plot = false;
+        doNextSegment = true;
+    end
 else
-    arg.row = 1;
-    doNextSegment = true;
+    doNextSegment = false;
 end
 
 if isempty(arg.row)
@@ -79,19 +86,21 @@ while n < ceq.nMax % & cnt < 2
         plt.tmin = min(plt.tmin, min(tt.pge2(1), tt.seq(1)));
         plt.tmax = max(plt.tmax, max(tt.pge2(end), tt.seq(end)));
 
-        % max percent difference
+        % check difference
+        % For traps/ext traps, interpreter waveform is delayed by 2us w.r.t. .seq file
+        % so allow for small differences due to that fact.
         g.seqip = interp1(tt.seq, g.seq, tt.pge2, 'linear', 'extrap');
-        e = 100*max(abs(g.seqip-g.pge2))/max(max(abs(g.seqip), 1e-3));
+        err = max(abs(g.seqip-g.pge2));    % max difference, G/cm
+        errLimit = sysGE.slew_max * sysGE.GRAD_UPDATE_TIME * 1e3;  % max difference per 4us sample
 
-        if e > 3
+        if err > errLimit
             fprintf('Gradient waveform mismatch (segment at row %d, %s)\n', n, ax{iax});
-            arg.plot = true;
             doNextSegment = false;
         end
 
         if arg.plot
             subplot(5,1,iax);
-            plot(tt.seq, g.seq, 'black-');   % Pulseq (ideal) waveform
+            plot(tt.seq, g.seq, 'black-');  
             hold on;
             plot(tt.pge2, g.pge2, 'r.-');
             %plot(tt.ceq, g.ceq, 'o');
@@ -111,9 +120,9 @@ while n < ceq.nMax % & cnt < 2
 
     % Pulseq waveform
     tt.seq = w{4}(1,:);                % sec
-    rf.seq = w{4}(2,:)/sysGE.gamma;    % Gauss
+    rf.seq = w{4}(2,:)/sysGE.gamma;    % complex, Gauss
 
-    % pge2 interpreter output
+    % pge2 interpreter waveform
     tt.rho = d(5).time(2:end-3)/1e6 - sysGE.segment_dead_time - sysGE.psd_rf_wait;
     [~,I] = unique(tt.rho);
     tt.rho(I+1) = tt.rho(I+1) + 1e-12;  % offset any duplicate time points (steps)
@@ -124,37 +133,51 @@ while n < ceq.nMax % & cnt < 2
     [~,I] = unique(tt.theta);
     tt.theta(I+1) = tt.theta(I+1) + 1e-12;  % offset any duplicate time points (steps)
     theta = d(6).value(2:end-3)/2^23*pi;  % radians
-    theta = interp1(tt.theta, theta, tt.rho, 'linear', 'extrap');
+    thetai = interp1(tt.theta, theta, tt.rho, 'linear', 'extrap');
 
-    rf.pge2 = rho .* exp(1i*theta);
+    rf.pge2 = rho .* exp(1i*thetai);
     tt.pge2 = tt.rho;
 
-    plt.tmin = min(plt.tmin, min(tt.pge2(1), tt.seq(1)));
-    plt.tmax = max(plt.tmax, max(tt.pge2(end), tt.seq(end)));
+    % TODO: interpolate to uniform raster time (only used to calculate rmse, not for plotting)
+    %{
+    dt = sysGE.GRAD_UPDATE_TIME;
+    tstart = min([tt.seq(1) tt.rho(1) tt.theta(1)]);
+    tstop = max([tt.seq(end) tt.rho(end) tt.theta(end)]);
+    cmp.tt = (tstart+dt/2):dt:tstop;
+    cmp.seq = interp1(tt.seq, rf.seq, cmp.tt);
+    cmp.pge2 = interp1(
+    %}
+
+    plt.tmin = min(plt.tmin, min(tt.pge2(1)));
+    plt.tmax = max(plt.tmax, max(tt.pge2(end)));
 
     % max percent difference
     % Note that the pge2 interpreter conjugates the RF 
-    rf.seqi = interp1(tt.seq, rf.seq, tt.pge2, 'linear', 'extrap');
-    e = 100*max(abs(rf.seqi-conj(rf.pge2)))/max(max(abs(rf.pge2), 1e-6))
+    rf.seqi = interp1(tt.seq, rf.seq, tt.pge2); %, 'linear', 'extrap');
+    I = isnan(rf.seqi);
+    rf.seqi(I) = [];
+    rf.pge2(I) = [];
 
-    if e > 1
-        fprintf('RF waveform mismatch (segment at row %d)\n', n);
-        arg.plot = true;
+    %err = 100*max(abs(rf.seqi-conj(rf.pge2)))/max(max(abs(rf.pge2), 1e-6)); % percent max error
+    err = 100 * rmse(rf.seqi, conj(rf.pge2)) / rmse(rf.seqi, 0*rf.seqi);    % percent rmse
+
+    if err > arg.threshRFper
+        fprintf('RF waveform mismatch (%.1f%%; segment at row %d)\n', err, n);
         doNextSegment = false;
-        keyboard
     end
 
     if arg.plot
         subplot(5,1,4); hold off;
         title(sprintf('|RF|, segment %d', cnt));
-        plot(tt.pge2, rho, 'r.-'); hold on;
+        plot(tt.rho, rho, 'r.-'); hold on;
         plot(tt.seq, abs(rf.seq), 'black');
         legend('pge2', 'Pulseq');
         ylabel(sprintf('|RF|\n(Gauss)'), 'Rotation', 0);
 
         subplot(5,1,5); hold off;
         title(sprintf('∠(conj(RF)), segment %d', cnt));
-        plot(tt.theta, -d(6).value(2:end-3)/2^23*pi, 'r.-'); hold on;
+        %plot(tt.theta, -d(6).value(2:end-3)/2^23*pi, 'r.-'); hold on;
+        plot(tt.theta, -theta, 'r.-'); hold on;
         plot(tt.seq, angle(rf.seq), 'black');
         legend('pge2', 'Pulseq');
         ylabel(sprintf('∠RF\n(radians)'), 'Rotation', 0);
