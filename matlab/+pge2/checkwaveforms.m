@@ -9,19 +9,30 @@ function checkwaveforms(ceq, sysGE, seq, xmlPath, varargin)
 %   sysGE     struct       System hardware info, see pge2.getsys()
 % 
 % Input options:
-%   'row'           [1] or 'all'   Check and plot segment starting at this number in .seq file
-%   'plot'          true/false     Plot each segment (continue to next on pressing 'Enter')
+%   'row'           [1] or 'all'   Check and plot segment starting at this number in .seq file (default: 'all')
+%   'plot'          true/FALSE     Plot each segment (continue to next on pressing 'Enter')
 %   'threshRFper'   [1]            RF error tolerance (percent rms error). Default: 10.
+%
+% Usage:
+%   1. Call seq2ceq.m to convert .seq file to ceq
+%   2. Simulation the .pge file in WTools, or run in VM/scanner, to create xml files
+%   3. Call getsys.m to define sysGE for your scanner.
+%   4a. Check and plot the first segment:
+%       >> pge2.checkwaveforms(ceq, sysGE, seq, xmlPath, 'row', 1, 'plot', true);
+%   4b. Check (and plot) each segment one by one until a waveform mismatch is detected:
+%      >> pge2.checkwaveforms(ceq, sysGE, seq, xmlPath, 'row', 'all', 'plot', true);
+%   4c. Check all segment instances:
+%      >> pge2.checkwaveforms(ceq, sysGE, seq, xmlPath);
 
-arg.row = 1;      
+arg.row = 'all';      
 arg.plot = false;   
-arg.threshRFper = 10;  % Seems high but the main failure modes we're after are things like conj/sign change
+arg.threshRFper = 10;  % Some inerpolation error is ok. Seems high but the main failure modes we're after are things like conj/sign change
 
 arg = vararg_pair(arg, varargin);   % in ../
 
 if ischar(arg.row)
     if strcmp(arg.row, 'all')
-        arg.plot = false;
+        arg.row = 1;
         doNextSegment = true;
     end
 else
@@ -89,8 +100,8 @@ while n < ceq.nMax % & cnt < 2
         % check difference
         % For traps/ext traps, interpreter waveform is delayed by 2us w.r.t. .seq file
         % so allow for small differences due to that fact.
-        g.seqip = interp1(tt.seq, g.seq, tt.pge2, 'linear', 'extrap');
-        err = max(abs(g.seqip-g.pge2));    % max difference, G/cm
+        g.seqi = interp1(tt.seq, g.seq, tt.pge2, 'linear', 'extrap');
+        err = max(abs(g.seqi-g.pge2));    % max difference, G/cm
         errLimit = sysGE.slew_max * sysGE.GRAD_UPDATE_TIME * 1e3;  % max difference per 4us sample
 
         if err > errLimit
@@ -139,27 +150,18 @@ while n < ceq.nMax % & cnt < 2
     tt.pge2 = tt.rho;
 
     % TODO: interpolate to uniform raster time (only used to calculate rmse, not for plotting)
-    %{
     dt = sysGE.GRAD_UPDATE_TIME;
-    tstart = min([tt.seq(1) tt.rho(1) tt.theta(1)]);
-    tstop = max([tt.seq(end) tt.rho(end) tt.theta(end)]);
-    cmp.tt = (tstart+dt/2):dt:tstop;
-    cmp.seq = interp1(tt.seq, rf.seq, cmp.tt);
-    cmp.pge2 = interp1(
-    %}
+    [tt.cmp, rf.seqi, rf.pge2i] = sub_interpwavs(dt, tt.seq, rf.seq, tt.pge2, rf.pge2);
+    %rf.seqi = interp1(tt.seq, rf.seq, tt.rho);
+    %rf.seqi(isnan(rf.seqi)) = [];
 
     plt.tmin = min(plt.tmin, min(tt.pge2(1)));
     plt.tmax = max(plt.tmax, max(tt.pge2(end)));
 
     % max percent difference
     % Note that the pge2 interpreter conjugates the RF 
-    rf.seqi = interp1(tt.seq, rf.seq, tt.pge2); %, 'linear', 'extrap');
-    I = isnan(rf.seqi);
-    rf.seqi(I) = [];
-    rf.pge2(I) = [];
-
     %err = 100*max(abs(rf.seqi-conj(rf.pge2)))/max(max(abs(rf.pge2), 1e-6)); % percent max error
-    err = 100 * rmse(rf.seqi, conj(rf.pge2)) / rmse(rf.seqi, 0*rf.seqi);    % percent rmse
+    err = 100 * rmse(rf.seqi, conj(rf.pge2i)) / rmse(rf.seqi, 0*rf.seqi);    % percent rmse
 
     if err > arg.threshRFper
         fprintf('RF waveform mismatch (%.1f%%; segment at row %d)\n', err, n);
@@ -207,3 +209,27 @@ while n < ceq.nMax % & cnt < 2
         return;
     end
 end
+
+% interpolate two waveforms to common uniform raster time
+function [tt, w1out, w2out] = sub_interpwavs(dt, tt1, w1, tt2, w2)
+
+    % interpolate
+    tstart = min([tt1(1) tt2(2)]);
+    tstop = max([tt1(end) tt2(end)]);
+    tt = (tstart+dt/2):dt:tstop;
+    w1out = interp1(tt1, w1, tt);
+    w2out = interp1(tt2, w2, tt);
+
+    % remove NaN's
+    I = isnan(w1out);
+    tt(I) = [];
+    w1out(I) = [];
+    w2out(I) = [];
+
+    I = isnan(w2out);
+    tt(I) = [];
+    w1out(I) = [];
+    w2out(I) = [];
+
+return
+
