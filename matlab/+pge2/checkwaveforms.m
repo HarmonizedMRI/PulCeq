@@ -5,8 +5,10 @@ function checkwaveforms(ceq, sysGE, seq, xmlPath, varargin)
 % and the original Pulseq (.seq) object.
 %
 % Inputs:
-%   ceq       struct       Ceq sequence object, see seq2ceq.m
-%   sysGE     struct       System hardware info, see pge2.getsys()
+%   ceq       struct         Ceq sequence object, see seq2ceq.m
+%   sysGE     struct         System hardware info, see pge2.getsys()
+%   seq       struct         A Pulseq sequence object
+%   xmlPath   string or []   Path to folder containing scan.xml.<xxxx> files
 % 
 % Input options:
 %   'row'           [1] or 'all'   Check and plot segment starting at this number in .seq file (default: 'all')
