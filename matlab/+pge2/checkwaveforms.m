@@ -98,6 +98,9 @@ while n < ceq.nMax % & cnt < 2
         % Ceq object (after seq2ceq.m conversion)
         tt.ceq = S.(ax{iax}).t - sysGE.segment_dead_time;
         g.ceq = S.(ax{iax}).signal;
+        I = tt.ceq < tt.pge2(1) | tt.ceq > tt.pge2(end);
+        tt.ceq(I) = [];
+        g.ceq(I) = [];
 
         plt.tmin = min(plt.tmin, min(tt.pge2(1), tt.seq(1)));
         plt.tmax = max(plt.tmax, max(tt.pge2(end), tt.seq(end)));
@@ -119,9 +122,9 @@ while n < ceq.nMax % & cnt < 2
             plot(tt.seq, g.seq, 'black-');  
             hold on;
             plot(tt.pge2, g.pge2, 'r.-');
-            %plot(tt.ceq, g.ceq, 'o');
+            %plot(tt.ceq, g.ceq, 'g.-');
             hold off
-            %legend('pge2', 'ceq', 'seq');
+            %legend('ceq', 'pge2', 'seq');
             legend('seq', 'pge2');
             ylabel(sprintf('%s\n(G/cm)', ax{iax}), 'Rotation', 0);
             if iax == 1
