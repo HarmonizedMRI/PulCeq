@@ -51,6 +51,9 @@ axesLinked = false;
 % Loop over segments
 cnt = 0;   % segment instance counter
 n = 1;
+if ~arg.plot
+    textprogressbar('Checking scan loop: ');
+end
 while n < ceq.nMax % & cnt < 2
     cnt = cnt + 1;
 
@@ -205,6 +208,7 @@ while n < ceq.nMax % & cnt < 2
         if arg.plot
             input('Press Enter key to plot next segment ', "s");
         end
+        textprogressbar(n/ceq.nMax*100);
         n = n2 + 1;
     else
         fprintf('Exiting\n');
@@ -212,11 +216,13 @@ while n < ceq.nMax % & cnt < 2
     end
 end
 
+textprogressbar((n-1)/ceq.nMax*100);
+
 % interpolate two waveforms to common uniform raster time
 function [tt, w1out, w2out] = sub_interpwavs(dt, tt1, w1, tt2, w2)
 
     % interpolate
-    tstart = min([tt1(1) tt2(2)]);
+    tstart = min([tt1(1) tt2(1)]);
     tstop = max([tt1(end) tt2(end)]);
     tt = (tstart+dt/2):dt:tstop;
     w1out = interp1(tt1, w1, tt);
