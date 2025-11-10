@@ -1,23 +1,25 @@
 function checkwaveforms(ceq, sysGE, seq, xmlPath, varargin)
 % function checkwaveforms(ceq, sysGE, seq, xmlPath, varargin)
 %
-% Check agreement between scanner/WTools sequence output 
+% Check agreement between MR30.2 scanner/WTools sequence output 
 % and the original Pulseq (.seq) object.
 %
 % Inputs:
 %   ceq       struct         Ceq sequence object, see seq2ceq.m
 %   sysGE     struct         System hardware info, see pge2.getsys()
 %   seq       struct         A Pulseq sequence object
-%   xmlPath   string or []   Path to folder containing scan.xml.<xxxx> files
+%   xmlPath   string or []   Path to folder containing scan.xml.<xxxx> files.
+%                            These files are also used by GE's Pulse View sequence plotter.
 % 
 % Input options:
 %   'row'           [1] or 'all'/[]   Check and plot segment starting at this number in .seq file (default: 'all')
+%                                     If row is not on a segment boundary, the following segment will be plotted.
 %   'plot'          true/FALSE        Plot each segment (continue to next on pressing 'Enter')
 %   'threshRFper'   [1]               RF error tolerance (percent rms error). Default: 10.
 %
 % Usage:
 %   1. Call seq2ceq.m to convert .seq file to ceq
-%   2. Simulation the .pge file in WTools, or run in VM/scanner, to create xml files
+%   2. Simulate the .pge file in WTools, or run in MR30.2 VM/scanner, to create xml files
 %   3. Call getsys.m to define sysGE for your scanner.
 %   4a. Check and plot the first segment:
 %       >> pge2.checkwaveforms(ceq, sysGE, seq, xmlPath, 'row', 1, 'plot', true);
