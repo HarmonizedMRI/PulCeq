@@ -11,9 +11,9 @@ function checkwaveforms(ceq, sysGE, seq, xmlPath, varargin)
 %   xmlPath   string or []   Path to folder containing scan.xml.<xxxx> files
 % 
 % Input options:
-%   'row'           [1] or 'all'   Check and plot segment starting at this number in .seq file (default: 'all')
-%   'plot'          true/FALSE     Plot each segment (continue to next on pressing 'Enter')
-%   'threshRFper'   [1]            RF error tolerance (percent rms error). Default: 10.
+%   'row'           [1] or 'all'/[]   Check and plot segment starting at this number in .seq file (default: 'all')
+%   'plot'          true/FALSE        Plot each segment (continue to next on pressing 'Enter')
+%   'threshRFper'   [1]               RF error tolerance (percent rms error). Default: 10.
 %
 % Usage:
 %   1. Call seq2ceq.m to convert .seq file to ceq
@@ -32,18 +32,13 @@ arg.threshRFper = 10;  % Some inerpolation error is ok. Seems high but the main 
 
 arg = vararg_pair(arg, varargin);   % in ../
 
-if ischar(arg.row)
-    if strcmp(arg.row, 'all')
-        arg.row = 1;
-        doNextSegment = true;
-    end
-else
-    doNextSegment = false;
-end
+arg
 
-if isempty(arg.row)
+if ischar(arg.row) | isempty(arg.row)
+    arg.row = 1;
     doNextSegment = true;
 else
+    doNextSegment = false;
 end
 
 axesLinked = false;
@@ -124,8 +119,7 @@ while n < ceq.nMax % & cnt < 2
             plot(tt.seq, g.seq, 'black-');  
             %plot(tt.ceq, g.ceq, 'g.-');
             hold off
-            %legend('ceq', 'pge2', 'seq');
-            legend('seq', 'pge2');
+            legend('pge2', 'Pulseq');
             ylabel(sprintf('%s\n(G/cm)', ax{iax}), 'Rotation', 0);
             if iax == 1
                 title(sprintf('segment starting at row %d (count = %d)', n, cnt));
@@ -187,7 +181,7 @@ while n < ceq.nMax % & cnt < 2
         plot(tt.rho, rho, 'r.-'); hold on;
         plot(tt.seq, abs(rf.seq), 'black');
         plot(tt.ceq, abs(rf.ceq), 'g.-');
-        legend('pge2', 'Pulseq');
+        legend('pge2', 'Pulseq', 'ceq');
         ylabel(sprintf('|RF|\n(Gauss)'), 'Rotation', 0);
 
         subplot(5,1,5); hold off;
