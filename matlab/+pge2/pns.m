@@ -43,7 +43,7 @@ n = size(g,2);
 
 % Contribution of a slew impulse at time 0 to PNS at time tau
 % IEC 60601-2-33:2022 Eq. AA.21
-tau = dt:dt:(10*c);  % no need to make much longer than chronaxie
+tau = dt:dt:(20*c);  % no need to make much longer than chronaxie
 f = dt/Smin * c ./ (c +  tau).^2;
 
 % Convolve slew rate waveform with impulse response.
@@ -51,6 +51,7 @@ f = dt/Smin * c ./ (c +  tau).^2;
 s = diff(g, 1, 2)/dt;     % T/m/s
 p = zeros(3, n);
 wt = [0.8 1.0 0.7];  % channel weights
+%wt = [1 1 1];  % for comparing with toppe.pns()
 for ch = 1:3
     tmp = wt(ch) * 100 * conv(s(ch,:), f);  % percent of stimulation threshold
     p(ch,:) = tmp(1:n);
@@ -90,16 +91,9 @@ function p_this = sub_test
     rheobase = 23.4;
     alpha = 0.333;
     Smin = rheobase/alpha;
-    Smin = 20.0;
 
     % gradient waveform to test
     dur = 1e-3;   % sec
-    %n = round(dur/dt);
-    %g = zeros(3, n);
-    %t = dt*[1:n] - dt;
-    %g(1,:) = 0.03 * sin(2 * pi * 100 * t);
-    %g(2,:) = 0.015 * sin(2 * pi * 100 * t);
-    %g(3,:) = 0.018 * sin(2 * pi * 100 * t);
     ramp = linspace(0, 1, 100);
     g = [ramp ones(1,200), fliplr(ramp)];
     g = g(1:end-1);
@@ -112,10 +106,10 @@ function p_this = sub_test
     fprintf('Compute time: %.4f s\n', ct);
 
     % ground truth
+    % to compare, set wt = [1 1 1] above
     %figure;
-    %tic; p_true = toppe.pns(g, 'xrm', 'plt', true); ct = toc;
-    %fprintf('toppe.pns() compute time: %.4f s\n', ct);
-    %assert(norm(p_true-p_this)/norm(p_true) < 0.05, ...
-    %    'test failed');
+    %p_true = toppe.pns(g, 'xrm', 'plt', true);
+    %err = norm(p_true-p_this)/norm(p_true);
+    %fprintf('norm(p_true-p_this)/norm(p_true)  = %.3f\n', err);
 
-    return
+return
