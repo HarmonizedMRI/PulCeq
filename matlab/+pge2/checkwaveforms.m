@@ -119,9 +119,9 @@ while n < ceq.nMax % & cnt < 2
 
         if arg.plot
             subplot(5,1,iax);
-            plot(tt.seq, g.seq, 'black-');  
-            hold on;
             plot(tt.pge2, g.pge2, 'r.-');
+            hold on;
+            plot(tt.seq, g.seq, 'black-');  
             %plot(tt.ceq, g.ceq, 'g.-');
             hold off
             %legend('ceq', 'pge2', 'seq');
@@ -157,6 +157,10 @@ while n < ceq.nMax % & cnt < 2
     rf.pge2 = rho .* exp(1i*thetai);
     tt.pge2 = tt.rho;
 
+    % Ceq object waveform (output of seq2ceq.m)
+    tt.ceq = S.rf.t - sysGE.segment_dead_time - sysGE.psd_rf_wait;
+    rf.ceq = S.rf.signal;
+
     % TODO: interpolate to uniform raster time (only used to calculate rmse, not for plotting)
     dt = sysGE.GRAD_UPDATE_TIME;
     [tt.cmp, rf.seqi, rf.pge2i] = sub_interpwavs(dt, tt.seq, rf.seq, tt.pge2, rf.pge2);
@@ -166,10 +170,11 @@ while n < ceq.nMax % & cnt < 2
     plt.tmin = min(plt.tmin, min(tt.pge2(1)));
     plt.tmax = max(plt.tmax, max(tt.pge2(end)));
 
-    % max percent difference
-    % Note that the pge2 interpreter conjugates the RF 
-    %err = 100*max(abs(rf.seqi-conj(rf.pge2)))/max(max(abs(rf.pge2), 1e-6)); % percent max error
-    err = 100 * rmse(rf.seqi, conj(rf.pge2i)) / rmse(rf.seqi, 0*rf.seqi);    % percent rmse
+    % max percent difference in RF amplitdue,
+    % (xml files don't seem to include RF phase offset)
+    % Note however that the pge2 interpreter conjugates the RF 
+    %err = 100 * rmse(rf.seqi, conj(rf.pge2i)) / rmse(rf.seqi, 0*rf.seqi);    % percent rmse
+    err = 100 * rmse(abs(rf.seqi), abs(rf.pge2i)) / rmse(rf.seqi, 0*rf.seqi);    % percent rmse
 
     if err > arg.threshRFper
         fprintf('RF waveform mismatch (%.1f%%; segment at row %d)\n', err, n);
@@ -181,6 +186,7 @@ while n < ceq.nMax % & cnt < 2
         title(sprintf('|RF|, segment %d', cnt));
         plot(tt.rho, rho, 'r.-'); hold on;
         plot(tt.seq, abs(rf.seq), 'black');
+        plot(tt.ceq, abs(rf.ceq), 'g.-');
         legend('pge2', 'Pulseq');
         ylabel(sprintf('|RF|\n(Gauss)'), 'Rotation', 0);
 
@@ -189,11 +195,26 @@ while n < ceq.nMax % & cnt < 2
         %plot(tt.theta, -d(6).value(2:end-3)/2^23*pi, 'r.-'); hold on;
         plot(tt.theta, -theta, 'r.-'); hold on;
         plot(tt.seq, angle(rf.seq), 'black');
-        legend('pge2', 'Pulseq');
+        plot(tt.ceq, angle(rf.ceq), 'g.-');
+        legend('pge2', 'Pulseq', 'ceq');
         ylabel(sprintf('∠RF\n(radians)'), 'Rotation', 0);
 
         xlabel('time (sec)');
-        xlim([plt.tmin plt.tmax]);
+
+        % set plot limits
+        for sp = 1:5
+            subplot(5, 1, sp);
+            xlim([plt.tmin plt.tmax]);
+            switch sp
+                case 4
+                    ylim([0 sysGE.b1_max]);
+                case 5
+                    ylim(1.1* pi * [-1 1]);
+                otherwise
+                    ylim(1.1*sysGE.g_max*[-1 1]);
+            end
+        end
+
         drawnow
 
         if ~axesLinked
