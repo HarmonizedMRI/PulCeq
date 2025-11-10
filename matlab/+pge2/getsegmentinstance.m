@@ -94,7 +94,7 @@ for j = 1:length(blockIDs)
 
         % time samples and waveform
         S.rf.t = [S.rf.t; tic + sys.psd_rf_wait + b.rf.delay + b.rf.t]; % + raster/2];
-        S.rf.signal = [S.rf.signal; b.rf.signal/max(abs(b.rf.signal))*L(j,3)/sys.gamma];  % amplitude in Gauss
+        S.rf.signal = [S.rf.signal; b.rf.signal/max(abs(b.rf.signal))*L(j,3)/sys.gamma] * exp(1i*L(j,4));  % complex, Gauss
     end
 
     % Gradients
