@@ -34,8 +34,6 @@ arg.threshRFper = 10;  % Some inerpolation error is ok. Seems high but the main 
 
 arg = vararg_pair(arg, varargin);   % in ../
 
-arg
-
 if ischar(arg.row) | isempty(arg.row)
     arg.row = 1;
     doNextSegment = true;
