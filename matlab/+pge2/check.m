@@ -1,8 +1,15 @@
-function pars = validate(ceq, sysGE)
+function pars = check(ceq, sysGE)
 %
 % Check compatibility of a PulCeq (Ceq) sequence object with the 
 % GE scanner specifications in 'sysGE'.
 %
+% The following are checked:
+%  - Sequence block timing
+%  - Peak b1 and gradient amplitude/slew
+%  - PNS (for one segment at a time)
+%
+% To determine if the pge2 interpreter output matches
+% the original .seq file, use pge2.validate(...)
 
 tol = 1e-7;   % timing tolerance. Matches 'eps' in the pge2 EPIC code
 
@@ -82,8 +89,12 @@ while n < ceq.nMax
 
     % record peak PNS
     Smin = sysGE.rheobase/sysGE.alpha;
-    G = [S.gx.signal'; S.gy.signal'; S.gz.signal']/100;  % T/m
-    [pt, p] = pge2.pns(Smin, sysGE.chronaxie, G, sysGE.GRAD_UPDATE_TIME, false); 
+    G = 2*[S.gx.signal'; S.gy.signal'; S.gz.signal']/100;  % T/m
+    try
+        [pt, p] = pge2.pns(Smin, sysGE.chronaxie, G, sysGE.GRAD_UPDATE_TIME, false); 
+    catch ME
+        error(sprintf('(n = %d, i = %d): %s\n', n, i, ME.message));
+    end
     if max(pt) > pars.pnsmax.val
         pars.pnsmax.val = max(pars.pnsmax.val, max(pt));
         pars.pnsmax.row = n;  
@@ -97,13 +108,16 @@ while n < ceq.nMax
     n = n + ceq.segments(i).nBlocksInSegment;
 end
 textprogressbar((n-1)/ceq.nMax*100);
-textprogressbar(' PASSED'); 
 
 if pars.pnsmax.val > 100
+    textprogressbar('FAILED'); 
     warning('PNS exceeds first controlled mode (100%%)!!!');
     return;
 end
 if pars.pnsmax.val > 80
+    textprogressbar('FAILED'); 
     warning('PNS exceeds normal mode (80%%)!');
     return;
 end
+
+textprogressbar(' PASSED'); 
