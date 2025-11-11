@@ -69,7 +69,7 @@ while n < ceq.nMax % & cnt < 2
     % and RF/ADC phase offset
     d = pge2.read_segment_xml(sprintf('%sscan.xml.%04d', xmlPath, cnt));
     th = pge2.readthetaregisters(sprintf('%sscan.xml.%04d.ssp', xmlPath, cnt));
-    phaseOffset.pge2 = th(1).theta/2^24*pi;
+    phaseOffset.pge2 = th(1).theta/2^23*pi;
 
     % Ceq object waveforms
     L = ceq.loop(n1:n2, :);
@@ -149,7 +149,7 @@ while n < ceq.nMax % & cnt < 2
     [~,I] = unique(tt.theta);
     tt.theta(I+1) = tt.theta(I+1) + 1e-12;  % offset any duplicate time points (steps)
     theta = d(6).value(2:end-3)/2^23*pi + phaseOffset.pge2;  % radians
-    theta = angle(exp(1i*(theta));
+    theta = angle(exp(-1i*theta));  % seq2ceq conjugates the phase
     
     thetai = interp1(tt.theta, theta, tt.rho, 'linear', 'extrap');
 
@@ -169,11 +169,8 @@ while n < ceq.nMax % & cnt < 2
     plt.tmin = min(plt.tmin, min(tt.pge2(1)));
     plt.tmax = max(plt.tmax, max(tt.pge2(end)));
 
-    % max percent difference in RF amplitdue,
-    % (xml files don't seem to include RF phase offset)
-    % Note however that the pge2 interpreter conjugates the RF 
-    %err = 100 * rmse(rf.seqi, conj(rf.pge2i)) / rmse(rf.seqi, 0*rf.seqi);    % percent rmse
-    err = 100 * rmse(abs(rf.seqi), abs(rf.pge2i)) / rmse(rf.seqi, 0*rf.seqi);    % percent rmse
+    % max percent (complex) difference
+    err = 100 * rmse(rf.seqi, rf.pge2i) / rmse(rf.seqi, 0*rf.seqi);    % percent rmse
 
     if err > arg.threshRFper
         fprintf('RF waveform mismatch (%.1f%%; segment at row %d)\n', err, n);
@@ -185,7 +182,7 @@ while n < ceq.nMax % & cnt < 2
         title(sprintf('|RF|, segment %d', cnt));
         plot(tt.rho, rho, 'r.-'); hold on;
         plot(tt.seq, abs(rf.seq), 'black');
-        %plot(tt.ceq, abs(rf.ceq), 'g.-');
+        plot(tt.ceq, abs(rf.ceq), 'g.-');
         legend('pge2', 'Pulseq'); %, 'ceq');
         ylabel(sprintf('|RF|\n(Gauss)'), 'Rotation', 0);
 
@@ -194,7 +191,7 @@ while n < ceq.nMax % & cnt < 2
         %plot(tt.theta, -d(6).value(2:end-3)/2^23*pi, 'r.-'); hold on;
         plot(tt.theta, theta, 'r.-'); hold on;
         plot(tt.seq, angle(rf.seq), 'black');
-        %plot(tt.ceq, angle(rf.ceq), 'g.-');
+        plot(tt.ceq, angle(rf.ceq), 'g.-');
         legend('pge2', 'Pulseq'); %, 'ceq');
         ylabel(sprintf('∠RF\n(radians)'), 'Rotation', 0);
 
