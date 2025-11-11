@@ -201,7 +201,7 @@ while n < ceq.nMax % & cnt < 2
             xlim([plt.tmin plt.tmax]);
             switch sp
                 case 4
-                    ylim([0 sysGE.b1_max]);
+                    %ylim([0 sysGE.b1_max]);
                 case 5
                     ylim(1.1* pi * [-1 1]);
                 otherwise
