@@ -89,7 +89,7 @@ while n < ceq.nMax
 
     % record peak PNS
     Smin = sysGE.rheobase/sysGE.alpha;
-    G = 2*[S.gx.signal'; S.gy.signal'; S.gz.signal']/100;  % T/m
+    G = [S.gx.signal'; S.gy.signal'; S.gz.signal']/100;  % T/m
     try
         [pt, p] = pge2.pns(Smin, sysGE.chronaxie, G, sysGE.GRAD_UPDATE_TIME, false); 
     catch ME
