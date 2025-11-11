@@ -66,7 +66,10 @@ while n < ceq.nMax % & cnt < 2
     w = seq.waveforms_and_times(true, [n1 n2]);
 
     % pge2 interpreter waveforms (from WTools)
+    % and RF/ADC phase offset
     d = pge2.read_segment_xml(sprintf('%sscan.xml.%04d', xmlPath, cnt));
+    th = pge2.readthetaregisters(sprintf('%sscan.xml.%04d.ssp', xmlPath, cnt));
+    phaseOffset.pge2 = th(1).theta/2^24*pi;
 
     % Ceq object waveforms
     L = ceq.loop(n1:n2, :);
@@ -145,7 +148,9 @@ while n < ceq.nMax % & cnt < 2
     tt.theta = d(6).time(2:end-3)/1e6 - sysGE.segment_dead_time - sysGE.psd_rf_wait;
     [~,I] = unique(tt.theta);
     tt.theta(I+1) = tt.theta(I+1) + 1e-12;  % offset any duplicate time points (steps)
-    theta = d(6).value(2:end-3)/2^23*pi;  % radians
+    theta = d(6).value(2:end-3)/2^23*pi + phaseOffset.pge2;  % radians
+    theta = angle(exp(1i*(theta));
+    
     thetai = interp1(tt.theta, theta, tt.rho, 'linear', 'extrap');
 
     rf.pge2 = rho .* exp(1i*thetai);
@@ -180,17 +185,17 @@ while n < ceq.nMax % & cnt < 2
         title(sprintf('|RF|, segment %d', cnt));
         plot(tt.rho, rho, 'r.-'); hold on;
         plot(tt.seq, abs(rf.seq), 'black');
-        plot(tt.ceq, abs(rf.ceq), 'g.-');
-        legend('pge2', 'Pulseq', 'ceq');
+        %plot(tt.ceq, abs(rf.ceq), 'g.-');
+        legend('pge2', 'Pulseq'); %, 'ceq');
         ylabel(sprintf('|RF|\n(Gauss)'), 'Rotation', 0);
 
         subplot(5,1,5); hold off;
-        title(sprintf('∠(conj(RF)), segment %d', cnt));
+        title(sprintf('∠RF, segment %d', cnt));
         %plot(tt.theta, -d(6).value(2:end-3)/2^23*pi, 'r.-'); hold on;
-        plot(tt.theta, -theta, 'r.-'); hold on;
+        plot(tt.theta, theta, 'r.-'); hold on;
         plot(tt.seq, angle(rf.seq), 'black');
-        plot(tt.ceq, angle(rf.ceq), 'g.-');
-        legend('pge2', 'Pulseq', 'ceq');
+        %plot(tt.ceq, angle(rf.ceq), 'g.-');
+        legend('pge2', 'Pulseq'); %, 'ceq');
         ylabel(sprintf('∠RF\n(radians)'), 'Rotation', 0);
 
         xlabel('time (sec)');
