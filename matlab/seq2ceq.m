@@ -73,8 +73,8 @@ for n = 1:ceq.nMax
         for ii = 1:length(b.label)
             if strcmp(b.label(ii).label, 'TRID')
                 nTRIDlabels = nTRIDlabels + 1;
-                tridLabels.val(nTRIDlabels) = nTRIDlabels; %b.label(ii).value;
-                trids(n) = nTRIDlabels;  %b.label(ii).value;
+                tridLabels.val(nTRIDlabels) = b.label(ii).value;
+                trids(n) = b.label(ii).value;
                 tridLabels.index(nTRIDlabels) = n;
                 break;
             end
