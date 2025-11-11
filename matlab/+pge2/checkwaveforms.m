@@ -16,6 +16,7 @@ function checkwaveforms(ceq, sysGE, seq, xmlPath, varargin)
 %                                     If row is not on a segment boundary, the following segment will be plotted.
 %   'plot'          true/FALSE        Plot each segment (continue to next on pressing 'Enter')
 %   'threshRFper'   [1]               RF error tolerance (percent rms error). Default: 10.
+%   'b1PlotLim'     [1]               RF plot limit (Gauss). Default: sysGE.b1_max 
 %
 % Usage:
 %   1. Call seq2ceq.m to convert .seq file to ceq
@@ -34,6 +35,7 @@ function checkwaveforms(ceq, sysGE, seq, xmlPath, varargin)
 arg.row = 'all';      
 arg.plot = false;   
 arg.threshRFper = 10;  
+arg.b1PlotLim = sysGE.b1_max;  % Gauss
 
 arg = vararg_pair(arg, varargin);   % in ../
 
@@ -207,7 +209,7 @@ while n < ceq.nMax % & cnt < 2
             xlim([plt.tmin plt.tmax]);
             switch sp
                 case 4
-                    %ylim([0 sysGE.b1_max]);
+                    ylim([0 arg.b1PlotLim]);
                 case 5
                     ylim(1.1* pi * [-1 1]);
                 otherwise
