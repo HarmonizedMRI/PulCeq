@@ -57,6 +57,8 @@ nTRIDlabels = 0;
 %fprintf('Getting TRID labels (%d
 textprogressbar('seq2ceq: Reading TRID labels and counting ADC events: ');
 ceq.nReadouts = 0;
+nMaxTRIDs = 1000; % inifite number
+TRIDlist = 1:1000;
 for n = 1:ceq.nMax
     textprogressbar(n/ceq.nMax*100);
 
@@ -71,8 +73,8 @@ for n = 1:ceq.nMax
         for ii = 1:length(b.label)
             if strcmp(b.label(ii).label, 'TRID')
                 nTRIDlabels = nTRIDlabels + 1;
-                tridLabels.val(nTRIDlabels) = b.label(ii).value;
-                trids(n) = b.label(ii).value;
+                tridLabels.val(nTRIDlabels) = nTRIDlabels; %b.label(ii).value;
+                trids(n) = nTRIDlabels;  %b.label(ii).value;
                 tridLabels.index(nTRIDlabels) = n;
                 break;
             end
