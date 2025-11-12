@@ -60,7 +60,7 @@ switch lower(coil)
     case 'xrm',   chronaxie=334d-6; rheobase=23.4; alpha=0.333;
     case 'whole', chronaxie=370d-6; rheobase=23.7; alpha=0.344;
     case 'zoom',  chronaxie=354d-6; rheobase=29.1; alpha=0.309;
-    case 'hrmb',  chronaxie=359d-6; rheobase=26.5; alpha=0.370;
+    case 'hrmbuhp',  chronaxie=359d-6; rheobase=26.5; alpha=0.370;
     case 'hrmw',  chronaxie=642.4d-6; rheobase=17.9; alpha=0.310;
     case 'magnus', chronaxie=611d-6; rheobase=55.2; alpha=0.324;
     otherwise, error('gradient coil (%s) unkown', coil);
