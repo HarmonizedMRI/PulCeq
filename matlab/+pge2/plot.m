@@ -161,39 +161,39 @@ function sub_addSegmentInstanceToPlot(tic, S, showBlocks, sys, yLim)
     % S    struct   segment instance
 
     subplot(5,1,1); hold on;
-    plot(tic + S.rf.t, abs(S.rf.signal), 'black.');
+    plot(1e3*(tic + S.rf.t), abs(S.rf.signal), 'black.');
     ylabel('RF (Gauss)');
     ylabel({'|b1|', 'Gauss'}, 'Rotation', 0); 
     ylim(1.1 * yLim.rf * [-1 1]);
     if showBlocks
-       sub_plotboundary(tic + S.tic, yLim.rf);
+       sub_plotboundary(1e3*(tic + S.tic), yLim.rf);
        %sub_plotboundary([tic + S.tic(1), tic + S.tic(end)], yLim.rf, 'segment');
-       sub_plotboundary([tic + S.tic(1)], yLim.rf, 'segment');
+       sub_plotboundary(1e3*[tic + S.tic(1)], yLim.rf, 'segment');
     end
 
     subplot(5,1,2); hold on;
-    plot(tic + S.rf.t, angle(S.rf.signal), 'black.');
+    plot(1e3*(tic + S.rf.t), angle(S.rf.signal), 'black.');
     ylabel({'\angleb1', 'rad'}, 'Rotation', 0); 
     ylim(1.1 * yLim.phs * [-1 1]);
     if showBlocks
-       sub_plotboundary(tic + S.tic, yLim.phs);
+       sub_plotboundary(1e3*(tic + S.tic), yLim.phs);
     end
 
     sp = 3;
     cols = 'rgb';
     for g = {'gx','gy','gz'}
         subplot(5,1,sp); hold on;
-        p = plot(tic + S.(g{1}).t, S.(g{1}).signal, [cols(sp-2) '.-']);
+        p = plot(1e3*(tic + S.(g{1}).t), S.(g{1}).signal, [cols(sp-2) '.-']);
         %setDataTipFormat(p, '%.6f');   % does not work :(
         ylabel({g{1}, 'G/cm'}, 'Rotation', 0);
         yl = 1.05 * max([yLim.gx yLim.gy yLim.gz]);
         ylim(yl * [-1 1]);
         if showBlocks
-            sub_plotboundary(tic + S.tic, yl);
+            sub_plotboundary(1e3*(tic + S.tic), yl);
         end
         sp = sp + 1;
     end
 
-    xlabel('time (sec)');
+    xlabel('time (ms)');
 
     return
