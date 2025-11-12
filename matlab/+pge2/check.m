@@ -111,12 +111,12 @@ textprogressbar((n-1)/ceq.nMax*100);
 
 if pars.pnsmax.val > 100
     textprogressbar('FAILED'); 
-    warning('PNS exceeds first controlled mode (100%%)!!!');
+    warning('PNS exceeds first controlled mode (100%)!!!');
     return;
 end
 if pars.pnsmax.val > 80
     textprogressbar('FAILED'); 
-    warning('PNS exceeds normal mode (80%%)!');
+    warning('PNS exceeds normal mode (80%)!');
     return;
 end
 
