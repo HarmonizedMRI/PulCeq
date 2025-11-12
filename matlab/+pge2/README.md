@@ -20,8 +20,7 @@ seq.read([fn '.seq']);
 ceq = seq2ceq([fn '.seq']);
 
 % Check the ceq object:
-% Define hardware parameters, and
-% check if 'ceq' is compatible with the parameters in 'sysGE'
+% First define hardware parameters.
 psd_rf_wait = 100e-6;  % RF-gradient delay, scanner specific (s)
 psd_grd_wait = 100e-6; % ADC-gradient delay, scanner specific (s)
 b1_max = 0.25;         % Gauss
@@ -30,11 +29,11 @@ slew_max = 20;         % Gauss/cm/ms
 coil = 'xrm';          % MR750. See pge2.getsys()
 sysGE = pge2.getsys(psd_rf_wait, psd_grd_wait, b1_max, g_max, slew_max, coil);
 
-% Check PNS and b1/gradient limits,
-% and extract some sequence parameters
+% Check if 'ceq' is compatible with the parameters in 'sysGE'.
+% Specifically, this step checks PNS and RF/gradient limits.
 pars = pge2.check(ceq, sysGE);
 
-% Plot part of the sequence
+% Plot part of the sequence (optional)
 S = pge2.plot(ceq, sysGE, 'timeRange', [0 0.02], 'rotate', false); 
 
 % Write ceq object to file.
