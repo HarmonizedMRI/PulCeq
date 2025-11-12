@@ -114,22 +114,22 @@ while n < ceq.nMax % & cnt < 2
         % so allow for small differences due to that fact.
         if length(tt.seq) > 0
             [g.seqi, I] = sub_robustinterp1(tt.seq, g.seq, tt.pge2);
-            err = max(abs(g.seqi-g.pge2(I)));    % max difference, G/cm
+            [err, Imaxdiff] = max(abs(g.seqi-g.pge2(I)));    % max difference, G/cm
         else
             err = 0;  % no gradient is present on the current axis
         end
         errLimit = sysGE.slew_max * sysGE.GRAD_UPDATE_TIME * 1e3;  % max difference per 4us sample
 
         if err > errLimit
-            fprintf('%s waveform mismatch (segment at row %d)\n', ax{iax}, n);
+            fprintf('%s waveform mismatch (segment at row %d: max diff %.3f G/cm at t = %.3f ms)\n', ax{iax}, n, err, 1e3*tt.pge2(Imaxdiff));
             doNextSegment = false;
         end
 
         if arg.plot
             subplot(5,1,iax);
-            plot(tt.pge2, g.pge2, 'r.-');
+            plot(1e3*tt.pge2, g.pge2, 'r.-');
             hold on;
-            plot(tt.seq, g.seq, 'black-');  
+            plot(1e3*tt.seq, g.seq, 'black-');  
             %plot(tt.ceq, g.ceq, 'g.-');
             hold off
             legend('pge2', 'Pulseq');
@@ -185,28 +185,28 @@ while n < ceq.nMax % & cnt < 2
     if arg.plot
         subplot(5,1,4); hold off;
         title(sprintf('|RF|, segment %d', cnt));
-        plot(tt.seq, abs(rf.seq), 'black');
+        plot(1e3*tt.seq, abs(rf.seq), 'black');
         hold on
-        plot(tt.rho, rho, 'r.-'); 
+        plot(1e3*tt.rho, rho, 'r.-'); 
         %plot(tt.ceq, abs(rf.ceq), 'g.-');
         legend('Pulseq', 'pge2'); 
         ylabel(sprintf('|RF|\n(Gauss)'), 'Rotation', 0);
 
         subplot(5,1,5); hold off;
         title(sprintf('∠RF, segment %d', cnt));
-        plot(tt.seq, angle(rf.seq), 'black');
+        plot(1e3*tt.seq, angle(rf.seq), 'black');
         hold on
-        plot(tt.theta, theta, 'r.');
+        plot(1e3*tt.theta, theta, 'r.');
         %plot(tt.ceq, angle(rf.ceq), 'g.-');
         legend('Pulseq', 'pge2'); 
         ylabel(sprintf('∠RF\n(radians)'), 'Rotation', 0);
 
-        xlabel('time (sec)');
+        xlabel('time (ms)');
 
         % set plot limits
         for sp = 1:5
             subplot(5, 1, sp);
-            xlim([plt.tmin plt.tmax]);
+            xlim(1e3*[plt.tmin plt.tmax]);
             switch sp
                 case 4
                     ylim([0 arg.b1PlotLim]);
