@@ -126,7 +126,7 @@ while n < ceq.nMax + 1
                     n = n + 1;
                     continue;  % go to next j iteration
                 else
-                    error('Non-delay blocks must have the same duration in all segment instances');
+                    error(sprintf('(row %d: segment %d, block %d) Non-delay blocks must have the same duration in all segment instances', n, i, j));
                 end
             end
         end
