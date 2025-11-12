@@ -45,6 +45,7 @@ else
 end
 
 % loop through segment instances
+ok = true;
 n = 1;    % row counter in ceq.loop
 textprogressbar('Checking scan loop: ');
 while n < ceq.nMax 
@@ -95,6 +96,14 @@ while n < ceq.nMax
     catch ME
         error(sprintf('(n = %d, i = %d): %s\n', n, i, ME.message));
     end
+    if max(pt) > 100
+        fprintf('(n = %d, i = %d): PNS exceeds first controlled mode (100%%)!!!\n', n, i);
+        ok = false;
+    end
+    if max(pt) > 80
+        fprintf('(n = %d, i = %d): PNS exceeds normal mode (80%%)!\n', n, i);
+        ok = false;
+    end
     if max(pt) > pars.pnsmax.val
         pars.pnsmax.val = max(pars.pnsmax.val, max(pt));
         pars.pnsmax.row = n;  
@@ -109,15 +118,8 @@ while n < ceq.nMax
 end
 textprogressbar((n-1)/ceq.nMax*100);
 
-if pars.pnsmax.val > 100
-    textprogressbar('FAILED'); 
-    warning('PNS exceeds first controlled mode (100%)!!!');
-    return;
+if ok
+    textprogressbar(' PASSED'); 
+else
+    textprogressbar(' FAILED'); 
 end
-if pars.pnsmax.val > 80
-    textprogressbar('FAILED'); 
-    warning('PNS exceeds normal mode (80%)!');
-    return;
-end
-
-textprogressbar(' PASSED'); 
