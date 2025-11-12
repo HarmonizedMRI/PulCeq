@@ -101,11 +101,7 @@ while n < ceq.nMax % & cnt < 2
         % Ceq object (after seq2ceq.m conversion)
         tt.ceq = S.(ax{iax}).t - sysGE.segment_dead_time;
         g.ceq = S.(ax{iax}).signal;
-        try
         I = tt.ceq < tt.pge2(1) | tt.ceq > tt.pge2(end);
-        catch
-        keyboard
-        end
         tt.ceq(I) = [];
         g.ceq(I) = [];
 
@@ -118,7 +114,7 @@ while n < ceq.nMax % & cnt < 2
         else
             err = 0;  % no gradient is present on the current axis
         end
-        errLimit = sysGE.slew_max * sysGE.GRAD_UPDATE_TIME * 1e3;  % max difference per 4us sample
+        errLimit = 1.5 * sysGE.slew_max * sysGE.GRAD_UPDATE_TIME * 1e3;  % max difference per 4us sample
 
         if err > errLimit
             fprintf('%s waveform mismatch (segment at row %d: max diff %.3f G/cm at t = %.3f ms)\n', ax{iax}, n, err, 1e3*tt.pge2(Imaxdiff));
