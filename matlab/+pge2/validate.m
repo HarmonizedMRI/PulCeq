@@ -105,18 +105,21 @@ while n < ceq.nMax % & cnt < 2
         tt.ceq(I) = [];
         g.ceq(I) = [];
 
-        % Check difference
-        % For traps/ext traps, interpreter waveform is delayed by 2us w.r.t. .seq file
+        % Check difference with seq object.
+        % For traps/ext traps, interpreter waveform is piecewise constant 
         % so allow for small differences due to that fact.
+        % In addition, increase tolerance to 1.5x (slew*4us) since seq.waveforms_and_times() 
+        % may not be entirely accurate (?)
+
         if length(tt.seq) > 0
             [g.seqi, I] = sub_robustinterp1(tt.seq, g.seq, tt.pge2);
             [err, Imaxdiff] = max(abs(g.seqi-g.pge2(I)));    % max difference, G/cm
         else
             err = 0;  % no gradient is present on the current axis
         end
-        errLimit = 1.5 * sysGE.slew_max * sysGE.GRAD_UPDATE_TIME * 1e3;  % max difference per 4us sample
+        tol = 1.5 * sysGE.slew_max * sysGE.GRAD_UPDATE_TIME * 1e3;  % max difference per 4us sample 
 
-        if err > errLimit
+        if err > tol
             fprintf('%s waveform mismatch (segment at row %d: max diff %.3f G/cm at t = %.3f ms)\n', ax{iax}, n, err, 1e3*tt.pge2(Imaxdiff));
             doNextSegment = false;
         end
