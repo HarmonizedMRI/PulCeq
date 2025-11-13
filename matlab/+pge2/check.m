@@ -88,7 +88,7 @@ while n < ceq.nMax
         end
     end
 
-    % record peak PNS
+    % check and record peak PNS
     Smin = sysGE.rheobase/sysGE.alpha;
     G = [S.gx.signal'; S.gy.signal'; S.gz.signal']/100;  % T/m
     try
@@ -96,12 +96,12 @@ while n < ceq.nMax
     catch ME
         error(sprintf('(n = %d, i = %d): %s\n', n, i, ME.message));
     end
-    if max(pt) > 100
-        fprintf('(n = %d, i = %d): PNS exceeds first controlled mode (100%%)!!!\n', n, i);
+    if ok & max(pt) > 100
+        fprintf('(block %d, segment %d): PNS exceeds first controlled mode (100%%)!!!\n', n, i);
         ok = false;
     end
-    if max(pt) > 80
-        fprintf('(n = %d, i = %d): PNS exceeds normal mode (80%%)!\n', n, i);
+    if ok & max(pt) > 80
+        fprintf('(block %d, segment %d): PNS exceeds normal mode (80%%)!\n', n, i);
         ok = false;
     end
     if max(pt) > pars.pnsmax.val
