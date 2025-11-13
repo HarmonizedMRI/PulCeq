@@ -8,7 +8,9 @@ function ceq = seq2ceq(seqarg, varargin)
 %   seqarg     a seq object, or name of a .seq file
 %
 % Input options with defaults
-%   verbose               true/false     Print some info to the terminal [false]
+%   verbose               true/FALSE    Print some info to the terminal
+%   usesRotationEvents    TRUE/false    If false, this script tries to estimate 
+%                                       in plane (2D, x-y) rotations from the gradient shapes.
 %
 % Output
 %   ceq        struct, based on github/HarmonizedMRI/PulCeq/src/pulCeq.h
@@ -23,8 +25,7 @@ function ceq = seq2ceq(seqarg, varargin)
 
 % defaults
 arg.verbose = false;
-arg.nMax    = [];
-arg.ignoreSegmentLabels = false; % Don't define segments using the EXT column
+arg.usesRotationEvents = true;
 
 % Substitute specified system values as appropriate (from MIRT toolbox)
 arg = vararg_pair(arg, varargin);
@@ -56,6 +57,8 @@ nTRIDlabels = 0;
 %fprintf('Getting TRID labels (%d
 textprogressbar('seq2ceq: Reading TRID labels and counting ADC events: ');
 ceq.nReadouts = 0;
+nMaxTRIDs = 1000; % inifite number
+TRIDlist = 1:1000;
 for n = 1:ceq.nMax
     textprogressbar(n/ceq.nMax*100);
 
@@ -123,7 +126,7 @@ while n < ceq.nMax + 1
                     n = n + 1;
                     continue;  % go to next j iteration
                 else
-                    error('Non-delay blocks must have the same duration in all segment instances');
+                    error(sprintf('(row %d: segment %d, block %d) Non-delay blocks must have the same duration in all segment instances', n, i, j));
                 end
             end
         end
@@ -225,9 +228,25 @@ while n < ceq.nMax + 1
         end
 
         % Get rotation
-        if isfield(b, 'rotation')
-            if strcmp(b.rotation.type, 'rot3D')
-                R = mr.aux.quat.toRotMat(b.rotation.rotQuaternion);
+        if arg.usesRotationEvents
+            if isfield(b, 'rotation')
+                if strcmp(b.rotation.type, 'rot3D')
+                    R = mr.aux.quat.toRotMat(b.rotation.rotQuaternion);
+                end
+            end
+        else
+            % try to detect 2D rotations by analyzing the gradient shapes
+            [Rtmp, scale] = getrotation(b, ceq.parentBlocks(p).block);
+            
+            if ~isempty(Rtmp)
+                if norm(Rtmp - eye(3), "fro") > 1e-6
+                    % Found a non-identiy rotation, so use it
+                    % (unless overwritten by a later block in this segment)
+                    R = Rtmp;
+
+                    % set gradient amplitudes equal to those in the parent block (possibly scaled)
+                    ceq.loop(n, [6 8 10]) = scale * ceq.loop(ceq.parentBlocks(p).row, [6 8 10]);
+                end
             end
         end
 

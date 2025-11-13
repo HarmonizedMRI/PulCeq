@@ -7,17 +7,25 @@ function W = plot(ceq, sys, varargin)
 %   sys     struct       System hardware info, see pge2.getsys()
 %
 % Input options:
-%  timeRange   [1 2]         Requested start and end times (sec). Actual plot will end on a segment boundary.
-%  showBlocks  true/false    Draw vertical lines at block boundaries (default: true)
-%  logical     true/false    If true, display gradients in logical coordinate frame, i.e., 
-%                            before rotating. Corner/sample points are indicated by circles.
-%                            If false, gradients are rotated and interpolated to 4us and shown as continuous line.
+%  timeRange       [1 2]           Requested start and end times (sec). Actual plot will end on a segment boundary.
+%  showBlocks      TRUE/false      Draw vertical lines at block boundaries (default: true)
+%  rotate          true/FALSE      If false, display gradients in logical coordinate frame, i.e., 
+%                                  before rotating. If true, interpolated gradients are shown.
+%  interpolate     true/FALSE      Interpolate to 4us, or display corner points (for extended traps)
 
 arg.timeRange = [0 ceq.duration];
 arg.showBlocks = true; 
-arg.logical = false;
+arg.rotate = false;
+arg.interpolate = false;
 
 arg = vararg_pair(arg, varargin);   % in ../
+
+if arg.rotate
+    if ~arg.interpolate
+        warning('Gradient waveforms interpolated to 4us');
+    end
+    arg.interpolate = true;
+end
 
 if arg.timeRange(1) > ceq.duration
     error('Request time exceeds sequence duration');
@@ -31,7 +39,6 @@ yLim.gy = max(abs(ceq.loop(:,8)))/sys.gamma/100;   % Gauss/cm
 yLim.gz = max(abs(ceq.loop(:,10)))/sys.gamma/100;   % Gauss/cm
 
 % Loop through sequence segments and display 
-%W.SSP.signal = [];
 W.tic = [];  % block boundary times
 tStart = 0;  % start of plot
 W.rf.t = 0; W.rf.signal = 0;
@@ -69,7 +76,7 @@ while n < ceq.nMax & tic - eps < min(ceq.duration, arg.timeRange(2))
 
     % Get segment instance and add to plot
     try
-        S = pge2.getsegmentinstance(ceq, i, sys, L, 'logical', arg.logical);
+        S = pge2.getsegmentinstance(ceq, i, sys, L, 'rotate', arg.rotate);
     catch ME
         error(sprintf('(n = %d, i = %d): %s\n', n, i, ME.message));
     end
@@ -89,8 +96,6 @@ while n < ceq.nMax & tic - eps < min(ceq.duration, arg.timeRange(2))
     W.gy.signal = [W.gy.signal; S.gy.signal];
     W.gz.signal = [W.gz.signal; S.gz.signal];
 
-    %W.SSP.signal = [W.SSP.signal; S.SSP.signal];
-
     % Update time counter and go to next segment
     tic = tic + S.duration;
     n = n + ceq.segments(i).nBlocksInSegment;
@@ -106,20 +111,20 @@ linkaxes([ax{1} ax{2} ax{3} ax{4} ax{5}], 'x');  % common zoom setting (along ti
 
 % set misc figure properties
 subplot(5,1,1);
-if arg.logical
-    msg = sprintf('Logical coordinates -- gradient rotations not shown.\n');
-    msg = sprintf('%sWaveform samples/corner points are shown as defined in the original Pulseq file.\n', msg);
+if arg.rotate
+    msg = sprintf('Physical coordinates -- gradient rotations are shown.\n');
 else
-    msg = sprintf('Physical coordinates -- waveforms rotated and interpolated to 4us.\n');
+    msg = sprintf('Logical coordinates -- gradient rotations not shown.\n');
+end
+if arg.interpolate
+    msg = sprintf('%sGradient waveforms interpolated to 4us.\n', msg);
+else
+    msg = sprintf('%sWaveform samples/corner points are shown as defined in the original Pulseq file.\n', msg);
 end
 msg = [msg 'Vertical lines show block/segment boundaries.'];
 title(msg);
 
-%yline(ax{2}, pi, 'black-');
-%yline(ax{2}, -pi, 'black-');
-%yt = [-pi yticks(ax{2}) pi];
 yticks(ax{2}, [-pi 0 pi]);
-%yl = yticklabels(ax{2});
 yticklabels(ax{2}, {'-π', '0', 'π'});
 
 return
@@ -151,83 +156,44 @@ function sub_plotboundary(T, vs, tp)
 
     return
 
-function setDataTipFormat(h, fmt)
-    % setDataTipFormat(h, fmt)
-    % h   = graphics object handle(s), e.g. line, scatter, bar
-    % fmt = sprintf format string, e.g. '%.6f', '%.4g', etc.
-
-    for k = 1:numel(h)
-        obj = h(k);
-
-        % --- Modern method (R2019b+ with DataTipTemplate) ---
-        if isprop(obj, 'DataTipTemplate')
-            try
-                rows = obj.DataTipTemplate.DataTipRows;
-                for r = 1:numel(rows)
-                    rows(r).ValueFormat = fmt;
-                end
-            catch
-                warning('Could not set DataTipTemplate for object %d', k);
-            end
-
-        % --- Fallback for older MATLAB (no DataTipTemplate) ---
-        else
-            dcm = datacursormode(ancestor(obj,'figure'));
-            set(dcm, 'UpdateFcn', @(~,event) localUpdate(event, fmt));
-        end
-    end
-
-    return
-
-
-function txt = localUpdate(event, fmt)
-    pos = get(event, 'Position');
-    txt = cell(1,numel(pos));
-    for i = 1:numel(pos)
-        txt{i} = sprintf(['Value %d: ' fmt], i, pos(i));
-    end
-
-    return
-
-
 function sub_addSegmentInstanceToPlot(tic, S, showBlocks, sys, yLim)
     % tic  [1]      time of start of segment
     % S    struct   segment instance
 
     subplot(5,1,1); hold on;
-    plot(tic + S.rf.t, abs(S.rf.signal), 'black.');
+    plot(1e3*(tic + S.rf.t), abs(S.rf.signal), 'black.');
     ylabel('RF (Gauss)');
     ylabel({'|b1|', 'Gauss'}, 'Rotation', 0); 
     ylim(1.1 * yLim.rf * [-1 1]);
     if showBlocks
-       sub_plotboundary(tic + S.tic, yLim.rf);
+       sub_plotboundary(1e3*(tic + S.tic), yLim.rf);
        %sub_plotboundary([tic + S.tic(1), tic + S.tic(end)], yLim.rf, 'segment');
-       sub_plotboundary([tic + S.tic(1)], yLim.rf, 'segment');
+       sub_plotboundary(1e3*[tic + S.tic(1)], yLim.rf, 'segment');
     end
 
     subplot(5,1,2); hold on;
-    plot(tic + S.rf.t, angle(S.rf.signal), 'black.');
+    plot(1e3*(tic + S.rf.t), angle(S.rf.signal), 'black.');
     ylabel({'\angleb1', 'rad'}, 'Rotation', 0); 
     ylim(1.1 * yLim.phs * [-1 1]);
     if showBlocks
-       sub_plotboundary(tic + S.tic, yLim.phs);
+       sub_plotboundary(1e3*(tic + S.tic), yLim.phs);
     end
 
     sp = 3;
     cols = 'rgb';
     for g = {'gx','gy','gz'}
         subplot(5,1,sp); hold on;
-        p = plot(tic + S.(g{1}).t, S.(g{1}).signal, [cols(sp-2) '.-']);
+        p = plot(1e3*(tic + S.(g{1}).t), S.(g{1}).signal, [cols(sp-2) '.-']);
         %setDataTipFormat(p, '%.6f');   % does not work :(
         ylabel({g{1}, 'G/cm'}, 'Rotation', 0);
         yl = 1.05 * max([yLim.gx yLim.gy yLim.gz]);
         ylim(yl * [-1 1]);
         if showBlocks
-            sub_plotboundary(tic + S.tic, yl);
+            sub_plotboundary(1e3*(tic + S.tic), yl);
         end
         sp = sp + 1;
     end
 
-    xlabel('time (sec)');
+    xlabel('time (ms)');
 
     return

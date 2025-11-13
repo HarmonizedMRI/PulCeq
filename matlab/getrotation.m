@@ -4,6 +4,11 @@ function [R,scale] = getrotation(b1, b2)
 % Determine if a rotation matrix R exists that takes (arbitrary) gradients from
 % Pulseq block b2 to those in b1.
 %
+% Included for backward compatibility with .seq files created 
+% before introduction of rotation events (Pulseq v1.5.1)
+%
+% Currently hardcoded to support only 2D (in-plane) rotations.
+%
 % For trapezoids, just return identity since rotation just
 % results in a trapezoid scaling on each axis which seq2ceq already detects.
 %
@@ -22,7 +27,7 @@ N = 0;
 N2 = 0;
 tt  = [];   % sample times
 tt2 = [];
-for ax = {'gx','gy','gz'}
+for ax = {'gx','gy'} %,'gz'}
     g = b1.(ax{1});
 
     % If trapezoid, just return identity
@@ -59,7 +64,7 @@ nd = 3;
 G1 = zeros(N, nd);
 G2 = zeros(N, nd);
 ax = {'gx','gy','gz'};
-for ii = 1:nd
+for ii = 1:2 %nd
     g1 = b1.(ax{ii});
     if isfield(g1, 'waveform')
         G1(:,ii) = g1.waveform;
