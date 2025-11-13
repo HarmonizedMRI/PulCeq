@@ -8,7 +8,7 @@ function writeceq(ceq, fn, varargin)
 
 % parse optional inputs
 arg.pislquant = 1;  
-arg.NMAXBLOCKSFORGRADHEATCHECK = 50000; 
+arg.NMAXBLOCKSFORGRADHEATCHECK = 40000; 
 arg = vararg_pair(arg, varargin);
 
 fid = fopen(fn, 'wb');  % big endian (network byte order)
