@@ -1,5 +1,5 @@
-function checkwaveforms(ceq, sysGE, seq, xmlPath, varargin)
-% function checkwaveforms(ceq, sysGE, seq, xmlPath, varargin)
+function validate(ceq, sysGE, seq, xmlPath, varargin)
+% function validate(ceq, sysGE, seq, xmlPath, varargin)
 %
 % Check agreement between MR30.2 scanner/WTools sequence output 
 % and the original Pulseq (.seq) object.
@@ -34,7 +34,7 @@ function checkwaveforms(ceq, sysGE, seq, xmlPath, varargin)
 % the main failure modes we're after are things like conj/sign change, and gross timing offsets
 arg.row = 'all';      
 arg.plot = false;   
-arg.threshRFper = 10;  
+arg.threshRFper = 50;  
 arg.b1PlotLim = sysGE.b1_max;  % Gauss
 
 arg = vararg_pair(arg, varargin);   % in ../
@@ -49,6 +49,7 @@ end
 axesLinked = false;
 
 % Loop over segments
+teps = 1e-12;
 cnt = 0;   % segment instance counter
 n = 1;
 if ~arg.plot
@@ -74,7 +75,7 @@ while n < ceq.nMax % & cnt < 2
     % and RF/ADC phase offset
     d = pge2.read_segment_xml(sprintf('%sscan.xml.%04d', xmlPath, cnt));
     th = pge2.readthetaregisters(sprintf('%sscan.xml.%04d.ssp', xmlPath, cnt));
-    phaseOffset.pge2 = th(1).theta/2^23*pi;
+    %phaseOffset.pge2 = th(1).theta/2^23*pi;
 
     % Ceq object waveforms
     L = ceq.loop(n1:n2, :);
@@ -112,8 +113,9 @@ while n < ceq.nMax % & cnt < 2
         % may not be entirely accurate (?)
 
         if length(tt.seq) > 0
-            [g.seqi, I] = sub_robustinterp1(tt.seq, g.seq, tt.pge2);
-            [err, Imaxdiff] = max(abs(g.seqi-g.pge2(I)));    % max difference, G/cm
+            [g.pge2i, I] = sub_robustinterp1(tt.pge2, g.pge2, tt.seq);
+            tmp = g.seq(I);  % if I is full/sparse this is either row/column vector :(
+            [err, Imaxdiff] = max(abs(g.pge2i(:)-tmp(:)));    % max difference, G/cm
         else
             err = 0;  % no gradient is present on the current axis
         end
@@ -149,14 +151,14 @@ while n < ceq.nMax % & cnt < 2
 
     % pge2 interpreter waveform
     tt.rho = d(5).time/1e6 - sysGE.segment_dead_time - sysGE.psd_rf_wait;
-    tt.rho = tt.rho + 1e-10*randn(size(tt.rho)); % avoid duplicate times so interp1 works
     plt.tmin = min(plt.tmin, min(tt.rho(1)));
     plt.tmax = max(plt.tmax, max(tt.rho(end)));
     rho = d(5).value;                     % a.u.
-    rho = rho/max(abs(rho)) * max(abs(rf.seq));    % Gauss
+    if max(abs(rho)) > 0                  % avoid divide by zero
+        rho = rho/max(abs(rho)) * max(abs(rf.seq));    % Gauss
+    end
 
     tt.theta = d(6).time/1e6 - sysGE.segment_dead_time - sysGE.psd_rf_wait;
-    tt.theta = tt.theta + 1e-10*randn(size(tt.theta));
     theta = d(6).value/2^23*pi;  % + phaseOffset.pge2;  % radians. TODO: add phase and freq offsets
     theta = angle(exp(-1i*theta));  % minus sign since the pge2 interpreter conjugates the phase
 
@@ -169,9 +171,16 @@ while n < ceq.nMax % & cnt < 2
     rf.pge2 = rho(I) .* exp(1i*thetai);
     tt.pge2 = tt.rho(I);
     dt = sysGE.GRAD_UPDATE_TIME;
+
     if length(rf.seq) > 0
-        [rf.seqi, I] = sub_robustinterp1(tt.seq, rf.seq, tt.pge2);
-        err = 100 * rmse(abs(rf.seqi), abs(rf.pge2(I))) / rmse(rf.seqi, 0*rf.seqi);    % percent rmse
+        [rf.pge2i, I] = sub_robustinterp1(tt.pge2, rf.pge2, tt.seq);
+        tmp = rf.seq(I);  % if I is full/sparse this is either row/column vector :(
+        if norm(rf.pge2i) > 0
+            %err = 100 * rmse(abs(rf.seqi), abs(rf.pge2(I))) / rmse(rf.seqi, 0*rf.seqi);    % percent rmse
+            err = 100 * rmse(abs(rf.pge2i), abs(tmp)) / rmse(rf.pge2i, 0*rf.pge2i);    % percent rmse
+        else
+            err = 0;
+        end
     else
         err = 0;
     end
@@ -244,10 +253,31 @@ end
 textprogressbar((n-1)/ceq.nMax*100);
 fprintf('\n');
 
+
+% Inputs
+%   ttout   [n]   
+%   ttin    [m]
+%   win     [m]
+%
+% Output
+%   wout    size(ttout)
 function [wout, Ikeep] = sub_robustinterp1(ttin, win, ttout)
 
-    w = interp1(ttin, win, ttout);
+    [nr, nc] = size(ttout);  
+
+    % make times unique
+    ttin = ttin(:) + 1e-12*(0:numel(ttin)-1)';
+    ttout = ttout(:) + 1e-12*(0:numel(ttout)-1)';
+
+    w = interp1(ttin, win(:), ttout);
+
     Ikeep = ~isnan(w);
     wout = w(Ikeep);
+
+    if nr > nc
+        wout = wout(:);
+    else
+        wout = wout(:).';
+    end
 
     return
