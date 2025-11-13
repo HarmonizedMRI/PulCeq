@@ -12,7 +12,6 @@ which is the best way to test and visualize a .pge file before going to the scan
 
 Workflow example:
 ```matlab
-
 % Load the .seq file and convert to a Ceq object
 fn = 'gre2d';        % .seq file name
 seq = mr.Sequence();
@@ -26,17 +25,17 @@ psd_grd_wait = 100e-6; % ADC-gradient delay, scanner specific (s)
 b1_max = 0.25;         % Gauss
 g_max = 5;             % Gauss/cm
 slew_max = 20;         % Gauss/cm/ms
-coil = 'xrm';          % MR750. See pge2.getsys()
-sysGE = pge2.getsys(psd_rf_wait, psd_grd_wait, b1_max, g_max, slew_max, coil);
+coil = 'xrm';          % MR750. See pge2.opts()
+sysGE = pge2.opts(psd_rf_wait, psd_grd_wait, b1_max, g_max, slew_max, coil);
 
 % Check if 'ceq' is compatible with the parameters in 'sysGE'.
 % Specifically, this step checks PNS and RF/gradient limits.
 pars = pge2.check(ceq, sysGE);
 
-% Plot part of the sequence (optional)
+% Plot part of the sequence 
 S = pge2.plot(ceq, sysGE, 'timeRange', [0 0.02], 'rotate', false); 
 
-% Write ceq object to file.
+% Write ceq object to file
 % pislquant is the number of ADC events used to set Rx gains in Auto Prescan
 writeceq(ceq, [ fn '.pge'], 'pislquant', 10);
 
