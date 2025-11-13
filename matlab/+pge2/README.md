@@ -14,8 +14,6 @@ Workflow example:
 ```matlab
 % Load the .seq file and convert to a Ceq object
 fn = 'gre2d';        % .seq file name
-seq = mr.Sequence();
-seq.read([fn '.seq']);
 ceq = seq2ceq([fn '.seq']);
 
 % Check the ceq object:
@@ -43,6 +41,8 @@ writeceq(ceq, [ fn '.pge'], 'pislquant', 10);
 % and compare with the seq object, e.g.:
 warning('OFF', 'mr:restoreShape');  % turn off Pulseq warning for spirals
 xmlPath = '~/transfer/xml/';
+seq = mr.Sequence();
+seq.read([fn '.seq']);
 pge2.validate(ceq, sysGE, seq, xmlPath, 'row', 'all', 'plot', true);
 ```
 
