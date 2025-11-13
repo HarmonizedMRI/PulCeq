@@ -76,7 +76,7 @@ while n < ceq.nMax & tic - eps < min(ceq.duration, arg.timeRange(2))
 
     % Get segment instance and add to plot
     try
-        S = pge2.getsegmentinstance(ceq, i, sys, L, 'rotate', arg.rotate);
+        S = pge2.getsegmentinstance(ceq, i, sys, L, 'rotate', arg.rotate, 'interpolate', arg.interpolate);
     catch ME
         error(sprintf('(n = %d, i = %d): %s\n', n, i, ME.message));
     end
