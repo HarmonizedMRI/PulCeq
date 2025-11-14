@@ -139,7 +139,7 @@ linkaxes([ax{1} ax{2} ax{3} ax{4} ax{5} ax{6}], 'x');  % common zoom setting (al
 subplot(nSubPlots,1,1);
 msg = sprintf('Displaying blocks %d:%d.\n', nFirst, n2);
 if ~arg.rotate
-    msg = sprintf('Logical coordinates -- gradient rotations not shown.\n');
+    msg = sprintf('%sLogical coordinates -- gradient rotations not shown.\n', msg);
 end
 if arg.interpolate
     msg = sprintf('%sGradient waveforms interpolated to 4us.\n', msg);
