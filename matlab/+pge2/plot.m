@@ -234,7 +234,7 @@ function sub_addSegmentInstanceToPlot(tic, S, showBlocks, sysGE, yLim, nSubPlots
         sub_plotboundary(1e3*[tic + S.tic(1)], 'segment');
     end
     ylabel(sprintf('PNS waveform\n%% of threshold'), 'Rotation', 0);
-    yticks(ax, [0 80 100]);
+    yticks(ax, [20:20:100]);
 %   yticklabels(ax, {'0', '80', 'π'});
 
     xlabel('time (ms)');
