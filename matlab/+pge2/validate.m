@@ -122,7 +122,7 @@ while n < ceq.nMax % & cnt < 2
         tol = 3 * sysGE.slew_max * sysGE.GRAD_UPDATE_TIME * 1e3;  % max allowed difference per 4us sample 
 
         if err > tol
-            fprintf('%s waveform mismatch (segment at row %d: max diff %.3f G/cm at t = %.3f ms)\n', ax{iax}, n, err, 1e3*tt.pge2(Imaxdiff));
+            fprintf('%s waveform mismatch (segment at row %d: max diff %.3f G/cm at t = %.3f ms)\n', ax{iax}, n, err, 1e3*tt.pge2(Imaxdiff(1)));
             doNextSegment = false;
         end
 
