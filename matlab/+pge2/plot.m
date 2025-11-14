@@ -27,6 +27,12 @@ if arg.rotate
     arg.interpolate = true;
 end
 
+if arg.interpolate
+    nSubPlots = 6;  % also plot PNS waveform
+else
+    nSubPlots = 5;
+end
+
 if arg.timeRange(1) > ceq.duration
     error('Request time exceeds sequence duration');
 end
@@ -81,7 +87,7 @@ while n < ceq.nMax & tic - eps < min(ceq.duration, arg.timeRange(2))
         error(sprintf('(n = %d, i = %d): %s\n', n, i, ME.message));
     end
 
-    sub_addSegmentInstanceToPlot(tic, S, arg.showBlocks, sys, yLim);
+    sub_addSegmentInstanceToPlot(tic, S, arg.showBlocks, sys, yLim, nSubPlots);
 
     % Add waveforms to running total (for return value -- not used for plotting)
     W.tic = [W.tic(:); tic + S.tic(:)];
@@ -102,15 +108,15 @@ while n < ceq.nMax & tic - eps < min(ceq.duration, arg.timeRange(2))
 end
 
 % linx axes
-for sp = 1:5
-    subplot(5, 1, sp); 
+for sp = 1:nSubPlots
+    subplot(nSubPlots, 1, sp); 
     ax{sp} = gca;
     grid on;
 end
-linkaxes([ax{1} ax{2} ax{3} ax{4} ax{5}], 'x');  % common zoom setting (along time axis) for all tiles
+linkaxes([ax{1} ax{2} ax{3} ax{4} ax{5} ax{6}], 'x');  % common zoom setting (along time axis) for all tiles
 
 % set misc figure properties
-subplot(5,1,1);
+subplot(nSubPlots,1,1);
 if arg.rotate
     msg = sprintf('Physical coordinates -- gradient rotations are shown.\n');
 else
@@ -156,11 +162,11 @@ function sub_plotboundary(T, vs, tp)
 
     return
 
-function sub_addSegmentInstanceToPlot(tic, S, showBlocks, sys, yLim)
+function sub_addSegmentInstanceToPlot(tic, S, showBlocks, sysGE, yLim, nSubPlots)
     % tic  [1]      time of start of segment
     % S    struct   segment instance
 
-    subplot(5,1,1); hold on;
+    subplot(nSubPlots,1,1); hold on;
     plot(1e3*(tic + S.rf.t), abs(S.rf.signal), 'black.');
     ylabel('RF (Gauss)');
     ylabel({'|b1|', 'Gauss'}, 'Rotation', 0); 
@@ -171,7 +177,7 @@ function sub_addSegmentInstanceToPlot(tic, S, showBlocks, sys, yLim)
        sub_plotboundary(1e3*[tic + S.tic(1)], yLim.rf, 'segment');
     end
 
-    subplot(5,1,2); hold on;
+    subplot(nSubPlots,1,2); hold on;
     plot(1e3*(tic + S.rf.t), angle(S.rf.signal), 'black.');
     ylabel({'\angleb1', 'rad'}, 'Rotation', 0); 
     ylim(1.1 * yLim.phs * [-1 1]);
@@ -182,16 +188,32 @@ function sub_addSegmentInstanceToPlot(tic, S, showBlocks, sys, yLim)
     sp = 3;
     cols = 'rgb';
     for g = {'gx','gy','gz'}
-        subplot(5,1,sp); hold on;
+        subplot(nSubPlots,1,sp); hold on;
         p = plot(1e3*(tic + S.(g{1}).t), S.(g{1}).signal, [cols(sp-2) '.-']);
         %setDataTipFormat(p, '%.6f');   % does not work :(
         ylabel({g{1}, 'G/cm'}, 'Rotation', 0);
-        yl = 1.05 * max([yLim.gx yLim.gy yLim.gz]);
+        %yl = 1.05 * max([yLim.gx yLim.gy yLim.gz]);
+        yl = 1.05 * yLim.(g{1});
         ylim(yl * [-1 1]);
         if showBlocks
             sub_plotboundary(1e3*(tic + S.tic), yl);
         end
         sp = sp + 1;
+    end
+
+    % if uniformly sampled, also plot PNS waveform
+    if nSubPlots == 6
+        ax = subplot(nSubPlots,1,6); hold on;
+        Smin = sysGE.rheobase/sysGE.alpha;
+        G = [S.gx.signal'; S.gy.signal'; S.gz.signal']/100;  % T/m
+        [pt, p] = pge2.pns(Smin, sysGE.chronaxie, G, sysGE.GRAD_UPDATE_TIME, false); 
+        plot(1e3*(tic + S.(g{1}).t), pt, 'r-');
+        if showBlocks
+            sub_plotboundary(1e3*(tic + S.tic), yl);
+        end
+        ylabel(sprintf('PNS waveform\n%% of threshold'), 'Rotation', 0);
+        yticks(ax, [0 80 100]);
+%        yticklabels(ax, {'0', '80', 'π'});
     end
 
     xlabel('time (ms)');
