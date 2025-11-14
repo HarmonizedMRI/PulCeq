@@ -56,6 +56,7 @@ W.gz.t = 0; W.gz.signal = 0;
 W.pns.t = 0; W.pns.signal = 0;
 
 n = 1;    % row counter in ceq.loop
+nFirst = [];
 tic = 0;  % running timer marking start of segment instance (sec)
 
 while n < arg.blockRange(2) & tic - eps < min(ceq.duration, arg.timeRange(2))
@@ -69,6 +70,10 @@ while n < arg.blockRange(2) & tic - eps < min(ceq.duration, arg.timeRange(2))
     if n < arg.blockRange(1);
         n = n2 + 1;
         continue;
+    end
+
+    if isempty(nFirst)
+        nFirst = n1;
     end
 
     % get dynamic (scan loop) information
@@ -132,7 +137,7 @@ linkaxes([ax{1} ax{2} ax{3} ax{4} ax{5} ax{6}], 'x');  % common zoom setting (al
 
 % set misc figure properties
 subplot(nSubPlots,1,1);
-msg = sprintf('Displaying blocks [%d %d].\n', n1, n2);
+msg = sprintf('Displaying blocks %d:%d.\n', nFirst, n2);
 if ~arg.rotate
     msg = sprintf('Logical coordinates -- gradient rotations not shown.\n');
 end
