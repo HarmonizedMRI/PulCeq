@@ -53,8 +53,7 @@ while n < ceq.nMax
     i = ceq.loop(n,1);  % segment index
     L = ceq.loop(n:(n-1+ceq.segments(i).nBlocksInSegment), :);  % dynamic info
     try
-        % ok to validate in logical coordinates since rotation doesn't impact executability
-        S = pge2.getsegmentinstance(ceq, i, sysGE, L, 'rotate', false, 'interpolate', true);
+        S = pge2.getsegmentinstance(ceq, i, sysGE, L, 'rotate', true, 'interpolate', true);
     catch ME
         error(sprintf('(n = %d, i = %d): %s\n', n, i, ME.message));
     end
@@ -97,11 +96,15 @@ while n < ceq.nMax
         error(sprintf('(n = %d, i = %d): %s\n', n, i, ME.message));
     end
     if ok & max(pt) > 100
-        fprintf('(block %d, segment %d): PNS exceeds first controlled mode (100%%)!!!\n', n, i);
+        I = find(pt == max(pt));
+        fprintf('(row %d, t = %.3f ms, segment %d): PNS exceeds first controlled mode (100%%)!!!\n', ...
+            n, I(1)*sysGE.GRAD_UPDATE_TIME*1e3, i);
         ok = false;
     end
     if ok & max(pt) > 80
-        fprintf('(block %d, segment %d): PNS exceeds normal mode (80%%)!\n', n, i);
+        I = find(pt == max(pt));
+        fprintf('(row %d, segment %d, t = %.3f ms): PNS exceeds first normal mode (80%%)!\n', ...
+            n, i, I(1)*sysGE.GRAD_UPDATE_TIME*1e3);
         ok = false;
     end
     if max(pt) > pars.pnsmax.val
