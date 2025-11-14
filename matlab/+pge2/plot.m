@@ -9,6 +9,7 @@ function W = plot(ceq, sys, varargin)
 %
 % Input options:
 %  timeRange       [2]             Requested start and end times (sec). Actual plot will end on a segment boundary.
+%  blockRange      [2]             Requested start and end blocks. Actual plot will end on a segment boundary.
 %  showBlocks      TRUE/false      Draw vertical lines at block boundaries (default: true)
 %  rotate          true/FALSE      If false, display gradients in logical coordinate frame, i.e., 
 %                                  before rotating. If true, only interpolated gradients are shown.
@@ -18,6 +19,7 @@ function W = plot(ceq, sys, varargin)
 %  W               struct containing the plotted waveforms
 
 arg.timeRange = [0 ceq.duration];
+arg.blockRange = [1 ceq.nMax];
 arg.showBlocks = true; 
 arg.rotate = false;
 arg.interpolate = false;
@@ -56,10 +58,20 @@ W.pns.t = 0; W.pns.signal = 0;
 n = 1;    % row counter in ceq.loop
 tic = 0;  % running timer marking start of segment instance (sec)
 
-while n < ceq.nMax & tic - eps < min(ceq.duration, arg.timeRange(2))
+while n < arg.blockRange(2) & tic - eps < min(ceq.duration, arg.timeRange(2))
 
-    % get segment index and dynamic (scan loop) information
+    % get segment index 
     i = ceq.loop(n,1);  % segment index
+
+    % skip segment if needed
+    n1 = n;
+    n2 = n - 1 + ceq.segments(i).nBlocksInSegment;
+    if n < arg.blockRange(1);
+        n = n2 + 1;
+        continue;
+    end
+
+    % get dynamic (scan loop) information
     L = ceq.loop(n:(n-1+ceq.segments(i).nBlocksInSegment), :);
 
     % get segment instance duration
@@ -120,9 +132,8 @@ linkaxes([ax{1} ax{2} ax{3} ax{4} ax{5} ax{6}], 'x');  % common zoom setting (al
 
 % set misc figure properties
 subplot(nSubPlots,1,1);
-if arg.rotate
-    msg = sprintf('Physical coordinates -- gradient rotations are shown.\n');
-else
+msg = sprintf('Displaying blocks [%d %d].\n', n1, n2);
+if ~arg.rotate
     msg = sprintf('Logical coordinates -- gradient rotations not shown.\n');
 end
 if arg.interpolate
@@ -130,7 +141,7 @@ if arg.interpolate
 else
     msg = sprintf('%sWaveform samples/corner points are shown as defined in the original Pulseq file.\n', msg);
 end
-msg = [msg 'Vertical lines show block/segment boundaries.'];
+%msg = [msg 'Vertical lines show block/segment boundaries.'];
 title(msg);
 
 yticks(ax{2}, [-pi 0 pi]);
@@ -139,12 +150,11 @@ yticklabels(ax{2}, {'-π', '0', 'π'});
 return
 
 
-function sub_plotboundary(T, vs, tp)
+function sub_plotboundary(T, tp)
     % T    [nt]    block boundary locations (time within sequence)
-    % vs   [1]     +/- limit
     % tp   string  'block' or 'segment' 
 
-    if nargin < 3
+    if nargin < 2
         tp = 'block';
     end
 
@@ -159,10 +169,6 @@ function sub_plotboundary(T, vs, tp)
         end
     end
 
-    % xtickformat('%.6f');
-    % xticks(T);
-    % xtickangle(45);
-
     return
 
 function sub_addSegmentInstanceToPlot(tic, S, showBlocks, sysGE, yLim, nSubPlots)
@@ -175,17 +181,28 @@ function sub_addSegmentInstanceToPlot(tic, S, showBlocks, sysGE, yLim, nSubPlots
     ylabel({'|b1|', 'Gauss'}, 'Rotation', 0); 
     ylim(1.1 * yLim.rf * [-1 1]);
     if showBlocks
-       sub_plotboundary(1e3*(tic + S.tic), yLim.rf);
-       %sub_plotboundary([tic + S.tic(1), tic + S.tic(end)], yLim.rf, 'segment');
-       sub_plotboundary(1e3*[tic + S.tic(1)], yLim.rf, 'segment');
+       sub_plotboundary(1e3*(tic + S.tic));
+       sub_plotboundary(1e3*[tic + S.tic(1)], 'segment');
     end
+    %x = 1e3*S.tic;
+    %y = 0*x;
+    %plot(x, y, '.');
+    %for i = 1:numel(x)
+    %    text(x(i), y(i)-0.05, sprintf('Block %d', i), ...
+    %         'HorizontalAlignment','center');
+    %end
+
+    %xtickformat('%d');
+    %xticks(1:length(S.tic));
+    % xtickangle(45);
 
     subplot(nSubPlots,1,2); hold on;
     plot(1e3*(tic + S.rf.t), angle(S.rf.signal), 'black.');
     ylabel({'\angleb1', 'rad'}, 'Rotation', 0); 
     ylim(1.1 * yLim.phs * [-1 1]);
     if showBlocks
-       sub_plotboundary(1e3*(tic + S.tic), yLim.phs);
+       sub_plotboundary(1e3*(tic + S.tic));
+       sub_plotboundary(1e3*[tic + S.tic(1)], 'segment');
     end
 
     sp = 3;
@@ -195,11 +212,11 @@ function sub_addSegmentInstanceToPlot(tic, S, showBlocks, sysGE, yLim, nSubPlots
         p = plot(1e3*(tic + S.(g{1}).t), S.(g{1}).signal, [cols(sp-2) '.-']);
         %setDataTipFormat(p, '%.6f');   % does not work :(
         ylabel({g{1}, 'G/cm'}, 'Rotation', 0);
-        %yl = 1.05 * max([yLim.gx yLim.gy yLim.gz]);
         yl = 1.05 * yLim.(g{1});
         ylim(yl * [-1 1]);
         if showBlocks
-            sub_plotboundary(1e3*(tic + S.tic), yl);
+            sub_plotboundary(1e3*(tic + S.tic));
+            sub_plotboundary(1e3*[tic + S.tic(1)], 'segment');
         end
         sp = sp + 1;
     end
@@ -208,7 +225,8 @@ function sub_addSegmentInstanceToPlot(tic, S, showBlocks, sysGE, yLim, nSubPlots
     ax = subplot(nSubPlots,1,6); hold on;
     plot(1e3*(tic + S.pns.t), S.pns.signal, 'r-');
     if showBlocks
-        sub_plotboundary(1e3*(tic + S.tic), yl);
+        sub_plotboundary(1e3*(tic + S.tic));
+        sub_plotboundary(1e3*[tic + S.tic(1)], 'segment');
     end
     ylabel(sprintf('PNS waveform\n%% of threshold'), 'Rotation', 0);
     yticks(ax, [0 80 100]);
