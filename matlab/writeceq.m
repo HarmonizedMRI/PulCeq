@@ -101,6 +101,7 @@ if isfield(b, 'trig')
 else
     trig.type = 0;
 end
+    trig.type = 0;
 sub_writetrig(fid, trig);
 
 return
