@@ -8,7 +8,7 @@ function W = plot(ceq, sys, varargin)
 %   sys     struct       System hardware info, see pge2.getsys()
 %
 % Input options:
-%  timeRange       [1 2]           Requested start and end times (sec). Actual plot will end on a segment boundary.
+%  timeRange       [2]             Requested start and end times (sec). Actual plot will end on a segment boundary.
 %  showBlocks      TRUE/false      Draw vertical lines at block boundaries (default: true)
 %  rotate          true/FALSE      If false, display gradients in logical coordinate frame, i.e., 
 %                                  before rotating. If true, only interpolated gradients are shown.
@@ -51,6 +51,7 @@ W.rf.t = 0; W.rf.signal = 0;
 W.gx.t = 0; W.gx.signal = 0;
 W.gy.t = 0; W.gy.signal = 0;
 W.gz.t = 0; W.gz.signal = 0;
+W.pns.t = 0; W.pns.signal = 0;
 
 n = 1;    % row counter in ceq.loop
 tic = 0;  % running timer marking start of segment instance (sec)
@@ -96,11 +97,13 @@ while n < ceq.nMax & tic - eps < min(ceq.duration, arg.timeRange(2))
     W.gx.t = [W.gx.t; tic + S.gx.t];
     W.gy.t = [W.gy.t; tic + S.gy.t];
     W.gz.t = [W.gz.t; tic + S.gz.t];
+    W.pns.t = [W.pns.t; tic + S.pns.t];
 
     W.rf.signal = [W.rf.signal; S.rf.signal];
     W.gx.signal = [W.gx.signal; S.gx.signal];
     W.gy.signal = [W.gy.signal; S.gy.signal];
     W.gz.signal = [W.gz.signal; S.gz.signal];
+    W.pns.signal = [W.pns.signal; S.pns.signal];
 
     % Update time counter and go to next segment
     tic = tic + S.duration;
