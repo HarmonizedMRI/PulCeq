@@ -1,4 +1,5 @@
 function W = plot(ceq, sys, varargin)
+% function W = plot(ceq, sys, varargin)
 %
 % Plot Ceq sequence object
 %
@@ -10,8 +11,11 @@ function W = plot(ceq, sys, varargin)
 %  timeRange       [1 2]           Requested start and end times (sec). Actual plot will end on a segment boundary.
 %  showBlocks      TRUE/false      Draw vertical lines at block boundaries (default: true)
 %  rotate          true/FALSE      If false, display gradients in logical coordinate frame, i.e., 
-%                                  before rotating. If true, interpolated gradients are shown.
+%                                  before rotating. If true, only interpolated gradients are shown.
 %  interpolate     true/FALSE      Interpolate to 4us, or display corner points (for extended traps)
+%
+% Output: 
+%  W               struct containing the plotted waveforms
 
 arg.timeRange = [0 ceq.duration];
 arg.showBlocks = true; 
@@ -27,11 +31,7 @@ if arg.rotate
     arg.interpolate = true;
 end
 
-if arg.interpolate
-    nSubPlots = 6;  % also plot PNS waveform
-else
-    nSubPlots = 5;
-end
+nSubPlots = 6;
 
 if arg.timeRange(1) > ceq.duration
     error('Request time exceeds sequence duration');
@@ -201,20 +201,15 @@ function sub_addSegmentInstanceToPlot(tic, S, showBlocks, sysGE, yLim, nSubPlots
         sp = sp + 1;
     end
 
-    % if uniformly sampled, also plot PNS waveform
-    if nSubPlots == 6
-        ax = subplot(nSubPlots,1,6); hold on;
-        Smin = sysGE.rheobase/sysGE.alpha;
-        G = [S.gx.signal'; S.gy.signal'; S.gz.signal']/100;  % T/m
-        [pt, p] = pge2.pns(Smin, sysGE.chronaxie, G, sysGE.GRAD_UPDATE_TIME, false); 
-        plot(1e3*(tic + S.(g{1}).t), pt, 'r-');
-        if showBlocks
-            sub_plotboundary(1e3*(tic + S.tic), yl);
-        end
-        ylabel(sprintf('PNS waveform\n%% of threshold'), 'Rotation', 0);
-        yticks(ax, [0 80 100]);
-%        yticklabels(ax, {'0', '80', 'π'});
+    % PNS waveform
+    ax = subplot(nSubPlots,1,6); hold on;
+    plot(1e3*(tic + S.pns.t), S.pns.signal, 'r-');
+    if showBlocks
+        sub_plotboundary(1e3*(tic + S.tic), yl);
     end
+    ylabel(sprintf('PNS waveform\n%% of threshold'), 'Rotation', 0);
+    yticks(ax, [0 80 100]);
+%   yticklabels(ax, {'0', '80', 'π'});
 
     xlabel('time (ms)');
 

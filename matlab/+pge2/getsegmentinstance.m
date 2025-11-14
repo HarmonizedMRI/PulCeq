@@ -19,6 +19,7 @@ function S = getsegmentinstance(ceq, i, sys, L, varargin)
 %     S.rf          RF waveform samples (Gauss) and times (sec)
 %     S.gx/gy/gz    Gradient waveform samples (Gauss/cm) and times (sec)
 %     S.duration    sec. Includes sys.dead_time and sys.segment_ringdown_time
+%     S.pns         PNS stimulation waveform (percent of threshold). Only calculated if 'interpolate' = true.
 
 arg.plot = false;
 arg.durationOnly = false;
@@ -170,6 +171,16 @@ if arg.interpolate
         S.gz.signal = G(3,:)';
     end
 end    
+
+% Calculate PNS waveform
+[Spns.gx.t, Spns.gx.signal] = sub_interp_grad(S.gx.t, S.gx.signal, S.duration, sys);
+[Spns.gy.t, Spns.gy.signal] = sub_interp_grad(S.gy.t, S.gy.signal, S.duration, sys);
+[Spns.gz.t, Spns.gz.signal] = sub_interp_grad(S.gz.t, S.gz.signal, S.duration, sys);
+S.pns.t = (1:length(Spns.gx.t))*sys.GRAD_UPDATE_TIME;
+sysGE = sys;
+Smin = sysGE.rheobase/sysGE.alpha;
+G = [Spns.gx.signal'; Spns.gy.signal'; Spns.gz.signal']/100;  % T/m
+[S.pns.signal, p] = pge2.pns(Smin, sysGE.chronaxie, G, sysGE.GRAD_UPDATE_TIME, false); 
 
 if ~arg.plot
     return;
