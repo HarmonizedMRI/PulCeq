@@ -195,8 +195,10 @@ while n < ceq.nMax % & cnt < 2
         tt.ceq = S.rf.t - sysGE.segment_dead_time - sysGE.psd_rf_wait;
         rf.ceq = S.rf.signal;
 
-        plt.tmin = min(plt.tmin, min(tt.ceq(1)));
-        plt.tmax = max(plt.tmax, max(tt.ceq(end)));
+        if length(rf.seq) > 0
+            plt.tmin = min(plt.tmin, min(tt.ceq(1)));
+            plt.tmax = max(plt.tmax, max(tt.ceq(end)));
+        end
     end
 
     if length(rf.seq) > 0
@@ -224,27 +226,31 @@ while n < ceq.nMax % & cnt < 2
     if arg.plot
         subplot(5,1,4); hold off;
         title(sprintf('|RF|, segment %d', cnt));
-        plot(1e3*tt.seq, abs(rf.seq), 'black');
-        hold on
-        if ~isempty(xmlPath)
-            plot(1e3*tt.rho, rho, 'r.-'); 
-            legend('Pulseq', 'pge2'); 
-        else
-            plot(1e3*tt.ceq, abs(rf.ceq), 'r.-'); 
-            legend('Pulseq', 'ceq'); 
+        if length(rf.seq) > 0
+            plot(1e3*tt.seq, abs(rf.seq), 'black');
+            hold on
+            if ~isempty(xmlPath)
+                plot(1e3*tt.rho, rho, 'r.-'); 
+                legend('Pulseq', 'pge2'); 
+            else
+                plot(1e3*tt.ceq, abs(rf.ceq), 'r.-'); 
+                legend('Pulseq', 'ceq'); 
+            end
         end
         ylabel(sprintf('|RF|\n(Gauss)'), 'Rotation', 0);
 
         subplot(5,1,5); hold off;
         title(sprintf('∠RF, segment %d', cnt));
-        plot(1e3*tt.seq, angle(rf.seq), 'black');
-        hold on
-        if ~isempty(xmlPath)
-            plot(1e3*tt.theta, theta, 'r.');
-            legend('Pulseq', 'pge2'); 
-        else
-            plot(1e3*tt.ceq, angle(rf.ceq), 'r.-'); 
-            legend('Pulseq', 'ceq'); 
+        if length(rf.seq) > 0
+            plot(1e3*tt.seq, angle(rf.seq), 'black');
+            hold on
+            if ~isempty(xmlPath)
+                plot(1e3*tt.theta, theta, 'r.');
+                legend('Pulseq', 'pge2'); 
+            else
+                plot(1e3*tt.ceq, angle(rf.ceq), 'r.-'); 
+                legend('Pulseq', 'ceq'); 
+            end
         end
         ylabel(sprintf('∠RF\n(radians)'), 'Rotation', 0);
 
