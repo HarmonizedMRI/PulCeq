@@ -1,9 +1,9 @@
 function validate(ceq, sysGE, seq, xmlPath, varargin)
 % function validate(ceq, sysGE, seq, xmlPath, varargin)
 %
-% Check agreement between MR30.2 scanner/WTools sequence output
+% Check agreement between pge2 interpreter output on scanner/VM/WTools
 % and the original Pulseq (.seq) object.
-% If 'xmlPath' is not provided ([]), the ceq object is used instead.
+% If 'xmlPath' is empty ([]), the ceq object is used instead.
 %
 % Inputs:
 %   ceq       struct         Ceq sequence object, see seq2ceq.m
@@ -11,7 +11,7 @@ function validate(ceq, sysGE, seq, xmlPath, varargin)
 %   seq       struct         A Pulseq sequence object
 %   xmlPath   string or []   Path to folder containing scan.xml.<xxxx> files.
 %                            These files are also used by GE's Pulse View sequence plotter.
-%                            If empty, the ceq and seq objects are compared.
+%                            If empty, the ceq object is used instead.
 % 
 % Input options:
 %   'row'           [1] or 'all'/[]   Check and plot segment starting at this number in .seq file (default: 'all')
@@ -79,11 +79,10 @@ while n < ceq.nMax % & cnt < 2
 
     % pge2 interpreter waveforms 
     % and RF/ADC phase offset
-    switch mode
-        case 'xml'
-            d = pge2.read_segment_xml(sprintf('%sscan.xml.%04d', xmlPath, cnt));
-            th = pge2.readthetaregisters(sprintf('%sscan.xml.%04d.ssp', xmlPath, cnt));
-            %phaseOffset.pge2 = th(1).theta/2^23*pi;
+    if ~isempty(xmlPath)
+        d = pge2.read_segment_xml(sprintf('%sscan.xml.%04d', xmlPath, cnt));
+        th = pge2.readthetaregisters(sprintf('%sscan.xml.%04d.ssp', xmlPath, cnt));
+        %phaseOffset.pge2 = th(1).theta/2^23*pi;
     end
 
     % Ceq object waveforms
@@ -101,8 +100,6 @@ while n < ceq.nMax % & cnt < 2
         % pge2 interpreter output (.xml files)
         if ~isempty(xmlPath)
             tt.pge2 = d(iax).time/1e6 - sysGE.segment_dead_time;     
-            plt.tmin = min(plt.tmin, min(tt.pge2(1)));
-            plt.tmax = max(plt.tmax, max(tt.pge2(end)));
             g.pge2 = d(iax).value;
         end
 
@@ -113,9 +110,14 @@ while n < ceq.nMax % & cnt < 2
         % Ceq object (after seq2ceq.m conversion)
         tt.ceq = S.(ax{iax}).t - sysGE.segment_dead_time;
         g.ceq = S.(ax{iax}).signal;
-        %I = tt.ceq < tt.pge2(1) | tt.ceq > tt.pge2(end);
-        %tt.ceq(I) = [];
-        %g.ceq(I) = [];
+
+        if ~isempty(xmlPath)
+            plt.tmin = min(plt.tmin, min(tt.pge2(1)));
+            plt.tmax = max(plt.tmax, max(tt.pge2(end)));
+        else
+            plt.tmin = min(plt.tmin, min(tt.ceq(1)));
+            plt.tmax = max(plt.tmax, max(tt.ceq(end)));
+        end
 
         % Check difference with seq object.
         % For traps/ext traps, interpreter waveform is piecewise constant 
@@ -124,10 +126,11 @@ while n < ceq.nMax % & cnt < 2
         % may not be entirely accurate (?)
 
         if length(tt.seq) > 0
+            % interpolate to tt.seq
             if ~isempty(xmlPath)
-                [gi, I] = sub_robustinterp1(tt.pge2, g.pge2, tt.seq);
+                [gi, I] = pge2.robustinterp1(tt.pge2, g.pge2, tt.seq);
             else
-                [gi, I] = sub_robustinterp1(tt.ceq, g.ceq, tt.seq);
+                [gi, I] = pge2.robustinterp1(tt.ceq, g.ceq, tt.seq);
             end
             tmp = g.seq(I);  % if I is full/sparse this is either row/column vector :(
             [err, Imaxdiff] = max(abs(gi(:)-tmp(:)));    % max difference, G/cm
@@ -172,6 +175,7 @@ while n < ceq.nMax % & cnt < 2
         tt.rho = d(5).time/1e6 - sysGE.segment_dead_time - sysGE.psd_rf_wait;
         rho = d(5).value;                     % a.u.
         if max(abs(rho)) > 0                  % avoid divide by zero
+            % Amplitude is in a.u. so here we just scale it based on the seq object (for now)
             rho = rho/max(abs(rho)) * max(abs(rf.seq));    % Gauss
         end
 
@@ -180,7 +184,7 @@ while n < ceq.nMax % & cnt < 2
         theta = angle(exp(-1i*theta));  % minus sign since the pge2 interpreter conjugates the phase
 
         % construct complex waveform
-        [thetai, I] = sub_robustinterp1(tt.theta, theta, tt.rho);
+        [thetai, I] = pge2.robustinterp1(tt.theta, theta, tt.rho);
         rf.pge2 = rho(I) .* exp(1i*thetai);
         tt.pge2 = tt.rho(I);
 
@@ -195,15 +199,13 @@ while n < ceq.nMax % & cnt < 2
         plt.tmax = max(plt.tmax, max(tt.ceq(end)));
     end
 
-    dt = sysGE.GRAD_UPDATE_TIME;
-
     if length(rf.seq) > 0
         if ~isempty(xmlPath)
-            [rfi, I] = sub_robustinterp1(tt.pge2, rf.pge2, tt.seq);
+            [rfi, I] = pge2.robustinterp1(tt.pge2, rf.pge2, tt.seq);
         else
-            [rfi, I] = sub_robustinterp1(tt.ceq, rf.ceq, tt.seq);
+            [rfi, I] = pge2.robustinterp1(tt.ceq, rf.ceq, tt.seq);
         end
-        tmp = rfi; %(I);  % if I is full/sparse this is either row/column vector :(
+        tmp = rf.seq(I);  % if I is full/sparse this is either row/column vector :(
         if norm(rfi) > 0
             %err = 100 * rmse(abs(rf.seqi), abs(rf.pge2(I))) / rmse(rf.seqi, 0*rf.seqi);    % percent rmse
             err = 100 * rmse(abs(rfi), abs(tmp)) / rmse(rfi, 0*rfi);    % percent rmse
@@ -289,32 +291,3 @@ end
 
 textprogressbar((n-1)/ceq.nMax*100);
 fprintf('\n');
-
-
-% Inputs
-%   ttout   [n]   
-%   ttin    [m]
-%   win     [m]
-%
-% Output
-%   wout    size(ttout)
-function [wout, Ikeep] = sub_robustinterp1(ttin, win, ttout)
-
-    [nr, nc] = size(ttout);  
-
-    % make times unique
-    ttin = ttin(:) + 1e-12*(0:numel(ttin)-1)';
-    ttout = ttout(:) + 1e-12*(0:numel(ttout)-1)';
-
-    w = interp1(ttin, win(:), ttout);
-
-    Ikeep = ~isnan(w);
-    wout = w(Ikeep);
-
-    if nr > nc
-        wout = wout(:);
-    else
-        wout = wout(:).';
-    end
-
-    return
