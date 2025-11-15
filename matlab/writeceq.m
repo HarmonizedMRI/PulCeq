@@ -8,7 +8,7 @@ function writeceq(ceq, fn, varargin)
 
 % parse optional inputs
 arg.pislquant = 1;  
-arg.NMAXBLOCKSFORGRADHEATCHECK = 64000; 
+arg.NMAXBLOCKSFORGRADHEATCHECK = 40000; 
 arg = vararg_pair(arg, varargin);
 
 fid = fopen(fn, 'wb');  % big endian (network byte order)
@@ -101,6 +101,7 @@ if isfield(b, 'trig')
 else
     trig.type = 0;
 end
+    trig.type = 0;
 sub_writetrig(fid, trig);
 
 return

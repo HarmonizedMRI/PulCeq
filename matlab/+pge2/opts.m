@@ -1,4 +1,5 @@
-function sys = getsys(psd_rf_wait, psd_grd_wait, b1_max, g_max, slew_max, coil, varargin)
+function sysGE = opts(psd_rf_wait, psd_grd_wait, b1_max, g_max, slew_max, coil, varargin)
+% function sysGE = opts(psd_rf_wait, psd_grd_wait, b1_max, g_max, slew_max, coil, varargin)
 %
 % Inputs:
 %   psd_rf_wait     [sec]
@@ -38,21 +39,21 @@ arg.gamma = 4.2576e3;                 % Hz/G
 
 arg = vararg_pair(arg, varargin);   % in ../
 
-sys.GRAD_UPDATE_TIME = arg.GRAD_UPDATE_TIME;
-sys.RF_UPDATE_TIME = arg.RF_UPDATE_TIME;
-sys.adc_raster_time = arg.adc_raster_time;
-sys.adc_dead_time = arg.adc_dead_time;
-sys.adc_ringdown_time = arg.adc_ringdown_time;
-sys.rf_dead_time = arg.rf_dead_time;
-sys.rf_ringdown_time = arg.rf_ringdown_time;
-sys.segment_dead_time = arg.segment_dead_time;
-sys.segment_ringdown_time = arg.segment_ringdown_time;
-sys.psd_rf_wait = psd_rf_wait;
-sys.psd_grd_wait = psd_grd_wait;
-sys.b1_max = b1_max;
-sys.g_max = g_max;
-sys.slew_max = slew_max;
-sys.gamma = arg.gamma;
+sysGE.GRAD_UPDATE_TIME = arg.GRAD_UPDATE_TIME;
+sysGE.RF_UPDATE_TIME = arg.RF_UPDATE_TIME;
+sysGE.adc_raster_time = arg.adc_raster_time;
+sysGE.adc_dead_time = arg.adc_dead_time;
+sysGE.adc_ringdown_time = arg.adc_ringdown_time;
+sysGE.rf_dead_time = arg.rf_dead_time;
+sysGE.rf_ringdown_time = arg.rf_ringdown_time;
+sysGE.segment_dead_time = arg.segment_dead_time;
+sysGE.segment_ringdown_time = arg.segment_ringdown_time;
+sysGE.psd_rf_wait = psd_rf_wait;
+sysGE.psd_grd_wait = psd_grd_wait;
+sysGE.b1_max = b1_max;
+sysGE.g_max = g_max;
+sysGE.slew_max = slew_max;
+sysGE.gamma = arg.gamma;
 
 % PNS model parameters
 switch lower(coil)
@@ -66,9 +67,9 @@ switch lower(coil)
     otherwise, error('gradient coil (%s) unkown', coil);
 end
 
-sys.chronaxie = chronaxie;
-sys.rheobase = rheobase;
-sys.alpha = alpha;
+sysGE.chronaxie = chronaxie;
+sysGE.rheobase = rheobase;
+sysGE.alpha = alpha;
 
-assert(abs(sys.b1_max) < 1, ...
+assert(abs(sysGE.b1_max) < 1, ...
     'b1_max must be specified in unit of G (typically this limit is 0.25 or a bit smaller)');

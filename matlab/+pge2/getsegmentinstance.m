@@ -1,11 +1,11 @@
-function S = getsegmentinstance(ceq, i, sys, L, varargin)
-% function S = getsegmentinstance(ceq, i, sys, L)
+function S = getsegmentinstance(ceq, i, sysGE, L, varargin)
+% function S = getsegmentinstance(ceq, i, sysGE, L)
 %
 % Inputs:
-%   ceq      struct                                    Ceq sequence object
-%   i        [1] int                                   Segment ID     
-%   sys      struct                                    See pge2.getsys()
-%   L        [nBlocksInSegment size(ceq.loop,2)]       Dynamic scan loop settings (rows from ceq.loop array)
+%   ceq        struct                                    Ceq sequence object
+%   i          [1] int                                   Segment ID     
+%   sysGE      struct                                    See pge2.opts()
+%   L          [nBlocksInSegment size(ceq.loop,2)]       Dynamic scan loop settings (rows from ceq.loop array)
 %
 % Input options:
 %   'plot'           true/false
@@ -18,7 +18,8 @@ function S = getsegmentinstance(ceq, i, sys, L, varargin)
 %   S               struct containing segment waveforms:
 %     S.rf          RF waveform samples (Gauss) and times (sec)
 %     S.gx/gy/gz    Gradient waveform samples (Gauss/cm) and times (sec)
-%     S.duration    sec. Includes sys.dead_time and sys.segment_ringdown_time
+%     S.duration    sec. Includes sysGE.dead_time and sysGE.segment_ringdown_time
+%     S.pns         PNS stimulation waveform (percent of threshold). Only calculated if 'interpolate' = true.
 
 arg.plot = false;
 arg.durationOnly = false;
@@ -37,13 +38,13 @@ parentBlocks = ceq.parentBlocks;
 assert(length(blockIDs) == size(L,1), 'size(L,1) must be equal to number of blocks in segment');
 
 % Get segment duration and block boundaries
-tic = sys.segment_dead_time;      % running time counter marking block boundary
+tic = sysGE.segment_dead_time;      % running time counter marking block boundary
 for j = 1:length(blockIDs)
     S.tic(j) = tic;
     tic = tic + L(j, 13);
 end
 S.tic(end+1) = tic;
-S.duration = tic + sys.segment_ringdown_time;
+S.duration = tic + sysGE.segment_ringdown_time;
 if arg.durationOnly
     return;
 end
@@ -57,7 +58,7 @@ for ax = {'gx','gy','gz'}
 end
 
 % build segment the same way the interpreter does it
-tic = sys.segment_dead_time;      % running time counter marking block boundary
+tic = sysGE.segment_dead_time;      % running time counter marking block boundary
 
 for j = 1:length(blockIDs)
     p = blockIDs(j);  % parent block index
@@ -81,20 +82,24 @@ for j = 1:length(blockIDs)
 
     b = parentBlocks(p).block;    % parent block
 
-    n = round(b.blockDuration/sys.GRAD_UPDATE_TIME);
-    if abs(n - b.blockDuration/sys.GRAD_UPDATE_TIME) > 1e-7
-        throw(MException('block:duration', sprintf('%s: Parent block duration not on sys.GRAD_UPDATE_TIME boundary', msg1))); 
+    n = round(b.blockDuration/sysGE.GRAD_UPDATE_TIME);
+    if abs(n - b.blockDuration/sysGE.GRAD_UPDATE_TIME) > 1e-7
+        throw(MException('block:duration', sprintf('%s: Parent block duration not on sysGE.GRAD_UPDATE_TIME boundary', msg1))); 
     end
 
     % RF
     if ~isempty(b.rf)
         % get raster time. Assume arbitrary waveform for now. TODO: support ext trap rf
         raster = diff(b.rf.t);
-        raster = round(raster(1)/sys.RF_UPDATE_TIME)*sys.RF_UPDATE_TIME;
+        raster = round(raster(1)/sysGE.RF_UPDATE_TIME)*sysGE.RF_UPDATE_TIME;
+
+        % apply phase and frequency offset
+        th = L(j,4) + 2*pi*L(j,5)*(b.rf.t - b.rf.center);
+        b.rf.signal = b.rf.signal .* exp(-1i*th); % note conjugate -- TODO why?
 
         % time samples and waveform
-        S.rf.t = [S.rf.t; tic + sys.psd_rf_wait + b.rf.delay + b.rf.t]; % + raster/2];
-        S.rf.signal = [S.rf.signal; b.rf.signal/max(abs(b.rf.signal))*L(j,3)/sys.gamma] * exp(1i*L(j,4));  % complex, Gauss
+        S.rf.t = [S.rf.t; tic + sysGE.psd_rf_wait + b.rf.delay + b.rf.t]; 
+        S.rf.signal = [S.rf.signal; b.rf.signal/max(abs(b.rf.signal))*L(j,3)/sysGE.gamma];  % Gauss
     end
 
     % Gradients
@@ -117,7 +122,7 @@ for j = 1:length(blockIDs)
                 wav = g.waveform/max(abs(g.waveform));  % normalized amplitude
             end
 
-            wav = L(j,grad_amp_indeces(iax)) / sys.gamma / 100 * wav;  % Gauss/cm
+            wav = L(j,grad_amp_indeces(iax)) / sysGE.gamma / 100 * wav;  % Gauss/cm
 
             % append to running waveform
             S.(ax{iax}).t = [S.(ax{iax}).t; tic + g.delay + tt];
@@ -141,10 +146,10 @@ if arg.interpolate
     % so we can apply the rotation matrix R directly.
     % NB!! The whole segment gets rotated! 
 
-    % Interpolate gradients to sys.GRAD_UPDATE_TIME (= 4us)
-    [S.gx.t, S.gx.signal] = sub_interp_grad(S.gx.t, S.gx.signal, S.duration, sys);
-    [S.gy.t, S.gy.signal] = sub_interp_grad(S.gy.t, S.gy.signal, S.duration, sys);
-    [S.gz.t, S.gz.signal] = sub_interp_grad(S.gz.t, S.gz.signal, S.duration, sys);
+    % Interpolate gradients to sysGE.GRAD_UPDATE_TIME (= 4us)
+    [S.gx.t, S.gx.signal] = sub_interp_grad(S.gx.t, S.gx.signal, S.duration, sysGE);
+    [S.gy.t, S.gy.signal] = sub_interp_grad(S.gy.t, S.gy.signal, S.duration, sysGE);
+    [S.gz.t, S.gz.signal] = sub_interp_grad(S.gz.t, S.gz.signal, S.duration, sysGE);
 
     if arg.rotate
 
@@ -171,6 +176,16 @@ if arg.interpolate
     end
 end    
 
+% Calculate PNS waveform
+[Spns.gx.t, Spns.gx.signal] = sub_interp_grad(S.gx.t, S.gx.signal, S.duration, sysGE);
+[Spns.gy.t, Spns.gy.signal] = sub_interp_grad(S.gy.t, S.gy.signal, S.duration, sysGE);
+[Spns.gz.t, Spns.gz.signal] = sub_interp_grad(S.gz.t, S.gz.signal, S.duration, sysGE);
+S.pns.t = (1:length(Spns.gx.t))'*sysGE.GRAD_UPDATE_TIME;
+Smin = sysGE.rheobase/sysGE.alpha;
+G = [Spns.gx.signal'; Spns.gy.signal'; Spns.gz.signal']/100;  % T/m
+[S.pns.signal, p] = pge2.pns(Smin, sysGE.chronaxie, G, sysGE.GRAD_UPDATE_TIME, false); 
+S.pns.signal = S.pns.signal(:);
+
 if ~arg.plot
     return;
 end
@@ -196,7 +211,7 @@ for d = {'gx','gy','gz'}
     ax{sp} = gca;
     plot([0; S.(d{1}).t; S.duration], [0; S.(d{1}).signal; 0], [cols(sp-2) '.-']);
     ylabel([d ' (G/cm)']);
-    ylim(sys.g_max*1.05*[-1 1]);
+    ylim(sysGE.g_max*1.05*[-1 1]);
     sp = sp + 1;
 end
 xlabel('time (sec)');
@@ -206,18 +221,18 @@ linkaxes([ax{1} ax{2} ax{3} ax{4} ax{5}], 'x');  % common zoom setting (along ti
 return
 
 
-function [tt, g] = sub_interp_grad(tt, g, dur, sys)
+function [tt, g] = sub_interp_grad(tt, g, dur, sysGE)
     % Interpolate gradients to uniform raster time (4 us)
     % Inputs:
-    %  tt     time samples before interpolation, arbitrary points (sec)
-    %  g      gradient sampled at tt (a.u.)
-    %  dur    total segment duration, including segment dead/ringdown times (sec)
-    %  sys    pge2 system struct, see getsys.m
+    %  tt      time samples before interpolation, arbitrary points (sec)
+    %  g       gradient sampled at tt (a.u.)
+    %  dur     total segment duration, including segment dead/ringdown times (sec)
+    %  sysGE   pge2 system struct, see opts.m
 
-    dt = sys.GRAD_UPDATE_TIME;  % gradient raster time
+    dt = sysGE.GRAD_UPDATE_TIME;  % gradient raster time
 
-    t_start = sys.segment_dead_time;
-    t_end = dur - sys.segment_ringdown_time;
+    t_start = sysGE.segment_dead_time;
+    t_end = dur - sysGE.segment_ringdown_time;
     T = t_start + dt/2:dt:t_end;
 
     if isempty(tt)
