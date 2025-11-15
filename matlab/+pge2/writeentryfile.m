@@ -18,7 +18,7 @@ arg = vararg_pair(arg, varargin);   % in ../
 seqname = replace(seqname, {'.seq', '.pge'}, '');
 
 % write .entry file
-fid = fopen([arg.path 'pge' num2str(n) '.entry'], 'wt');
+fid = fopen(['pge' num2str(n) '.entry'], 'wt');
 
 fprintf(fid, '1\n');
 fprintf(fid, '%s\n', [arg.path seqname '.pge']);
