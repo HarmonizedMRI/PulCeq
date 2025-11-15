@@ -1,8 +1,9 @@
 function validate(ceq, sysGE, seq, xmlPath, varargin)
 % function validate(ceq, sysGE, seq, xmlPath, varargin)
 %
-% Check agreement between MR30.2 scanner/WTools sequence output 
+% Check agreement between MR30.2 scanner/WTools sequence output
 % and the original Pulseq (.seq) object.
+% If 'xmlPath' is not provided ([]), the ceq object is used instead.
 %
 % Inputs:
 %   ceq       struct         Ceq sequence object, see seq2ceq.m
@@ -10,6 +11,7 @@ function validate(ceq, sysGE, seq, xmlPath, varargin)
 %   seq       struct         A Pulseq sequence object
 %   xmlPath   string or []   Path to folder containing scan.xml.<xxxx> files.
 %                            These files are also used by GE's Pulse View sequence plotter.
+%                            If empty, the ceq and seq objects are compared.
 % 
 % Input options:
 %   'row'           [1] or 'all'/[]   Check and plot segment starting at this number in .seq file (default: 'all')
@@ -46,6 +48,10 @@ else
     doNextSegment = false;
 end
 
+if ~isempty(xmlPath)
+    xmlPath = pge2.ensuretrailingslash(xmlPath);
+end
+
 axesLinked = false;
 
 % Loop over segments
@@ -71,11 +77,14 @@ while n < ceq.nMax % & cnt < 2
     % Pulseq waveforms
     w = seq.waveforms_and_times(true, [n1 n2]);
 
-    % pge2 interpreter waveforms (from WTools)
+    % pge2 interpreter waveforms 
     % and RF/ADC phase offset
-    d = pge2.read_segment_xml(sprintf('%sscan.xml.%04d', xmlPath, cnt));
-    th = pge2.readthetaregisters(sprintf('%sscan.xml.%04d.ssp', xmlPath, cnt));
-    %phaseOffset.pge2 = th(1).theta/2^23*pi;
+    switch mode
+        case 'xml'
+            d = pge2.read_segment_xml(sprintf('%sscan.xml.%04d', xmlPath, cnt));
+            th = pge2.readthetaregisters(sprintf('%sscan.xml.%04d.ssp', xmlPath, cnt));
+            %phaseOffset.pge2 = th(1).theta/2^23*pi;
+    end
 
     % Ceq object waveforms
     L = ceq.loop(n1:n2, :);
@@ -90,10 +99,12 @@ while n < ceq.nMax % & cnt < 2
     ax = {'gx','gy','gz'};
     for iax = 1:length(ax)
         % pge2 interpreter output (.xml files)
-        tt.pge2 = d(iax).time/1e6 - sysGE.segment_dead_time;     
-        plt.tmin = min(plt.tmin, min(tt.pge2(1)));
-        plt.tmax = max(plt.tmax, max(tt.pge2(end)));
-        g.pge2 = d(iax).value;
+        if ~isempty(xmlPath)
+            tt.pge2 = d(iax).time/1e6 - sysGE.segment_dead_time;     
+            plt.tmin = min(plt.tmin, min(tt.pge2(1)));
+            plt.tmax = max(plt.tmax, max(tt.pge2(end)));
+            g.pge2 = d(iax).value;
+        end
 
         % Pulseq (.seq) object
         tt.seq = w{iax}(1,:);                   % sec
@@ -102,9 +113,9 @@ while n < ceq.nMax % & cnt < 2
         % Ceq object (after seq2ceq.m conversion)
         tt.ceq = S.(ax{iax}).t - sysGE.segment_dead_time;
         g.ceq = S.(ax{iax}).signal;
-        I = tt.ceq < tt.pge2(1) | tt.ceq > tt.pge2(end);
-        tt.ceq(I) = [];
-        g.ceq(I) = [];
+        %I = tt.ceq < tt.pge2(1) | tt.ceq > tt.pge2(end);
+        %tt.ceq(I) = [];
+        %g.ceq(I) = [];
 
         % Check difference with seq object.
         % For traps/ext traps, interpreter waveform is piecewise constant 
@@ -113,25 +124,32 @@ while n < ceq.nMax % & cnt < 2
         % may not be entirely accurate (?)
 
         if length(tt.seq) > 0
-            [g.pge2i, I] = sub_robustinterp1(tt.pge2, g.pge2, tt.seq);
+            if ~isempty(xmlPath)
+                [gi, I] = sub_robustinterp1(tt.pge2, g.pge2, tt.seq);
+            else
+                [gi, I] = sub_robustinterp1(tt.ceq, g.ceq, tt.seq);
+            end
             tmp = g.seq(I);  % if I is full/sparse this is either row/column vector :(
-            [err, Imaxdiff] = max(abs(g.pge2i(:)-tmp(:)));    % max difference, G/cm
+            [err, Imaxdiff] = max(abs(gi(:)-tmp(:)));    % max difference, G/cm
         else
             err = 0;  % no gradient is present on the current axis
         end
         tol = 3 * sysGE.slew_max * sysGE.GRAD_UPDATE_TIME * 1e3;  % max allowed difference per 4us sample 
 
         if err > tol
-            fprintf('%s waveform mismatch (segment at row %d: max diff %.3f G/cm at t = %.3f ms)\n', ax{iax}, n, err, 1e3*tt.pge2(Imaxdiff(1)));
+            fprintf('%s waveform mismatch (segment at row %d: max diff %.3f G/cm at t = %.3f ms)\n', ax{iax}, n, err, 1e3*tt.seq(Imaxdiff(1)));
             doNextSegment = false;
         end
 
         if arg.plot
             subplot(5,1,iax);
-            plot(1e3*tt.pge2, g.pge2, 'r.-');
+            if ~isempty(xmlPath)
+                plot(1e3*tt.pge2, g.pge2, 'r.-');
+            else
+                plot(1e3*tt.ceq, g.ceq, 'r.-');
+            end
             hold on;
             plot(1e3*tt.seq, g.seq, 'black-');  
-            %plot(tt.ceq, g.ceq, 'g.-');
             hold off
             legend('pge2', 'Pulseq');
             ylabel(sprintf('%s\n(G/cm)', ax{iax}), 'Rotation', 0);
@@ -149,35 +167,46 @@ while n < ceq.nMax % & cnt < 2
     tt.seq = w{4}(1,:);                % sec
     rf.seq = w{4}(2,:)/sysGE.gamma;    % complex, Gauss
 
-    % pge2 interpreter waveform
-    tt.rho = d(5).time/1e6 - sysGE.segment_dead_time - sysGE.psd_rf_wait;
-    plt.tmin = min(plt.tmin, min(tt.rho(1)));
-    plt.tmax = max(plt.tmax, max(tt.rho(end)));
-    rho = d(5).value;                     % a.u.
-    if max(abs(rho)) > 0                  % avoid divide by zero
-        rho = rho/max(abs(rho)) * max(abs(rf.seq));    % Gauss
+    if ~isempty(xmlPath)
+        % pge2 interpreter output (RHO and THETA)
+        tt.rho = d(5).time/1e6 - sysGE.segment_dead_time - sysGE.psd_rf_wait;
+        rho = d(5).value;                     % a.u.
+        if max(abs(rho)) > 0                  % avoid divide by zero
+            rho = rho/max(abs(rho)) * max(abs(rf.seq));    % Gauss
+        end
+
+        tt.theta = d(6).time/1e6 - sysGE.segment_dead_time - sysGE.psd_rf_wait;
+        theta = d(6).value/2^23*pi;  % + phaseOffset.pge2;  % radians. TODO: add phase and freq offsets
+        theta = angle(exp(-1i*theta));  % minus sign since the pge2 interpreter conjugates the phase
+
+        % construct complex waveform
+        [thetai, I] = sub_robustinterp1(tt.theta, theta, tt.rho);
+        rf.pge2 = rho(I) .* exp(1i*thetai);
+        tt.pge2 = tt.rho(I);
+
+        plt.tmin = min(plt.tmin, min(tt.pge2(1)));
+        plt.tmax = max(plt.tmax, max(tt.pge2(end)));
+    else
+        % Ceq object waveform (output of seq2ceq.m)
+        tt.ceq = S.rf.t - sysGE.segment_dead_time - sysGE.psd_rf_wait;
+        rf.ceq = S.rf.signal;
+
+        plt.tmin = min(plt.tmin, min(tt.ceq(1)));
+        plt.tmax = max(plt.tmax, max(tt.ceq(end)));
     end
 
-    tt.theta = d(6).time/1e6 - sysGE.segment_dead_time - sysGE.psd_rf_wait;
-    theta = d(6).value/2^23*pi;  % + phaseOffset.pge2;  % radians. TODO: add phase and freq offsets
-    theta = angle(exp(-1i*theta));  % minus sign since the pge2 interpreter conjugates the phase
-
-    % Ceq object waveform (output of seq2ceq.m)
-    tt.ceq = S.rf.t - sysGE.segment_dead_time - sysGE.psd_rf_wait;
-    rf.ceq = S.rf.signal;
-
-    % interpolate and compare
-    [thetai, I] = sub_robustinterp1(tt.theta, theta, tt.rho);
-    rf.pge2 = rho(I) .* exp(1i*thetai);
-    tt.pge2 = tt.rho(I);
     dt = sysGE.GRAD_UPDATE_TIME;
 
     if length(rf.seq) > 0
-        [rf.pge2i, I] = sub_robustinterp1(tt.pge2, rf.pge2, tt.seq);
-        tmp = rf.seq(I);  % if I is full/sparse this is either row/column vector :(
-        if norm(rf.pge2i) > 0
+        if ~isempty(xmlPath)
+            [rfi, I] = sub_robustinterp1(tt.pge2, rf.pge2, tt.seq);
+        else
+            [rfi, I] = sub_robustinterp1(tt.ceq, rf.ceq, tt.seq);
+        end
+        tmp = rfi; %(I);  % if I is full/sparse this is either row/column vector :(
+        if norm(rfi) > 0
             %err = 100 * rmse(abs(rf.seqi), abs(rf.pge2(I))) / rmse(rf.seqi, 0*rf.seqi);    % percent rmse
-            err = 100 * rmse(abs(rf.pge2i), abs(tmp)) / rmse(rf.pge2i, 0*rf.pge2i);    % percent rmse
+            err = 100 * rmse(abs(rfi), abs(tmp)) / rmse(rfi, 0*rfi);    % percent rmse
         else
             err = 0;
         end
@@ -195,18 +224,26 @@ while n < ceq.nMax % & cnt < 2
         title(sprintf('|RF|, segment %d', cnt));
         plot(1e3*tt.seq, abs(rf.seq), 'black');
         hold on
-        plot(1e3*tt.rho, rho, 'r.-'); 
-        %plot(tt.ceq, abs(rf.ceq), 'g.-');
-        legend('Pulseq', 'pge2'); 
+        if ~isempty(xmlPath)
+            plot(1e3*tt.rho, rho, 'r.-'); 
+            legend('Pulseq', 'pge2'); 
+        else
+            plot(1e3*tt.ceq, abs(rf.ceq), 'r.-'); 
+            legend('Pulseq', 'ceq'); 
+        end
         ylabel(sprintf('|RF|\n(Gauss)'), 'Rotation', 0);
 
         subplot(5,1,5); hold off;
         title(sprintf('∠RF, segment %d', cnt));
         plot(1e3*tt.seq, angle(rf.seq), 'black');
         hold on
-        plot(1e3*tt.theta, theta, 'r.');
-        %plot(tt.ceq, angle(rf.ceq), 'g.-');
-        legend('Pulseq', 'pge2'); 
+        if ~isempty(xmlPath)
+            plot(1e3*tt.theta, theta, 'r.');
+            legend('Pulseq', 'pge2'); 
+        else
+            plot(1e3*tt.ceq, angle(rf.ceq), 'r.-'); 
+            legend('Pulseq', 'ceq'); 
+        end
         ylabel(sprintf('∠RF\n(radians)'), 'Rotation', 0);
 
         xlabel('time (ms)');
