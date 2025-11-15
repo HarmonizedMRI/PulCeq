@@ -93,9 +93,13 @@ for j = 1:length(blockIDs)
         raster = diff(b.rf.t);
         raster = round(raster(1)/sysGE.RF_UPDATE_TIME)*sysGE.RF_UPDATE_TIME;
 
+        % apply phase and frequency offset
+        th = L(j,4) + 2*pi*L(j,5)*(b.rf.t - b.rf.center);
+        b.rf.signal = b.rf.signal .* exp(-1i*th); % note conjugate -- TODO why?
+
         % time samples and waveform
-        S.rf.t = [S.rf.t; tic + sysGE.psd_rf_wait + b.rf.delay + b.rf.t]; % + raster/2];
-        S.rf.signal = [S.rf.signal; b.rf.signal/max(abs(b.rf.signal))*L(j,3)/sysGE.gamma] * exp(1i*L(j,4));  % complex, Gauss
+        S.rf.t = [S.rf.t; tic + sysGE.psd_rf_wait + b.rf.delay + b.rf.t]; 
+        S.rf.signal = [S.rf.signal; b.rf.signal/max(abs(b.rf.signal))*L(j,3)/sysGE.gamma];  % Gauss
     end
 
     % Gradients
