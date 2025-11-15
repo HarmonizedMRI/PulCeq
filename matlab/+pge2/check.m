@@ -103,7 +103,7 @@ while n < ceq.nMax
     end
     if ok & max(pt) > 80
         I = find(pt == max(pt));
-        fprintf('(row %d, segment %d, t = %.3f ms): PNS exceeds first normal mode (80%%)!\n', ...
+        fprintf('(row %d, segment %d, t = %.3f ms): PNS exceeds normal mode (80%%)!\n', ...
             n, i, I(1)*sysGE.GRAD_UPDATE_TIME*1e3);
         ok = false;
     end
