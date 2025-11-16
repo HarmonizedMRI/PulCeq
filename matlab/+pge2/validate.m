@@ -59,7 +59,7 @@ teps = 1e-12;
 cnt = 0;   % segment instance counter
 n = 1;
 if ~arg.plot
-    textprogressbar('Checking scan loop: ');
+    textprogressbar('pge2.validate(): Checking scan loop: ');
 end
 while n < ceq.nMax % & cnt < 2
     cnt = cnt + 1;

@@ -47,7 +47,7 @@ end
 % loop through segment instances
 ok = true;
 n = 1;    % row counter in ceq.loop
-textprogressbar('Checking scan loop: ');
+textprogressbar('pge2.check(): Checking scan loop: ');
 while n < ceq.nMax 
     % get segment instance
     i = ceq.loop(n,1);  % segment index
