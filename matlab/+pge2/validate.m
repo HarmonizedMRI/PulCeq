@@ -141,7 +141,7 @@ while n < ceq.nMax % & cnt < 2
 
         if err > tol
             fprintf('%s waveform mismatch (segment at row %d: max diff %.3f G/cm at t = %.3f ms)\n', ax{iax}, n, err, 1e3*tt.seq(Imaxdiff(1)));
-            doNextSegment = false;
+            %doNextSegment = false;
         end
 
         if arg.plot
@@ -220,7 +220,7 @@ while n < ceq.nMax % & cnt < 2
 
     if err > arg.threshRFper
         fprintf('RF waveform mismatch (%.1f%%; segment at row %d)\n', err, n);
-        doNextSegment = false;
+        %doNextSegment = false;
     end
 
     if arg.plot
