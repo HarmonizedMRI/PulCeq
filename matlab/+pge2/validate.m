@@ -230,10 +230,10 @@ while n < ceq.nMax % & cnt < 2
             plot(1e3*tt.seq, abs(rf.seq), 'black');
             hold on
             if ~isempty(xmlPath)
-                plot(1e3*tt.rho, rho, 'r.-'); 
+                plot(1e3*tt.rho, rho, 'r.'); 
                 legend('Pulseq', 'pge2'); 
             else
-                plot(1e3*tt.ceq, abs(rf.ceq), 'r.-'); 
+                plot(1e3*tt.ceq, abs(rf.ceq), 'r.'); 
                 legend('Pulseq', 'ceq'); 
             end
         end
@@ -248,7 +248,7 @@ while n < ceq.nMax % & cnt < 2
                 plot(1e3*tt.theta, theta, 'r.');
                 legend('Pulseq', 'pge2'); 
             else
-                plot(1e3*tt.ceq, angle(rf.ceq), 'r.-'); 
+                plot(1e3*tt.ceq, angle(rf.ceq), 'r.'); 
                 legend('Pulseq', 'ceq'); 
             end
         end
