@@ -41,11 +41,9 @@ arg.b1PlotLim = sysGE.b1_max;  % Gauss
 
 arg = vararg_pair(arg, varargin);   % in ../
 
+doNextSegment = true;
 if ischar(arg.row) | isempty(arg.row)
     arg.row = 1;
-    doNextSegment = true;
-else
-    doNextSegment = false;
 end
 
 if ~isempty(xmlPath)
@@ -236,6 +234,8 @@ while n < ceq.nMax % & cnt < 2
                 plot(1e3*tt.ceq, abs(rf.ceq), 'r.'); 
                 legend('Pulseq', 'ceq'); 
             end
+        else
+            cla
         end
         ylabel(sprintf('|RF|\n(Gauss)'), 'Rotation', 0);
 
@@ -251,6 +251,8 @@ while n < ceq.nMax % & cnt < 2
                 plot(1e3*tt.ceq, angle(rf.ceq), 'r.'); 
                 legend('Pulseq', 'ceq'); 
             end
+        else
+            cla
         end
         ylabel(sprintf('∠RF\n(radians)'), 'Rotation', 0);
 
