@@ -1,4 +1,4 @@
-function validate(ceq, sysGE, seq, xmlPath, varargin)
+function ok = validate(ceq, sysGE, seq, xmlPath, varargin)
 % function validate(ceq, sysGE, seq, xmlPath, varargin)
 %
 % Check agreement between pge2 interpreter output on scanner/VM/WTools
@@ -41,11 +41,9 @@ arg.b1PlotLim = sysGE.b1_max;  % Gauss
 
 arg = vararg_pair(arg, varargin);   % in ../
 
+doNextSegment = true;
 if ischar(arg.row) | isempty(arg.row)
     arg.row = 1;
-    doNextSegment = true;
-else
-    doNextSegment = false;
 end
 
 if ~isempty(xmlPath)
@@ -54,12 +52,14 @@ end
 
 axesLinked = false;
 
+ok = true;
+
 % Loop over segments
 teps = 1e-12;
 cnt = 0;   % segment instance counter
 n = 1;
 if ~arg.plot
-    textprogressbar('Checking scan loop: ');
+    textprogressbar('pge2.validate(): Checking scan loop: ');
 end
 while n < ceq.nMax % & cnt < 2
     cnt = cnt + 1;
@@ -87,7 +87,11 @@ while n < ceq.nMax % & cnt < 2
 
     % Ceq object waveforms
     L = ceq.loop(n1:n2, :);
-    S = pge2.getsegmentinstance(ceq, i, sysGE, L, 'rotate', true, 'interpolate', true);
+    try
+        S = pge2.getsegmentinstance(ceq, i, sysGE, L, 'rotate', true, 'interpolate', true);
+    catch ME
+        error(sprintf('(n = %d, i = %d): %s\n', n, i, ME.message));
+    end
 
     plt.tmin = 0;
     plt.tmax = 0;
@@ -141,7 +145,8 @@ while n < ceq.nMax % & cnt < 2
 
         if err > tol
             fprintf('%s waveform mismatch (segment at row %d: max diff %.3f G/cm at t = %.3f ms)\n', ax{iax}, n, err, 1e3*tt.seq(Imaxdiff(1)));
-            doNextSegment = false;
+            ok = false;
+            %doNextSegment = false;
         end
 
         if arg.plot
@@ -220,27 +225,28 @@ while n < ceq.nMax % & cnt < 2
 
     if err > arg.threshRFper
         fprintf('RF waveform mismatch (%.1f%%; segment at row %d)\n', err, n);
-        doNextSegment = false;
+        ok = false;
+        %doNextSegment = false;
     end
 
     if arg.plot
         subplot(5,1,4); hold off;
-        title(sprintf('|RF|, segment %d', cnt));
         if length(rf.seq) > 0
             plot(1e3*tt.seq, abs(rf.seq), 'black');
             hold on
             if ~isempty(xmlPath)
-                plot(1e3*tt.rho, rho, 'r.-'); 
+                plot(1e3*tt.rho, rho, 'r.'); 
                 legend('Pulseq', 'pge2'); 
             else
-                plot(1e3*tt.ceq, abs(rf.ceq), 'r.-'); 
+                plot(1e3*tt.ceq, abs(rf.ceq), 'r.'); 
                 legend('Pulseq', 'ceq'); 
             end
+        else
+            cla
         end
         ylabel(sprintf('|RF|\n(Gauss)'), 'Rotation', 0);
 
         subplot(5,1,5); hold off;
-        title(sprintf('∠RF, segment %d', cnt));
         if length(rf.seq) > 0
             plot(1e3*tt.seq, angle(rf.seq), 'black');
             hold on
@@ -248,9 +254,11 @@ while n < ceq.nMax % & cnt < 2
                 plot(1e3*tt.theta, theta, 'r.');
                 legend('Pulseq', 'pge2'); 
             else
-                plot(1e3*tt.ceq, angle(rf.ceq), 'r.-'); 
+                plot(1e3*tt.ceq, angle(rf.ceq), 'r.'); 
                 legend('Pulseq', 'ceq'); 
             end
+        else
+            cla
         end
         ylabel(sprintf('∠RF\n(radians)'), 'Rotation', 0);
 
