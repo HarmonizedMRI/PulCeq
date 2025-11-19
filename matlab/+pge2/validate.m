@@ -223,7 +223,6 @@ while n < ceq.nMax % & cnt < 2
 
     if arg.plot
         subplot(5,1,4); hold off;
-        title(sprintf('|RF|, segment %d', cnt));
         if length(rf.seq) > 0
             plot(1e3*tt.seq, abs(rf.seq), 'black');
             hold on
@@ -240,7 +239,6 @@ while n < ceq.nMax % & cnt < 2
         ylabel(sprintf('|RF|\n(Gauss)'), 'Rotation', 0);
 
         subplot(5,1,5); hold off;
-        title(sprintf('∠RF, segment %d', cnt));
         if length(rf.seq) > 0
             plot(1e3*tt.seq, angle(rf.seq), 'black');
             hold on
