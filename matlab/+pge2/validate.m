@@ -1,4 +1,4 @@
-function validate(ceq, sysGE, seq, xmlPath, varargin)
+function ok = validate(ceq, sysGE, seq, xmlPath, varargin)
 % function validate(ceq, sysGE, seq, xmlPath, varargin)
 %
 % Check agreement between pge2 interpreter output on scanner/VM/WTools
@@ -52,6 +52,8 @@ end
 
 axesLinked = false;
 
+ok = true;
+
 % Loop over segments
 teps = 1e-12;
 cnt = 0;   % segment instance counter
@@ -85,7 +87,11 @@ while n < ceq.nMax % & cnt < 2
 
     % Ceq object waveforms
     L = ceq.loop(n1:n2, :);
-    S = pge2.getsegmentinstance(ceq, i, sysGE, L, 'rotate', true, 'interpolate', true);
+    try
+        S = pge2.getsegmentinstance(ceq, i, sysGE, L, 'rotate', true, 'interpolate', true);
+    catch ME
+        error(sprintf('(n = %d, i = %d): %s\n', n, i, ME.message));
+    end
 
     plt.tmin = 0;
     plt.tmax = 0;
@@ -139,6 +145,7 @@ while n < ceq.nMax % & cnt < 2
 
         if err > tol
             fprintf('%s waveform mismatch (segment at row %d: max diff %.3f G/cm at t = %.3f ms)\n', ax{iax}, n, err, 1e3*tt.seq(Imaxdiff(1)));
+            ok = false;
             %doNextSegment = false;
         end
 
@@ -218,6 +225,7 @@ while n < ceq.nMax % & cnt < 2
 
     if err > arg.threshRFper
         fprintf('RF waveform mismatch (%.1f%%; segment at row %d)\n', err, n);
+        ok = false;
         %doNextSegment = false;
     end
 
