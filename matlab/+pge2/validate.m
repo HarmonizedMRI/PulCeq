@@ -145,9 +145,9 @@ while n < ceq.nMax % & cnt < 2
         if arg.plot
             subplot(5,1,iax);
             if ~isempty(xmlPath)
-                plot(1e3*tt.pge2, g.pge2, 'r.-');
+                plot(1e3*tt.pge2, g.pge2, 'r.');
             else
-                plot(1e3*tt.ceq, g.ceq, 'r.-');
+                plot(1e3*tt.ceq, g.ceq, 'r.');
             end
             hold on;
             plot(1e3*tt.seq, g.seq, 'black-');  
