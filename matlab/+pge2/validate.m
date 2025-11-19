@@ -7,7 +7,7 @@ function ok = validate(ceq, sysGE, seq, xmlPath, varargin)
 %
 % Inputs:
 %   ceq       struct         Ceq sequence object, see seq2ceq.m
-%   sysGE     struct         System hardware info, see pge2.getsys()
+%   sysGE     struct         System hardware info, see pge2.opts()
 %   seq       struct         A Pulseq sequence object
 %   xmlPath   string or []   Path to folder containing scan.xml.<xxxx> files.
 %                            These files are also used by GE's Pulse View sequence plotter.
@@ -19,17 +19,6 @@ function ok = validate(ceq, sysGE, seq, xmlPath, varargin)
 %   'plot'          true/FALSE        Plot each segment (continue to next on pressing 'Enter')
 %   'threshRFper'   [1]               RF error tolerance (percent rms error). Default: 10.
 %   'b1PlotLim'     [1]               RF plot limit (Gauss). Default: sysGE.b1_max 
-%
-% Usage:
-%   1. Call seq2ceq.m to convert .seq file to ceq
-%   2. Simulate the .pge file in WTools, or run in MR30.2 VM/scanner, to create xml files
-%   3. Call getsys.m to define sysGE for your scanner.
-%   4a. Check and plot the first segment:
-%       >> pge2.checkwaveforms(ceq, sysGE, seq, xmlPath, 'row', 1, 'plot', true);
-%   4b. Check (and plot) each segment one by one until a waveform mismatch is detected:
-%      >> pge2.checkwaveforms(ceq, sysGE, seq, xmlPath, 'row', 'all', 'plot', true);
-%   4c. Check all segment instances:
-%      >> pge2.checkwaveforms(ceq, sysGE, seq, xmlPath);
 
 % Default options
 % Re: thresRFper: Some interpolation error is ok; 
