@@ -49,6 +49,8 @@ cnt = 0;   % segment instance counter
 n = 1;
 if ~arg.plot
     textprogressbar('pge2.validate(): Checking scan loop: ');
+else
+    figure
 end
 while n < ceq.nMax % & cnt < 2
     cnt = cnt + 1;
