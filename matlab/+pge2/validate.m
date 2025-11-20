@@ -142,15 +142,19 @@ while n < ceq.nMax % & cnt < 2
 
         if arg.plot
             subplot(5,1,iax);
+            plot(1e3*tt.seq, g.seq, 'black-');  
+            hold on;
             if ~isempty(xmlPath)
                 plot(1e3*tt.pge2, g.pge2, 'r.-');
             else
                 plot(1e3*tt.ceq, g.ceq, 'r.-');
             end
-            hold on;
-            plot(1e3*tt.seq, g.seq, 'black-');  
             hold off
-            legend('pge2', 'Pulseq');
+            if ~isempty(xmlPath)
+                legend('Pulseq', 'pge2');
+            else
+                legend('Pulseq', 'ceq');
+            end
             ylabel(sprintf('%s\n(G/cm)', ax{iax}), 'Rotation', 0);
             if iax == 1
                 title(sprintf('segment starting at row %d (count = %d)', n, cnt));
