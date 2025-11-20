@@ -1,16 +1,40 @@
 function writeceq(ceq, fn, varargin)
-% function writeceq(ceq, fn)
+% function writeceq(ceq, fn, ...)
+%
+% Write a Ceq struct to a .pge file so the sequence can be executed with the pge2 interpreter.
+% Either 'params' or 'sysGE' (kwargs) must be provided.
+% 
+% Inputs
+%   ceq       struct       Ceq sequence object, see seq2ceq.m
+%   fn        string       Output file name (.pge file)
 %
 % Options
-%   pislquant     default: 1      number of ADC events at start of scan for setting Rx gain
-% 
-% Write Ceq struct to binary file
+%   sysGE        struct       System hardware info, see pge2.opts()
+%   params       struct       Various derived sequence parameters, obtained with:
+%                             >> params = pge2.check(ceq, sysGE).
+%                             If not specified, this script calls pge2.check(ceq, sysGE) for you.
+%   pislquant    [1]          Number of ADC events at start of scan for setting Rx gain (default = 1)
+%   gamma        [1]          Default: 42.576e6 (Hz/T)
 
 % parse optional inputs
+arg.sysGE = [];
+arg.params = [];
 arg.pislquant = 1;  
+arg.gamma = 42.576e6;    % Hz/T
 arg.NMAXBLOCKSFORGRADHEATCHECK = 40000; 
+
 arg = vararg_pair(arg, varargin);
 
+if ~isempty(arg.params)
+    params = arg.params;
+    assert(strcmp(params.hash, DataHash(ceq)), ...
+        'hash mismatch: Run ''params = pge2.check(ceq, sysGE);'' again before calling this function');
+else
+    assert(~isempty(arg.sysGE), 'Either params or sysGE must be specified');
+    params = pge2.check(ceq, arg.sysGE);
+end
+
+% open output file
 fid = fopen(fn, 'wb');  % big endian (network byte order)
 
 fwrite(fid, 47, 'int16');  % for checking endianness when reading 
@@ -34,7 +58,7 @@ for ii = 1:size(ceq.loop,1)
     fwrite(fid, ceq.loop(ii,:), 'float32');  % write in row-major order
 end
 
-% get max B1 and gradient in sequence
+% get max B1 and gradient in sequence and compare with inputs
 maxB1 = 0;
 maxGrad = 0;
 for n = 1:ceq.nMax
@@ -42,11 +66,16 @@ for n = 1:ceq.nMax
     maxGrad = max([maxGrad abs(ceq.loop(n, [6 8 10]))]);
 end
 
-% safety stuff. some are dummy values, TODO
-fwrite(fid, 1, 'float32');  % maxRfPower, G^2 * sec
+assert(abs(params.b1max*1e-4 - maxB1/arg.gamma) < 1e-7, 'params.b1max does''t match peak b1 in ceq.loop()');
+assert(abs(params.gmax - maxGrad/arg.gamma*1e2) < 1e-7, 'params.gmax does''t match peak gradient in ceq.loop()');
+
+maxSlew = params.smax * arg.gamma * 10;   % Hz/m
+
+% safety stuff
+fwrite(fid, 1, 'float32');  % maxRfPower, G^2 * sec. Not used.
 fwrite(fid, maxB1, 'float32');
-fwrite(fid, maxGrad, 'float32');   % maxGrad
-fwrite(fid, 0.0, 'float32');   % maxSlew
+fwrite(fid, maxGrad, 'float32');        % maxGrad (Hz/m)
+fwrite(fid, maxSlew, 'float32');        % maxSlew (Hz/m/sec)
 fwrite(fid, ceq.duration, 'float32');   % duration
 fwrite(fid, ceq.nReadouts, 'int32');    % total number of ADC events in sequence
 fwrite(fid, arg.pislquant, 'int32');    % number ADC events at start of scan for setting receive gain in Auto Prescan

@@ -1,4 +1,4 @@
-function pars = check(ceq, sysGE)
+function params = check(ceq, sysGE)
 %
 % Check compatibility of a PulCeq (Ceq) sequence object with the 
 % GE scanner specifications in 'sysGE'.
@@ -14,14 +14,14 @@ function pars = check(ceq, sysGE)
 tol = 1e-7;   % timing tolerance. Matches 'eps' in the pge2 EPIC code
 
 % initialize return value
-pars.b1max = 0;      % max RF amplitude
-pars.gmax = 0;       % max single-axis gradient amplitude [G/cm]
-pars.smax = 0;       % max single-axis slew rate in sequence, G/cm/ms
+params.b1max = 0;      % max RF amplitude
+params.gmax = 0;       % max single-axis gradient amplitude [G/cm]
+params.smax = 0;       % max single-axis slew rate in sequence, G/cm/ms
+params.hash = DataHash(ceq);
 
 % Check parent block timing.
 % Parent blocks are 'virtual' (waveform amplitudes are arbitrary/normalized), so only check
 % timing here; waveforms will be checked below for each segment instance in the scan loop.
-fprintf('Checking parent blocks timing: ');
 for p = 1:ceq.nParentBlocks         % we use 'p' to count parent blocks here and in the EPIC code
     b = ceq.parentBlocks(p).block;
     try
@@ -51,10 +51,14 @@ while n < ceq.nMax
         error(sprintf('(segment %d, row %d): %s', i, n, ME.message));
     end
 
+    params.b1max = max(params.b1max, v.b1max);
+    params.gmax = max(params.gmax, v.gmax);
+    params.smax = max(params.smax, v.smax);
+
     textprogressbar(n/ceq.nMax*100);
 
     n = n + ceq.segments(i).nBlocksInSegment;
 end
 textprogressbar((n-1)/ceq.nMax*100);
 
-textprogressbar(' PASSED'); 
+textprogressbar(' ok'); 
