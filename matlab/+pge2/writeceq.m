@@ -1,26 +1,38 @@
-function writeceq(ceq, params, fn, varargin)
-% function writeceq(ceq, fn)
+function writeceq(ceq, fn, varargin)
+% function writeceq(ceq, fn, ...)
 %
-% Write Ceq struct to binary file
-%
+% Write a Ceq struct to a .pge file so the sequence can be executed with the pge2 interpreter.
+% Either 'params' or 'sysGE' (kwargs) must be provided.
+% 
 % Inputs
-%   ceq          struct       PulCeq sequence object
-%   params       struct       Various derived sequence parameters, obtained with:
-%                             >> params = pge2.check(ceq, sysGE)
-%   fn           string       output file name (.pge file)
+%   ceq       struct       Ceq sequence object, see seq2ceq.m
+%   fn        string       Output file name (.pge file)
 %
 % Options
-%   pislquant     default: 1      number of ADC events at start of scan for setting Rx gain
-%   gamma         default: 42.576e6 (Hz/T)
-
-assert(strcmp(params.hash, DataHash(ceq)), 'hash mismatch: Run ''params = pge2.check(ceq, sysGE);'' again before calling this function');
+%   sysGE        struct       System hardware info, see pge2.opts()
+%   params       struct       Various derived sequence parameters, obtained with:
+%                             >> params = pge2.check(ceq, sysGE).
+%                             If not specified, this script calls pge2.check(ceq, sysGE) for you.
+%   pislquant    [1]          Number of ADC events at start of scan for setting Rx gain (default = 1)
+%   gamma        [1]          Default: 42.576e6 (Hz/T)
 
 % parse optional inputs
+arg.sysGE = [];
+arg.params = [];
 arg.pislquant = 1;  
 arg.gamma = 42.576e6;    % Hz/T
 arg.NMAXBLOCKSFORGRADHEATCHECK = 40000; 
 
 arg = vararg_pair(arg, varargin);
+
+if ~isempty(arg.params)
+    params = arg.params;
+    assert(strcmp(params.hash, DataHash(ceq)), ...
+        'hash mismatch: Run ''params = pge2.check(ceq, sysGE);'' again before calling this function');
+else
+    assert(~isempty(arg.sysGE), 'Either params or sysGE must be specified');
+    params = pge2.check(ceq, arg.sysGE);
+end
 
 % open output file
 fid = fopen(fn, 'wb');  % big endian (network byte order)
