@@ -13,6 +13,7 @@ function S = getsegmentinstance(ceq, i, sysGE, L, varargin)
 %   'rotate'         true/false     If false, display gradients in logical coordinate frame, i.e., 
 %                                   before rotating. If true, interpolated gradients are shown.
 %   'interpolate'    true/false     Interpolate to 4us, or display corner points (for extended traps)
+%   'wt'             [3]            PNS x/y/z/ channel weights. Default: [1 1 1].
 %
 % Output:
 %   S               struct containing segment waveforms:
@@ -25,6 +26,7 @@ arg.plot = false;
 arg.durationOnly = false;
 arg.rotate = false; 
 arg.interpolate = false; 
+arg.wt = [1 1 1];
 
 arg = vararg_pair(arg, varargin);   % in ../
 
@@ -183,7 +185,7 @@ end
 S.pns.t = (1:length(Spns.gx.t))'*sysGE.GRAD_UPDATE_TIME;
 Smin = sysGE.rheobase/sysGE.alpha;
 G = [Spns.gx.signal'; Spns.gy.signal'; Spns.gz.signal']/100;  % T/m
-[S.pns.signal, p] = pge2.pns(Smin, sysGE.chronaxie, G, sysGE.GRAD_UPDATE_TIME, false); 
+[S.pns.signal, p] = pge2.pns(Smin, sysGE.chronaxie, G, sysGE.GRAD_UPDATE_TIME, 'wt', arg.wt); 
 S.pns.signal = S.pns.signal(:);
 
 if ~arg.plot

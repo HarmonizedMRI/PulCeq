@@ -1,5 +1,5 @@
-function [pt, p, ct] = pns(Smin, c, g, dt, plt)
-% function [pt, p, ct] = pns(Smin, c, g, dt, [plt=false])
+function [pt, p, ct] = pns(Smin, c, g, dt, varargin)
+% function [pt, p, ct] = pns(Smin, c, g, dt, varargin)
 %
 % Calculate PNS following IEC 60601-2-33:2022.
 %
@@ -14,6 +14,8 @@ function [pt, p, ct] = pns(Smin, c, g, dt, plt)
 %   dt     [1]     gradient raster (sample) time (sec)
 %
 % Input options
+%   wt     [3]     x/y/z/ channel weights. Default: [1 1 1].
+%                  From IEC 60601-2-33:2022 section (12): wt = [0.8 1.0 0.7]
 %   plt    true/false   plot 
 %
 % Output
@@ -23,17 +25,16 @@ function [pt, p, ct] = pns(Smin, c, g, dt, plt)
 %
 % To test
 
-tic
+arg.wt = [1 1 1];
+arg.plt = false;
+
+arg = vararg_pair(arg, varargin);   % in ../
 
 if ischar(Smin)
     if strcmp(Smin, 'test')
         pt = sub_test();
         return;
     end
-end
-
-if nargin < 5
-    plt = false;
 end
 
 assert(size(g,1) < size(g,2), 'g must be size 3xn');
@@ -47,13 +48,10 @@ tau = dt:dt:(20*c);  % no need to make much longer than chronaxie
 f = dt/Smin * c ./ (c +  tau).^2;
 
 % Convolve slew rate waveform with impulse response.
-% x/y/z channel weightings from IEC 60601-2-33:2022 section (12) 
 s = diff(g, 1, 2)/dt;     % T/m/s
 p = zeros(3, n);
-wt = [0.8 1.0 0.7];  % channel weights
-%wt = [1 1 1];  % for comparing with toppe.pns()
 for ch = 1:3
-    tmp = wt(ch) * 100 * conv(s(ch,:), f);  % percent of stimulation threshold
+    tmp = arg.wt(ch) * 100 * conv(s(ch,:), f);  % percent of stimulation threshold
     p(ch,:) = tmp(1:n);
 end
 
@@ -63,7 +61,7 @@ pt = sqrt(sum(p.^2,1));
 ct = toc;
 
 % plot
-if plt
+if arg.plt
     tt = dt*1e3*(1:n);  % ms
 
     subplot(221); plot(tt, 1e3*g); ylabel('g (mT/m)'); grid on; xlabel('ms');
