@@ -12,7 +12,7 @@ function params = check(ceq, sysGE, varargin)
 %    ceq
 %    sysGE
 %
-% Options
+% Input options
 %    wt     [3]   PNS x/y/z/ channel weights. See pge2.pns().
 %    
 % To determine if the pge2 interpreter output matches
@@ -28,6 +28,7 @@ tol = 1e-7;   % timing tolerance. Matches 'eps' in the pge2 EPIC code
 params.b1max = 0;      % max RF amplitude
 params.gmax = 0;       % max single-axis gradient amplitude [G/cm]
 params.smax = 0;       % max single-axis slew rate in sequence, G/cm/ms
+params.wt = arg.wt;
 params.hash = DataHash(ceq);
 
 % Check parent block timing.
