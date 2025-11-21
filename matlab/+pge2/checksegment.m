@@ -15,6 +15,10 @@ arg.wt = [1 1 1];
 
 arg = vararg_pair(arg, varargin);   % in ../
 
+b1max = 0;
+gmax = 0;
+smax = 0;
+
 tol = 1e-7;   % timing tolerance. Matches 'eps' in the pge2 EPIC code
 
 % Block boundaries must be on sysGE.GRAD_UPDATE_TIME boundary
@@ -25,7 +29,7 @@ end
 
 % check peak b1 amplitude
 if ~isempty(S.rf.signal)
-    b1max = max(abs(S.rf.signal));  % Gauss
+    b1max = max(b1max, max(abs(S.rf.signal)));  % Gauss
     if b1max > sysGE.b1_max
         throw(MException('hardware:peakb1', sprintf('RF amp (%.3 G) exceeds limit (%.3f)', b1max, sysGE.b1_max)));
     end
@@ -36,13 +40,13 @@ end
 % check peak gradient amplitude and slew rate
 for ax = {'gx','gy','gz'}
     if ~isempty(S.(ax{1}).signal)
-        gmax = max(abs(S.(ax{1}).signal)); % G/cm
+        gmax = max(gmax, max(abs(S.(ax{1}).signal))); % G/cm
         if gmax > sysGE.g_max
             throw(MException('hardware:gmax', sprintf('%s peak amplitude (%.2f G/cm) exceeds limit (%.1f)', ax{1}, gmax, sysGE.g_max)));
             %sprintf('segment %d, instance at row %d: %s amp (%.2f G/cm) exceeds limit (%.1f)', i, n, ax{1}, gmax, sysGE.g_max));
         end
         slew = diff(S.(ax{1}).signal)./diff(S.(ax{1}).t)/1000;  % G/cm/ms
-        smax = max(abs(slew));
+        smax = max(smax, max(abs(slew)));
         if smax > sysGE.slew_max
             throw(MException('hardware:slew', sprintf('%s slew rate (%.2f G/cm/ms) exceeds limit (%.1f)', ax{1}, smax, sysGE.slew_max)));
         end
