@@ -14,6 +14,7 @@ function W = plot(ceq, sys, varargin)
 %  rotate          true/FALSE      If false, display gradients in logical coordinate frame, i.e., 
 %                                  before rotating. If true, only interpolated gradients are shown.
 %  interpolate     true/FALSE      Interpolate to 4us, or display corner points (for extended traps)
+%  wt              [3]             PNS x/y/z/ channel weights. Default: [1 1 1].
 %
 % Output: 
 %  W               struct containing the plotted waveforms
@@ -23,6 +24,7 @@ arg.blockRange = [1 ceq.nMax];
 arg.showBlocks = true; 
 arg.rotate = false;
 arg.interpolate = false;
+arg.wt = [1 1 1];
 
 arg = vararg_pair(arg, varargin);   % in ../
 
@@ -100,7 +102,8 @@ while n < arg.blockRange(2) & tic - eps < min(ceq.duration, arg.timeRange(2))
 
     % Get segment instance and add to plot
     try
-        S = pge2.getsegmentinstance(ceq, i, sys, L, 'rotate', arg.rotate, 'interpolate', arg.interpolate);
+        S = pge2.getsegmentinstance(ceq, i, sys, L, 'rotate', arg.rotate, ...
+            'interpolate', arg.interpolate, 'wt', arg.wt);
     catch ME
         error(sprintf('(n = %d, i = %d): %s\n', n, i, ME.message));
     end

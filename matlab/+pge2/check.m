@@ -1,4 +1,4 @@
-function params = check(ceq, sysGE)
+function params = check(ceq, sysGE, varargin)
 %
 % Check compatibility of a PulCeq (Ceq) sequence object with the 
 % GE scanner specifications in 'sysGE'.
@@ -8,8 +8,19 @@ function params = check(ceq, sysGE)
 %  - Peak b1 and gradient amplitude/slew
 %  - PNS (for one segment at a time)
 %
+% Inputs
+%    ceq
+%    sysGE
+%
+% Options
+%    wt     [3]   PNS x/y/z/ channel weights. See pge2.pns().
+%    
 % To determine if the pge2 interpreter output matches
 % the original .seq file, use pge2.validate(...)
+
+arg.wt = [1 1 1];
+
+arg = vararg_pair(arg, varargin);   % in ../
 
 tol = 1e-7;   % timing tolerance. Matches 'eps' in the pge2 EPIC code
 
@@ -46,7 +57,7 @@ while n < ceq.nMax
 
     % check it
     try
-        v = pge2.checksegment(S, sysGE);
+        v = pge2.checksegment(S, sysGE, 'wt', arg.wt);
     catch ME
         error(sprintf('(segment %d, row %d): %s', i, n, ME.message));
     end

@@ -1,12 +1,19 @@
-function val = checksegment(S, sysGE)
+function val = checksegment(S, sysGE, varargin)
 %
 % Inputs
-%    S        segment instance, see pge2.getsegmentinstance()
-%    sysGE    hardware parameters, see pge2.opts()
+%    S            segment instance, see pge2.getsegmentinstance()
+%    sysGE        hardware parameters, see pge2.opts()
+%
+% Options:
+%    wt     [3]   PNS x/y/z/ channel weights. See pge2.pns().
 %
 % Ouput
 %    val.b1max/gmax/smax    Max b1/gradient amp/slew rate in segment
 %    val.pns                PNS waveform
+
+arg.wt = [1 1 1];
+
+arg = vararg_pair(arg, varargin);   % in ../
 
 tol = 1e-7;   % timing tolerance. Matches 'eps' in the pge2 EPIC code
 
@@ -46,7 +53,7 @@ end
 Smin = sysGE.rheobase/sysGE.alpha;
 G = [S.gx.signal'; S.gy.signal'; S.gz.signal']/100;  % T/m
 try
-    [pt, p] = pge2.pns(Smin, sysGE.chronaxie, G, sysGE.GRAD_UPDATE_TIME, false); 
+    [pt, p] = pge2.pns(Smin, sysGE.chronaxie, G, sysGE.GRAD_UPDATE_TIME, 'wt', arg.wt); 
 catch ME
     error(sprintf('(n = %d, i = %d): %s\n', n, i, ME.message));
 end
