@@ -59,12 +59,12 @@ catch ME
 end
 if max(pt) > 100
     I = find(pt == max(pt));
-    throw(MException('safety:pns', sprintf('(t = %.3f ms) PNS exceeds first controlled mode (100%%)!!!\n', ...
+    throw(MException('safety:pns', sprintf('(t = %.3f ms) PNS exceeds first controlled mode (100%%%%)!!!\n', ...
             I(1)*sysGE.GRAD_UPDATE_TIME*1e3)));
 end
 if max(pt) > 80
     I = find(pt == max(pt));
-    throw(MException('safety:pns', sprintf('(t = %.3f ms) PNS exceeds normal mode (80%%)!\n', ...
+    throw(MException('safety:pns', sprintf('(t = %.3f ms) PNS exceeds normal mode (80%%%%)!\n', ...
             I(1)*sysGE.GRAD_UPDATE_TIME*1e3)));
 end
 
