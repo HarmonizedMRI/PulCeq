@@ -1,5 +1,5 @@
-function [pt, p, ct] = pns(Smin, c, g, dt, varargin)
-% function [pt, p, ct] = pns(Smin, c, g, dt, varargin)
+function [pt, p] = pns(Smin, c, g, dt, varargin)
+% function [pt, p] = pns(Smin, c, g, dt, varargin)
 %
 % Calculate PNS following IEC 60601-2-33:2022.
 %
@@ -21,9 +21,6 @@ function [pt, p, ct] = pns(Smin, c, g, dt, varargin)
 % Output
 %   pt      [1 n]  channel-combined PNS waveform (% of stimulation threshold)
 %   p       [3 n]  PNS waveform on each gradient channel
-%   ct      [1]    compute time (s)
-%
-% To test
 
 arg.wt = [1 1 1];
 arg.plt = false;
@@ -57,8 +54,6 @@ end
 
 % return total (gradient-combined) PNS waveform
 pt = sqrt(sum(p.^2,1));    
-
-ct = toc;
 
 % plot
 if arg.plt
@@ -96,12 +91,11 @@ function p_this = sub_test
     g = [ramp ones(1,200), fliplr(ramp)];
     g = g(1:end-1);
     g = repmat([g -g], [1 5]);
-    g = [g; 0.85*g; 0.75*g];
+    g = [g; 0.5*g; 0.5*g];
     g = 4 * g * 1e-2;    % T/m
 
     % calculate pns
-    [p_this, ~, ct] = pge2.pns(Smin, c, g, dt, true);
-    fprintf('Compute time: %.4f s\n', ct);
+    [p_this, ~] = pge2.pns(Smin, c, g, dt, 'plt', true);
 
     % ground truth
     % to compare, set wt = [1 1 1] above
@@ -109,5 +103,4 @@ function p_this = sub_test
     %p_true = toppe.pns(g, 'xrm', 'plt', true);
     %err = norm(p_true-p_this)/norm(p_true);
     %fprintf('norm(p_true-p_this)/norm(p_true)  = %.3f\n', err);
-
 return
