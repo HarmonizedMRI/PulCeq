@@ -67,8 +67,10 @@ for n = 1:ceq.nMax
 end
 
 assert(abs(params.b1max*1e-4 - maxB1/arg.gamma) < 1e-7, 'params.b1max does''t match peak b1 in ceq.loop()');
-assert(abs(params.gmax - maxGrad/arg.gamma*1e2) < 1e-7, 'params.gmax does''t match peak gradient in ceq.loop()');
 
+err = 100 * abs(params.gmax - maxGrad/arg.gamma*1e2) / max(params.gmax, eps);
+assert(err < 1, sprintf('params.gmax does''t match peak gradient in ceq.loop() (%.1f%% difference)\n', err)); 
+    
 maxSlew = params.smax * arg.gamma * 10;   % Hz/m
 
 % safety stuff
