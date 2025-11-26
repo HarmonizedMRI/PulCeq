@@ -14,6 +14,12 @@ arg.path = '/srv/nfs/psd/usr/psd/pulseq/v7/sequences/';
 % substitute with provided keyword arguments
 arg = vararg_pair(arg, varargin);   % in ../
 
+% use linux file separator
+arg.path = strrep(arg.path, '\', '/');
+if ~endsWith(arg.path, '/')
+    arg.path = [arg.path '/'];
+end
+
 % strip .seq or .pge extension if present
 seqname = replace(seqname, {'.seq', '.pge'}, '');
 
