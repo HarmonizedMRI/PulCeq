@@ -1,16 +1,18 @@
-function g = makeTrapezoid(channel, area, gmax, slew, dt, varargin)
-% function g = makeTrapezoid(channel, Area, maxGrad, maxSlew, gradRasterTime)
+function g = makeTrapezoid(channel, sys, varargin)
+% function g = makeTrapezoid(channel, sys, varargin)
 % 
 % Make a symmetric Pulseq trapezoid with requested area.
 % 
 % Inputs
-%   Area             Hz/m*s
-%   maxGrad          Hz/m
-%   maxSlew          Hz/m/s
-%   gradRasterTime   s 
+%   channel       'x', 'y', or 'z'
+%   sys           mr.opts() system struct
+%   'Area'        Required keyword argument (Hz/m*s)
 %
 % Input options
-%   delay    s        Default: 0
+%   Delay            s          Default: 0
+%   maxGrad          Hz/m       If provided, overrides value in sys
+%   maxSlew          Hz/m/s     If provided, overrides value in sys
+%   gradRasterTime   s          If provided, overrides value in sys
 %
 % Output
 %   g        struct   Pulseq gradient event of type 'trap'
@@ -25,7 +27,18 @@ function g = makeTrapezoid(channel, area, gmax, slew, dt, varargin)
 
 % Parse inputs
 arg.Delay = 0;
+arg.Area = [];
+arg.maxGrad = sys.maxGrad;
+arg.maxSlew = sys.maxSlew;
+arg.gradRasterTime = sys.gradRasterTime;
 arg = vararg_pair(arg, varargin);   % in ../
+
+assert(~isempty(arg.Area), 'Must specify Area');
+
+gmax = arg.maxGrad;
+slew = arg.maxSlew;
+dt = arg.gradRasterTime;
+area = arg.Area;
 
 % Precompute max ramp duration and area
 tauMax   = ceil(gmax/slew/dt) * dt;
