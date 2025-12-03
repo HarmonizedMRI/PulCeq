@@ -240,6 +240,11 @@ while n < ceq.nMax % & cnt < 2
         if length(rf.seq) > 0
             plot(1e3*tt.seq, angle(rf.seq), 'black');
             hold on
+            if ~isempty(xmlPath)
+                plot(1e3*tt.theta, theta, 'r.');
+            else
+                plot(1e3*tt.ceq, angle(rf.ceq), 'r.'); 
+            end
         else
             cla
         end
