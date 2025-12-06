@@ -23,20 +23,18 @@ This sequence representation allows efficient and accurate implementation
 of a Pulseq sequence on the GE MRI platform.
 
 **Update December 2025**:
-The branches have bee renamed:
+The branches have been renamed:
 ```
 Previous branch name         Current branch name
+tv7                    ==>   main (default)
 main                   ==>   tv6_v1.9
-tv7                    ==>   main
 develop                ==>   tv6_v1.10
 ```
 
 From now on, development will happen in short-lived feature branches.
-The
 
-There are actually two versions in use:
-1. For tv6, use the 'tv6' branch
-2. For pge2, use 'main' branch
-See https://github.com/HarmonizedMRI/SequenceExamples-GE/.
+For tv6, use the 'tv6\_v1.9' or 'tv6\_v1.10' branches.
+These older branches are no longer being actively supported.
+
 
 
