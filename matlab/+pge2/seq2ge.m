@@ -21,3 +21,5 @@ params = pge2.check(ceq, sysGE, 'wt', PNSwt);
 
 pge2.writeceq(ceq, [fn '.pge'], 'pislquant', pislquant, 'params', params);
 
+fprintf('\n');
+
