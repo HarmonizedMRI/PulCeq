@@ -1,5 +1,5 @@
-function s = override(s, varargin)
-% override(s,'field1',value1,'field2',value2,...)
+function s = setfields(s, varargin)
+% setfields(s,'field1',value1,'field2',value2,...)
 %
 % Replace one or more fields in a struct
 
