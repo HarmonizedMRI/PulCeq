@@ -1,5 +1,5 @@
 function ok = validate(ceq, sysGE, seq, xmlPath, varargin)
-% function validate(ceq, sysGE, seq, xmlPath, varargin)
+% function validate(ceq, sysGE, seq, xmlPath, ...)
 %
 % Check agreement between pge2 interpreter output on scanner/VM/WTools
 % and the original Pulseq (.seq) object.

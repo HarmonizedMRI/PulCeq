@@ -1,4 +1,5 @@
 function params = check(ceq, sysGE, varargin)
+% function params = check(ceq, sysGE, ...)
 %
 % Check compatibility of a PulCeq (Ceq) sequence object with the 
 % GE scanner specifications in 'sysGE'.

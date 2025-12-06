@@ -1,5 +1,5 @@
 function [pt, p] = pns(Smin, c, g, dt, varargin)
-% function [pt, p] = pns(Smin, c, g, dt, varargin)
+% function [pt, p] = pns(Smin, c, g, dt, ...)
 %
 % Calculate PNS following IEC 60601-2-33:2022.
 %
