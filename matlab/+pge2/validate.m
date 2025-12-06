@@ -141,7 +141,7 @@ while n < ceq.nMax % & cnt < 2
         end
 
         if arg.plot
-            subplot(5,1,iax);
+            subplot(5,1,iax+2);
             plot(1e3*tt.seq, g.seq, 'black-');  
             hold on;
             if ~isempty(xmlPath)
@@ -150,15 +150,7 @@ while n < ceq.nMax % & cnt < 2
                 plot(1e3*tt.ceq, g.ceq, 'r.-');
             end
             hold off
-            if ~isempty(xmlPath)
-                legend('Pulseq', 'pge2');
-            else
-                legend('Pulseq', 'ceq');
-            end
             ylabel(sprintf('%s\n(G/cm)', ax{iax}), 'Rotation', 0);
-            if iax == 1
-                title(sprintf('segment starting at row %d (count = %d)', n, cnt));
-            end
         end
     end
 
@@ -225,7 +217,7 @@ while n < ceq.nMax % & cnt < 2
     end
 
     if arg.plot
-        subplot(5,1,4); hold off;
+        subplot(5,1,1); hold off;
         if length(rf.seq) > 0
             plot(1e3*tt.seq, abs(rf.seq), 'black');
             hold on
@@ -240,17 +232,16 @@ while n < ceq.nMax % & cnt < 2
             cla
         end
         ylabel(sprintf('|RF|\n(Gauss)'), 'Rotation', 0);
+        title(sprintf('segment starting at row %d (count = %d)', n, cnt));
 
-        subplot(5,1,5); hold off;
+        subplot(5,1,2); hold off;
         if length(rf.seq) > 0
             plot(1e3*tt.seq, angle(rf.seq), 'black');
             hold on
             if ~isempty(xmlPath)
                 plot(1e3*tt.theta, theta, 'r.');
-                legend('Pulseq', 'pge2'); 
             else
                 plot(1e3*tt.ceq, angle(rf.ceq), 'r.'); 
-                legend('Pulseq', 'ceq'); 
             end
         else
             cla
@@ -264,9 +255,9 @@ while n < ceq.nMax % & cnt < 2
             subplot(5, 1, sp);
             xlim(1e3*[plt.tmin plt.tmax]);
             switch sp
-                case 4
+                case 1
                     ylim([0 arg.b1PlotLim]);
-                case 5
+                case 2
                     ylim(1.1* pi * [-1 1]);
                 otherwise
                     ylim(1.1*sysGE.g_max*[-1 1]);
