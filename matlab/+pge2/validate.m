@@ -151,9 +151,6 @@ while n < ceq.nMax % & cnt < 2
             end
             hold off
             ylabel(sprintf('%s\n(G/cm)', ax{iax}), 'Rotation', 0);
-            if iax == 1
-                title(sprintf('segment starting at row %d (count = %d)', n, cnt));
-            end
         end
     end
 
@@ -235,6 +232,7 @@ while n < ceq.nMax % & cnt < 2
             cla
         end
         ylabel(sprintf('|RF|\n(Gauss)'), 'Rotation', 0);
+        title(sprintf('segment starting at row %d (count = %d)', n, cnt));
 
         subplot(5,1,2); hold off;
         if length(rf.seq) > 0
