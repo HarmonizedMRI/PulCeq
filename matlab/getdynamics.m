@@ -24,6 +24,8 @@ R = eye(3);
 GAM = 4257.6;   % Hz/Gauss
 
 if ~isempty(block.rf)
+    assert(~isempty(parentBlock.rf), ...
+        sprintf('(virtual segment %d) Expected RF event not found in base block %d', segmentID, parentBlockID));
     rfamp = max(abs(block.rf.signal));
     rfphs = block.rf.phaseOffset;
     rffreq = block.rf.freqOffset;
@@ -32,6 +34,8 @@ end
 for ax = {'gx','gy','gz'}
     g = block.(ax{1});
     if ~isempty(g)
+        assert(~isempty(parentBlock.(ax{1})), ...
+            sprintf('(virtual segment %d) Expected %s event not found in base block %d', segmentID, ax{1}, parentBlockID));
         if strcmp(g.type, 'trap')
             amp.(ax{1}) = g.amplitude;
             energy.(ax{1}) = (g.amplitude)^2 / 3 * g.riseTime ...   % (Hz/m)^2*sec
@@ -48,12 +52,6 @@ for ax = {'gx','gy','gz'}
             % is pb.g.waveform/max(abs(pb.g.waveform))
             w1 = parentBlock.(ax{1}).waveform;  % Pulseq gradient event, in physical units
             w2 = w1 / max(abs(w1)); % this is the (normalized) shape that is loaded into waveform memory in interpreter
-            %mx = max(g.waveform);
-            %mn = min(g.waveform);
-            %pbmx = max(parentBlock.(ax{1}).waveform);
-            %pbmn = min(parentBlock.(ax{1}).waveform);
-            %amp.(ax{1}) = max(abs(g.waveform));
-            %if any(g.waveform.*parentBlock.(ax{1}).waveform < 0)
             if w2 .* g.waveform < 1
                 amp.(ax{1}) = -amp.(ax{1});
             end
@@ -62,9 +60,10 @@ for ax = {'gx','gy','gz'}
 end
 
 if ~isempty(block.adc)
+    assert(~isempty(parentBlock.adc), ...
+        sprintf('(virtual segment %d) Expected ADC event not found in base block %d', segmentID, parentBlockID));
     recphs = block.adc.phaseOffset;
-    % save ADC frequency for ADC events
-    rffreq = block.adc.freqOffset;
+    rffreq = block.adc.freqOffset;   % save ADC frequency for ADC events
 end
 
 loop = [segmentID parentBlockID ...
