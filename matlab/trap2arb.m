@@ -7,7 +7,7 @@ function [tt, wav] = trap2arb(g)
 % Inputs
 %   g      struct      Pulseq gradient event
 %
-% Ouputs
+% Outputs
 %   tt    [n 1]        sample time points ('corner' points), with tt(1) = g.delay
 %   wav   [n 1]        gradient samples at tt
 

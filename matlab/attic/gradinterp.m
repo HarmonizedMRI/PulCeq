@@ -3,7 +3,7 @@ function [wavOut, ttOut] = gradinterp(g, rasterIn, rasterOut)
 %
 % Interpolate arbitrary Pulseq gradient to uniform raster.
 %
-% Intputs:
+% Inputs:
 %  g             Pulseq (arbitrary) gradient struct. Must contain the following fields:
 %                g.waveform     gradient waveform samples (a.u.)
 %                g.tt           sample times (sec)
