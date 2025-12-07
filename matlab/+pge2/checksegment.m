@@ -7,7 +7,7 @@ function val = checksegment(S, sysGE, varargin)
 % Options:
 %    wt     [3]   PNS x/y/z/ channel weights. See pge2.pns().
 %
-% Ouput
+% Output
 %    val.b1max/gmax/smax    Max b1/gradient amp/slew rate in segment
 %    val.pns                PNS waveform
 

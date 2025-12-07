@@ -52,12 +52,12 @@ blockEvents = reshape(blockEvents, [nEvents, length(seq.blockEvents)]).';
 ceq.nMax = size(blockEvents, 1);
 
 
-%% Get TRID labels and corresponding row indeces for all segment instances
+%% Get TRID labels and corresponding row indices for all segment instances
 nTRIDlabels = 0;
 %fprintf('Getting TRID labels (%d
 textprogressbar('seq2ceq: Reading TRID labels and counting ADC events: ');
 ceq.nReadouts = 0;
-nMaxTRIDs = 1000; % inifite number
+nMaxTRIDs = 1000; % infinite number
 TRIDlist = 1:1000;
 for n = 1:ceq.nMax
     textprogressbar(n/ceq.nMax*100);

@@ -24,7 +24,7 @@ function sysGE = opts(psd_rf_wait, psd_grd_wait, b1_max, g_max, slew_max, coil, 
 % (e.g., /export/home/mx/host/config/current/GRSubsystemHWO.xml)
 % (alpha = EffectivedBdTlength<X,Y,Z>/100)
 
-% Keyword-argument intputs with defaults. Some were determined empirically using WTools.
+% Keyword-argument inputs with defaults. Some were determined empirically using WTools.
 % You probably don't want to change these.
 arg.GRAD_UPDATE_TIME = 4e-6;    % block duration, and gradient waveform duration, must be an integer multiple of this value
 arg.RF_UPDATE_TIME = 2e-6;      % RF pulse duration must be an integer multiple of this value

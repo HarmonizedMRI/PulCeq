@@ -1,6 +1,6 @@
 function textprogressbar(c)
 % This function creates a text progress bar. It should be called with a 
-% STRING argument to initialize and terminate. Otherwise the number correspoding 
+% STRING argument to initialize and terminate. Otherwise the number corresponding 
 % to progress in % should be supplied.
 % INPUTS:   C   Either: Text string to initialize or terminate 
 %                       Percentage number to show progress 
@@ -41,13 +41,13 @@ function textprogressbar(c)
 %% Initialization
 persistent strCR;           %   Carriage return pesistent variable
 
-% Vizualization parameters
+% Visualization parameters
 strPercentageLength = 10;   %   Length of percentage string (must be >5)
 strDotsMaximum      = 10;   %   The total number of dots in a progress bar
 
 %% Main 
 
-if isempty(strCR) && ~ischar(c), % If c is numeric but not initalized, just initialize with a generic prompt on a new line
+if isempty(strCR) && ~ischar(c), % If c is numeric but not initialized, just initialize with a generic prompt on a new line
     fprintf('\nLoading: ',c);
     strCR = -1;
 end
