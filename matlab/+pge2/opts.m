@@ -23,6 +23,7 @@ function sysGE = opts(psd_rf_wait, psd_grd_wait, b1_max, g_max, slew_max, coil, 
 % These values are on the scanner in /w/config/Scandbdt.cfg or GRSubsystemHWO.xml
 % (e.g., /export/home/mx/host/config/current/GRSubsystemHWO.xml)
 % (alpha = EffectivedBdTlength<X,Y,Z>/100)
+% See also /w/config/GradientConfig.cfg
 
 % Keyword-argument inputs with defaults. Some were determined empirically using WTools.
 % You probably don't want to change these.
@@ -61,7 +62,7 @@ switch lower(coil)
     case 'xrm',   chronaxie=334d-6; rheobase=23.4; alpha=0.333;
     case 'whole', chronaxie=370d-6; rheobase=23.7; alpha=0.344;
     case 'zoom',  chronaxie=354d-6; rheobase=29.1; alpha=0.309;
-    case 'hrmbuhp',  chronaxie=359d-6; rheobase=26.5; alpha=0.370;
+    case 'hrmb',  chronaxie=359d-6; rheobase=26.5; alpha=0.370;
     case 'hrmw',  chronaxie=642.4d-6; rheobase=17.9; alpha=0.310;
     case 'magnus', chronaxie=611d-6; rheobase=55.2; alpha=0.324;
     otherwise, error('gradient coil (%s) unkown', coil);
