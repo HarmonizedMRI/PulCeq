@@ -141,15 +141,15 @@ while n < ceq.nMax % & cnt < 2
         end
 
         if arg.plot
-            subplot(5,1,iax+2);
+            sax = subplot(5,1,iax+2); 
+            cla(sax);
+            hold(sax, 'on');
             plot(1e3*tt.seq, g.seq, 'black-');  
-            hold on;
             if ~isempty(xmlPath)
                 plot(1e3*tt.pge2, g.pge2, 'r.-');
             else
                 plot(1e3*tt.ceq, g.ceq, 'r.-');
             end
-            hold off
             ylabel(sprintf('%s\n(G/cm)', ax{iax}), 'Rotation', 0);
         end
     end
@@ -217,7 +217,9 @@ while n < ceq.nMax % & cnt < 2
     end
 
     if arg.plot
-        subplot(5,1,1); hold off;
+        sax = subplot(5,1,1); 
+        cla(sax);
+        hold(sax, 'on');
         if length(rf.seq) > 0
             plot(1e3*tt.seq, abs(rf.seq), 'black');
             hold on
@@ -229,22 +231,23 @@ while n < ceq.nMax % & cnt < 2
                 legend('Pulseq', 'ceq'); 
             end
         else
-            cla
+            cla(sax)
         end
         ylabel(sprintf('|RF|\n(Gauss)'), 'Rotation', 0);
         title(sprintf('segment starting at row %d (count = %d)', n, cnt));
 
-        subplot(5,1,2); hold off;
+        sax = subplot(5,1,2); 
+        cla(sax);
+        hold(sax, 'on');
         if length(rf.seq) > 0
             plot(1e3*tt.seq, angle(rf.seq), 'black');
-            hold on
             if ~isempty(xmlPath)
                 plot(1e3*tt.theta, theta, 'r.');
             else
                 plot(1e3*tt.ceq, angle(rf.ceq), 'r.'); 
             end
         else
-            cla
+            cla(sax)
         end
         ylabel(sprintf('∠RF\n(radians)'), 'Rotation', 0);
 
