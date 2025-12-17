@@ -101,6 +101,8 @@ for j = 1:length(blockIDs)
 
         % time samples and waveform
         S.rf.t = [S.rf.t; tic + sysGE.psd_rf_wait + b.rf.delay + b.rf.t]; 
+        assert(S.rf.t(end) + sysGE.rf_ringdown_time < S.duration - sysGE.segment_ringdown_time, ...
+            'RF ringdown period extends past end of segment -- remember to check psd_rf_wait');
         S.rf.signal = [S.rf.signal; b.rf.signal/max(abs(b.rf.signal))*L(j,3)/sysGE.gamma];  % Gauss
     end
 
