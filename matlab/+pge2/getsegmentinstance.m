@@ -1,4 +1,6 @@
 function S = getsegmentinstance(ceq, i, sysGE, L, varargin)
+% getsegmentinstance - Build segment waveforms in the way the interpreter does it
+%
 % function S = getsegmentinstance(ceq, i, sysGE, L)
 %
 % Inputs:

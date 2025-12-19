@@ -1,4 +1,6 @@
 function s = setfields(s, varargin)
+% setfields - set one or more struct fields
+%
 % setfields(s,'field1',value1,'field2',value2,...)
 %
 % Replace one or more fields in a struct

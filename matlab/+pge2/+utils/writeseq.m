@@ -1,5 +1,7 @@
 function writeseq(seq, fov, seqName)
-% Simply calls seq.checkTiming and seq.write
+% writeseq - Call seq.checkTiming and seq.write
+%
+% function writeseq(seq, fov, seqName)
 
 % --- Check sequence timing ---
 [ok, error_report]=seq.checkTiming;

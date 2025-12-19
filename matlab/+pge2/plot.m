@@ -1,7 +1,7 @@
 function W = plot(ceq, sys, varargin)
-% function W = plot(ceq, sys, varargin)
+% plot - Plot Ceq sequence object
 %
-% Plot Ceq sequence object
+% function W = plot(ceq, sys, varargin)
 %
 % Inputs:
 %   ceq     struct       Ceq sequence object, see seq2ceq.m

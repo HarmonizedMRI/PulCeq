@@ -1,7 +1,7 @@
 function [pt, p] = pns(Smin, c, g, dt, varargin)
-% function [pt, p] = pns(Smin, c, g, dt, ...)
+% pns - Calculate PNS using nerve impulse response model in IEC 60601-2-33:2022
 %
-% Calculate PNS following IEC 60601-2-33:2022.
+% function [pt, p] = pns(Smin, c, g, dt, ...)
 %
 % Quick demo:
 %   >> pns('test');

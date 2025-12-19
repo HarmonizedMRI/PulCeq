@@ -1,7 +1,8 @@
 function writeceq(ceq, fn, varargin)
+% writeceq - Write a Ceq object to a binary file for execution on GE scanners
+%
 % function writeceq(ceq, fn, ...)
 %
-% Write a Ceq struct to a .pge file so the sequence can be executed with the pge2 interpreter.
 % Either 'params' or 'sysGE' (kwargs) must be provided.
 % 
 % Inputs

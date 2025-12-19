@@ -1,4 +1,6 @@
 function sysGE = opts(psd_rf_wait, psd_grd_wait, b1_max, g_max, slew_max, coil, varargin)
+% opts - Create struct containing GE MR system hardware parameters
+% 
 % function sysGE = opts(psd_rf_wait, psd_grd_wait, b1_max, g_max, slew_max, coil, varargin)
 %
 % Inputs:

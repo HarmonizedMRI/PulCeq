@@ -1,8 +1,7 @@
 function params = check(ceq, sysGE, varargin)
-% function params = check(ceq, sysGE, ...)
+% check - Check compatibility of a Ceq sequence against scanner hardware parameters
 %
-% Check compatibility of a PulCeq (Ceq) sequence object with the 
-% GE scanner specifications in 'sysGE'.
+% function params = check(ceq, sysGE, ...)
 %
 % The following are checked:
 %  - Sequence block timing
@@ -10,8 +9,8 @@ function params = check(ceq, sysGE, varargin)
 %  - PNS (for one segment at a time)
 %
 % Inputs
-%    ceq
-%    sysGE
+%   ceq       struct         Ceq sequence object, see seq2ceq.m
+%   sysGE     struct         System hardware info, see pge2.opts()
 %
 % Input options
 %    wt     [3]   PNS x/y/z/ channel weights. See pge2.pns().

@@ -1,4 +1,6 @@
 function [wout, Ikeep] = robustinterp1(ttin, win, ttout)
+% robustinterp1 - 1D interpolation
+%
 % function [wout, Ikeep] = robustinterp1(ttin, win, ttout)
 %
 % Inputs

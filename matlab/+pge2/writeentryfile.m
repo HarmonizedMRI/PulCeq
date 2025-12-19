@@ -1,4 +1,6 @@
 function writeentryfile(n, seqname, varargin)
+% writeentryfile - Convenience function for writing a pge .entry file
+%
 % function writeentryfile(n, seqname, varargin)
 % 
 % Inputs

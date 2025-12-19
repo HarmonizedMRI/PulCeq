@@ -1,7 +1,7 @@
 function seq2ge(seqfile, sysGE, pislquant, PNSwt)
-% function seq2ge(seqfile, sysGE, pislquant, [PNSwt])
+% seq2ge - Convert .seq file to a .pge file for the pge2 GE interpreter
 %
-% Convert .seq file to a .pge file for the pge2 GE interpreter.
+% function seq2ge(seqfile, sysGE, pislquant, [PNSwt])
 %
 % Inputs
 %  seqfile    string     Pulseq file

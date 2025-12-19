@@ -1,7 +1,7 @@
 function pth = normalizepath(pth)
-% function pth = normalizepath(path)
+% normalizepath - Reformat path for pc/windows/mac, and add trailing slash/backslash 
 %
-% Reformat path for pc/windows/mac, and add trailing slash/backslash 
+% function p = normalizepath(p)
 
 if ispc
     pth = strrep(pth, '/', '\');

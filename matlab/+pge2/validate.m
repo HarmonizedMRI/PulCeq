@@ -1,4 +1,6 @@
 function ok = validate(ceq, sysGE, seq, xmlPath, varargin)
+% validate - Compare waveforms in Ceq object/WTools against original .seq file
+% 
 % function validate(ceq, sysGE, seq, xmlPath, ...)
 %
 % Check agreement between pge2 interpreter output on scanner/VM/WTools

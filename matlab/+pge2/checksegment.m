@@ -1,4 +1,7 @@
 function val = checksegment(S, sysGE, varargin)
+% checksegment - Perform timing and waveform checks
+%
+% function val = checksegment(S, sysGE, varargin)
 %
 % Inputs
 %    S            segment instance, see pge2.getsegmentinstance()

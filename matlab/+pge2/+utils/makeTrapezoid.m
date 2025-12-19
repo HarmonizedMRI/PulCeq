@@ -1,7 +1,7 @@
 function g = makeTrapezoid(channel, sys, varargin)
-% function g = makeTrapezoid(channel, sys, varargin)
+% makeTrapezoid - Make a symmetric Pulseq trapezoid with requested area.
 % 
-% Make a symmetric Pulseq trapezoid with requested area.
+% function g = makeTrapezoid(channel, sys, varargin)
 % 
 % Inputs
 %   channel       'x', 'y', or 'z'
