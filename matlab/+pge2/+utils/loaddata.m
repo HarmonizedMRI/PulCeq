@@ -25,7 +25,8 @@ assert(nShots >= nADC, sprintf('Data file contains only %d ADC events', nShots))
 
 % read data
 clear dat
-textprogressbar('Loading ');
+fprintf(sprintf('Loading %s\n', fn));
+textprogressbar('');
 for n = 1:nADC
     currentControl = GERecon('Archive.Next', archive);
     dat{n} = currentControl.Data;
