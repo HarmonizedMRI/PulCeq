@@ -6,7 +6,7 @@
    version="1.1"
    id="svg2"
    sodipodi:docname="logo.svg"
-   inkscape:version="1.4.2 (ebf0e940d0, 2025-05-08)"
+   inkscape:version="1.2.2 (b0a8486541, 2022-12-01)"
    inkscape:export-filename="logo.png"
    inkscape:export-xdpi="400"
    inkscape:export-ydpi="400"
@@ -27,13 +27,14 @@
      inkscape:deskcolor="#d1d1d1"
      inkscape:zoom="1.7096154"
      inkscape:cx="198.87514"
-     inkscape:cy="129.85377"
+     inkscape:cy="130.73116"
      inkscape:window-width="1854"
-     inkscape:window-height="1123"
+     inkscape:window-height="1011"
      inkscape:window-x="0"
      inkscape:window-y="0"
      inkscape:window-maximized="1"
-     inkscape:current-layer="svg2" />
+     inkscape:current-layer="svg2"
+     showgrid="false" />
   <path
      d="M 85,80 95,30 112.48594,80 Z"
      fill="#1f4a8a"
@@ -80,5 +81,5 @@
      font-size="72px"
      font-weight="700"
      fill="#0f8b8d"
-     id="text2">seg</text>
+     id="text2">Seg</text>
 </svg>
