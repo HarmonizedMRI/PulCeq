@@ -1,6 +1,11 @@
 # A vendor-agnostic representation of MRI pulse sequences
 
-<!-- ![logo](doc/logo.svg) -->
+> ⚠️ **Warning**
+> This repository has been superseded by the [PulSeg](https://github.com/HarmonizedMRI/pulseg) and [pge2](https://github.com/HarmonizedMRI/pge2) toolboxes.
+> 
+> For the updated Pulseq workflow for GE scanners, please visit: [2DGRE example in the SequenceExamples-GE repository](https://github.com/HarmonizedMRI/SequenceExamples-GE/tree/main/pge2/2DGRE).
+
+
 
 This repository contains MATLAB code for converting a 
 [Pulseq](https://pulseq.github.io/) 
